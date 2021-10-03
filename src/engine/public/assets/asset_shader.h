@@ -1,55 +1,68 @@
 #pragma once
 #include "asset_base.h"
+#include "rendering/shaders/shader_property.h"
 #include "rendering/vulkan/shader_module.h"
 
 #include <optional>
 #include <spirv_cross.hpp>
 #include <vulkan/vulkan_core.h>
 
-constexpr const char* G_SCENE_DATA_BUFFER_NAME   = "GlobalCameraUniformBuffer";
-constexpr const char* G_MODEL_MATRIX_BUFFER_NAME = "ObjectBuffer";
+constexpr const char* G_SCENE_DATA_BUFFER_NAME   = "SCENE_DATA_BUFFER";
+constexpr const char* G_MODEL_MATRIX_BUFFER_NAME = "INSTANCE_TRANSFORM_DATA";
 
-struct ShaderProperty
+struct ShaderReflectProperty
 {
     std::string                     property_name;
     spirv_cross::SPIRType::BaseType property_type;
     size_t                          structure_size;
     uint32_t                        location;
     uint32_t                        vec_size;
-    EShaderStage                    shader_stage;
+    VkShaderStageFlagBits           shader_stage;
 
-    std::vector<ShaderProperty> structure_properties;
+    std::vector<ShaderReflectProperty> structure_properties;
+
+    [[nodiscard]] std::string get_property_glsl_typename() const;
 };
 
 class AShader : public AssetBase
 {
   public:
-    AShader(const std::filesystem::path& source_mesh_path, EShaderStage in_shader_kind);
+    AShader(const std::filesystem::path& source_mesh_path, const ShaderConfiguration& in_shader_configuration);
+    AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderConfiguration& in_shader_configuration);
     virtual ~AShader() override = default;
 
-    [[nodiscard]] VkShaderModule          get_shader_module() const;
-    [[nodiscard]] ShaderModule* get_shader_module_ptr() const;
+    [[nodiscard]] VkShaderModule get_shader_module() const;
+    [[nodiscard]] ShaderModule*  get_shader_module_ptr() const;
 
-    [[nodiscard]] const std::optional<ShaderProperty>& get_push_constants() const;
-    [[nodiscard]] const std::vector<ShaderProperty>&   get_uniform_buffers() const;
-    [[nodiscard]] const std::vector<ShaderProperty>&   get_image_samplers() const;
-    [[nodiscard]] const std::vector<ShaderProperty>&   get_storage_buffers() const;
+    [[nodiscard]] const std::optional<ShaderReflectProperty>& get_push_constants() const;
+    [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_uniform_buffers() const;
+    [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_image_samplers() const;
+    [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_storage_buffers() const;
+    [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_stage_inputs() const;
+    [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_stage_outputs() const;
 
-    [[nodiscard]] const ShaderProperty* get_model_matrix_buffer() const;
-    [[nodiscard]] const ShaderProperty* get_scene_data_buffer() const;
+    [[nodiscard]] const ShaderReflectProperty* get_model_matrix_buffer() const;
+    [[nodiscard]] const ShaderReflectProperty* get_scene_data_buffer() const;
+
+    [[nodiscard]] const TAssetPtr<AShader>&    get_previous_shader_stage() const;
+    [[nodiscard]] const VkShaderStageFlagBits& get_shader_stage() const;
+    [[nodiscard]] const ShaderConfiguration&   get_shader_config() const;
+    [[nodiscard]] uint32_t                     get_last_binding_index() const;
 
   private:
     void                       build_reflection_data(const std::vector<uint32_t>& bytecode);
     std::optional<std::string> read_shader_file(const std::filesystem::path& source_path);
 
-    const EShaderStage shader_stage;
-
+    const ShaderConfiguration     shader_configuration;
     std::unique_ptr<ShaderModule> shader_module;
 
     // Reflection data
-    std::string                   entry_point;
-    std::optional<ShaderProperty> push_constants = std::optional<ShaderProperty>();
-    std::vector<ShaderProperty>   uniform_buffer = {};
-    std::vector<ShaderProperty>   storage_buffer = {};
-    std::vector<ShaderProperty>   image_samplers = {};
+    uint32_t                             last_binding_index = 0;
+    std::string                          entry_point        = "main";
+    std::optional<ShaderReflectProperty> push_constants     = std::optional<ShaderReflectProperty>();
+    std::vector<ShaderReflectProperty>   uniform_buffer     = {};
+    std::vector<ShaderReflectProperty>   storage_buffer     = {};
+    std::vector<ShaderReflectProperty>   image_samplers     = {};
+    std::vector<ShaderReflectProperty>   shader_inputs      = {};
+    std::vector<ShaderReflectProperty>   shader_outputs     = {};
 };

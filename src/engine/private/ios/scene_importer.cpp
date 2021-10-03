@@ -146,26 +146,18 @@ TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMat
                 break;
             }
         }
-
-        LOG_INFO("diffuse : %s => %d", texture_ptr->mFilename.C_Str(), diffuse_index);
     }
 
-    LOG_INFO("using texture %d", diffuse_index);
-
-    ShaderStageConfiguration vertex_stage{
-        .shader = TAssetPtr<AShader>("gltf_vertex_shader"),
-    };
-    ShaderStageConfiguration fragment_stage{
-        .shader   = TAssetPtr<AShader>("gltf_fragment_shader"),
-        .textures = {{"diffuse_color", TAssetPtr<ATexture>("default_texture")}},
-    };
-
+    LOG_INFO("using diffuse %d", diffuse_index);
+    
     if (diffuse_index >= 0)
     {
+        LOG_WARNING(":: @TODO set fragment shader texture");
         TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
-        fragment_stage.textures["diffuse_color"] = texture;
+        //fragment_stage.textures["diffuse_color"] = texture;
     }
 
     const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
-    return AssetManager::get()->create<AMaterial>(asset_id, vertex_stage, fragment_stage, std::vector<std::string>{"render_scene", "combine_deferred", "post_processing_0"});
+
+    return AssetManager::get()->create<AMaterial>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
 }

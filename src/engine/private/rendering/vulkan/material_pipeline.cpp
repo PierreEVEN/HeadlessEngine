@@ -2,7 +2,6 @@
 
 #include "rendering/vulkan/material_pipeline.h"
 
-#include "assets/asset_material.h"
 #include "assets/asset_mesh_data.h"
 #include "assets/asset_shader.h"
 #include "rendering/graphics.h"
@@ -73,37 +72,34 @@ void MaterialPipeline::create_pipeline()
      * Create pipeline
      */
 
-    /** AShader pipeline */
-    VkPipelineShaderStageCreateInfo vertex_shader_stage{
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage  = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = pipeline_configuration.vertex_module->get_shader_module(),
-        .pName  = "main",
-    };
-
-    VkPipelineShaderStageCreateInfo fragment_shader_stage{
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = pipeline_configuration.fragment_module->get_shader_module(),
-        .pName  = "main",
-    };
-
-    std::vector shaderStages = {vertex_shader_stage, fragment_shader_stage};
-
-    auto bindingDescription    = Vertex::get_binding_description();
-    auto attributeDescriptions = Vertex::get_attribute_descriptions();
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {};
+    for (const auto& stage : pipeline_configuration.shader_stages)
+    {
+        shaderStages.emplace_back(VkPipelineShaderStageCreateInfo{
+            .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage  = stage->get_shader_stage(),
+            .module = stage->get_shader_module(),
+            .pName  = "main",
+        });
+    }    
 
     auto* pass_configuration = Graphics::get()->get_renderer()->get_render_pass_configuration(pipeline_configuration.renderer_stages);
 
     if (!pass_configuration)
         LOG_FATAL("pass configuration is null for stage %s", pipeline_configuration.renderer_stages.c_str());
 
+    VkVertexInputBindingDescription bindingDescription{
+        .binding   = 0,
+        .stride    = static_cast<uint32_t>(pipeline_configuration.vertex_input.vertex_structure_size),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    };
+
     VkPipelineVertexInputStateCreateInfo vertex_input_state{
         .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount   = 1,
         .pVertexBindingDescriptions      = &bindingDescription,
-        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-        .pVertexAttributeDescriptions    = attributeDescriptions.data(),
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(pipeline_configuration.vertex_input.attributes.size()),
+        .pVertexAttributeDescriptions    = pipeline_configuration.vertex_input.attributes.data(),
     };
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
@@ -226,8 +222,7 @@ void MaterialPipeline::update_configuration(const MaterialPipelineConfiguration&
 {
     if (!in_configuration.is_valid())
     {
-        LOG_ERROR("material configuration is not valid : vertex = %s, fragment = %s, render stage count = %d", in_configuration.vertex_module.to_string().c_str(), in_configuration.fragment_module.to_string().c_str(),
-                  in_configuration.renderer_stages.size());
+        LOG_ERROR("material configuration is not valid : stage count = %d, render stage count = %d", in_configuration.shader_stages.size(), in_configuration.renderer_stages.size());
         return;
     }
     pipeline_configuration = in_configuration;

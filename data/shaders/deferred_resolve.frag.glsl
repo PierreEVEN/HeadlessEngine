@@ -1,21 +1,4 @@
-#version 460
-
-// IN
-layout(location = 10) in vec2 uv;
-
-layout (binding = 1) uniform sampler2D samplerAlbedo;
-layout (binding = 2) uniform sampler2D samplerNormal;
-layout (binding = 3) uniform sampler2D samplerPosition;
-
-// UNIFORM BUFFER
-layout(binding = 9) uniform GlobalCameraUniformBuffer {
-    mat4 worldProjection;
-    mat4 viewMatrix;
-	vec3 cameraLocation;
-} ubo;
-
-// OUT
-layout(location = 0) out vec4 outColor;
+#AUTO_LOCATION out vec4 outColor;
 
 void demo_deferred() {
 	if (uv.x +(uv.y * 0.2 - 0.1) < 1.0/3)
@@ -39,7 +22,7 @@ void deferred_render() {
 	vec3 fragcolor  = albedo.rgb * 0.5;
 		
 	// Viewer to fragment
-	vec3 V = ubo.cameraLocation.xyz - fragPos;
+	vec3 V = cameraLocation.xyz - fragPos;
 	V = normalize(V);
 	
 	// Light to fragment

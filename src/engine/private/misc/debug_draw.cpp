@@ -43,27 +43,7 @@ void main() \
 
 DebugDraw::DebugDraw(NCamera* in_context_camera) : context_camera(in_context_camera)
 {
-    return;
-    material_pipeline.update_configuration(MaterialPipelineConfiguration{
-        .vertex_module   = TAssetPtr<AShader>(), //@TODO create a custom shader asset
-        .fragment_module = TAssetPtr<AShader>(),
-        .renderer_stages = "",
-        .descriptor_bindings =
-            MaterialPipelineBindings{
-                .descriptor_bindings = { //@TODO autobuild descriptor bindings
-                    VkDescriptorSetLayoutBinding{
-                        .binding            = 9,
-                        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .descriptorCount    = 1,
-                        .stageFlags         = VK_SHADER_STAGE_VERTEX_BIT,
-                        .pImmutableSamplers = nullptr,
-                    },
-                },
-            },
-        .topology     = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-        .polygon_mode = VK_POLYGON_MODE_LINE,
-    });
-    material_pipeline.init_or_rebuild_pipeline();
+    LOG_WARNING("@TODO : create shader");
 }
 
 DebugDraw::~DebugDraw()

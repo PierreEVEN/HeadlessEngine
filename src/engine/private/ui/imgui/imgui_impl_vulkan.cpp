@@ -13,18 +13,21 @@
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
 #include "ui/imgui/imgui_impl_vulkan.h"
+#include "assets/asset_base.h"
 #include "imgui.h"
+#include "assets/asset_shader.h"
 
 #include <array>
 #include <cpputils/logger.hpp>
 
 #include "backends/imgui_impl_glfw.h"
-#include "rendering/vulkan/descriptor_pool.h"
-#include "rendering/vulkan/common.h"
 #include "rendering/graphics.h"
-#include "rendering/swapchain_config.h"
-#include "rendering/renderer/renderer.h"
 #include "rendering/renderer/render_pass.h"
+#include "rendering/renderer/renderer.h"
+#include "rendering/swapchain_config.h"
+#include "rendering/vulkan/common.h"
+#include "rendering/vulkan/descriptor_pool.h"
+#include "rendering/vulkan/material_pipeline.h"
 
 static uint32_t instance_count = 0;
 
@@ -182,7 +185,7 @@ void ImGuiInstance::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCom
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
-    
+
     // Allocate array to store enough vertex/index buffers
     ImGui_ImplVulkanH_WindowRenderBuffers* wrb = &g_MainWindowRenderBuffers;
     if (wrb->FrameRenderBuffers == NULL)
@@ -433,24 +436,11 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_
 bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
 {
     VkResult       err;
-    VkShaderModule vert_module;
-    VkShaderModule frag_module;
 
-    // Create The AShader Modules:
-    {
-        VkShaderModuleCreateInfo vert_info = {};
-        vert_info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vert_info.codeSize                 = sizeof(__glsl_shader_vert_spv);
-        vert_info.pCode                    = (uint32_t*)__glsl_shader_vert_spv;
-        err                                = vkCreateShaderModule(Graphics::get()->get_logical_device(), &vert_info, vulkan_common::allocation_callback, &vert_module);
-        VK_ENSURE(err);
-        VkShaderModuleCreateInfo frag_info = {};
-        frag_info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        frag_info.codeSize                 = sizeof(__glsl_shader_frag_spv);
-        frag_info.pCode                    = (uint32_t*)__glsl_shader_frag_spv;
-        err                                = vkCreateShaderModule(Graphics::get()->get_logical_device(), &frag_info, vulkan_common::allocation_callback, &frag_module);
-        VK_ENSURE(err);
-    }
+    TAssetPtr<AShader> vertex_shader = nullptr;//AssetManager::get()->create<AShader>("imgui_vertex_shader", std::vector<uint32_t>(__glsl_shader_vert_spv, __glsl_shader_vert_spv + sizeof(__glsl_shader_vert_spv)), EShaderStage::VERTEX_SHADER);
+    TAssetPtr<AShader> fragment_shader = nullptr;//        AssetManager::get()->create<AShader>("imgui_fragment_shader", std::vector<uint32_t>(__glsl_shader_frag_spv, __glsl_shader_frag_spv + sizeof(__glsl_shader_frag_spv)), EShaderStage::FRAGMENT_SHADER);
+    LOG_FATAL("@TODO update shader creation");
+    MaterialPipeline test_pipeline;
 
     if (!g_FontSampler)
     {
@@ -505,11 +495,11 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
     VkPipelineShaderStageCreateInfo stage[2] = {};
     stage[0].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[0].stage                           = VK_SHADER_STAGE_VERTEX_BIT;
-    stage[0].module                          = vert_module;
+    stage[0].module                          = vertex_shader->get_shader_module();
     stage[0].pName                           = "main";
     stage[1].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[1].stage                           = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stage[1].module                          = frag_module;
+    stage[1].module                          = fragment_shader->get_shader_module();
     stage[1].pName                           = "main";
 
     VkVertexInputBindingDescription binding_desc[1] = {};
@@ -598,12 +588,9 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
     info.pColorBlendState             = &blend_info;
     info.pDynamicState                = &dynamic_state;
     info.layout                       = g_PipelineLayout;
-    //info.renderPass                   = Graphics::get()->get_renderer()->get_render_pass().get_render_pass(); //@TODO update to new system
-    err                               = vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), g_pipeline_cache, 1, &info, vulkan_common::allocation_callback, &g_Pipeline);
+    info.renderPass                   = Graphics::get()->get_renderer()->get_render_pass("stage_ui")->get_render_pass();
+    err = vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), g_pipeline_cache, 1, &info, vulkan_common::allocation_callback, &g_Pipeline);
     VK_ENSURE(err);
-
-    vkDestroyShaderModule(Graphics::get()->get_logical_device(), vert_module, vulkan_common::allocation_callback);
-    vkDestroyShaderModule(Graphics::get()->get_logical_device(), frag_module, vulkan_common::allocation_callback);
 
     return true;
 }
@@ -814,7 +801,7 @@ ImGuiInstance::ImGuiInstance()
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    context = ImGui::CreateContext();
+    context     = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;

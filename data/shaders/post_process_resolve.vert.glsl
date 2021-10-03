@@ -1,10 +1,7 @@
-#version 460
-
-// OUT
-layout (location = 10) out vec2 uvs;
+#AUTO_LOCATION out vec2 uv;
 
 void main() {
-	uvs = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
-	gl_Position = vec4(uvs * 2.0f - 1.0f, 0.0f, 1.0f);
-	uvs.y = 1 - uvs.y;
+	uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+	gl_Position = vec4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
+	uv.y = 1 - uv.y;
 }

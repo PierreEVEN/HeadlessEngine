@@ -13,21 +13,27 @@ struct MaterialPipelineBindings
     std::unordered_map<std::string, uint32_t> fragment_binding_map = {};
 };
 
+struct VertexInputConfig
+{
+    std::vector<VkVertexInputAttributeDescription> attributes            = {};
+    size_t                                         vertex_structure_size = 0;
+};
+
 struct MaterialPipelineConfiguration
 {
-    TAssetPtr<AShader>       vertex_module         = {};
-    TAssetPtr<AShader>       fragment_module       = {};
-    std::string              renderer_stages       = {};
-    MaterialPipelineBindings descriptor_bindings   = {};
-    VkBool32                 depth_test            = VK_TRUE;
-    VkBool32                 wireframe             = VK_FALSE;
-    float                    wireframe_lines_width = 1;
-    VkPrimitiveTopology      topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode            polygon_mode          = VK_POLYGON_MODE_FILL;
+    std::vector<TAssetPtr<AShader>> shader_stages         = {};
+    std::string                     renderer_stages       = {};
+    MaterialPipelineBindings        descriptor_bindings   = {};
+    VertexInputConfig               vertex_input          = {};
+    VkBool32                        depth_test            = VK_TRUE;
+    VkBool32                        wireframe             = VK_FALSE;
+    float                           wireframe_lines_width = 1;
+    VkPrimitiveTopology             topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode                   polygon_mode          = VK_POLYGON_MODE_FILL;
 
     [[nodiscard]] bool is_valid() const
     {
-        return vertex_module && fragment_module && !renderer_stages.empty();
+        return !shader_stages.empty() && !renderer_stages.empty();
     }
 };
 

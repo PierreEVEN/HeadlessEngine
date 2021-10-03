@@ -20,7 +20,7 @@ struct Vertex
     glm::vec3 tang   = glm::vec3(0);
     glm::vec3 bitang = glm::vec3(0);
 
-    static VkVertexInputBindingDescription get_binding_description();
+    static size_t get_vertex_structure_size();
 
     static std::vector<VkVertexInputAttributeDescription> get_attribute_descriptions();
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "asset_base.h"
+#include "rendering/shaders/shader_property.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -20,6 +21,29 @@ class ATexture : public AssetBase
 
   private:
     std::vector<VkDescriptorImageInfo> descriptor_image_infos = {};
+};
+
+class ShaderPropertyTextureSampler final : public ShaderUserProperty
+{
+public:
+    ShaderPropertyTextureSampler(ATexture* in_value) : value(in_value)
+    {
+    }
+
+    [[nodiscard]] std::string get_glsl_type_name() const override
+    {
+        return "sampler2D";
+    }
+    [[nodiscard]] bool should_keep_in_buffer_structure() const override
+    {
+        return false;
+    }
+
+    [[nodiscard]] VkDescriptorType get_descriptor_type() const override
+    {
+        return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    }
+    TAssetPtr<ATexture>            value;
 };
 
 class ATexture2D : public ATexture

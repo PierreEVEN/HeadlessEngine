@@ -7,20 +7,12 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-enum class EShaderStage
-{
-    UNKNOWN,
-    VERTEX_SHADER,
-    FRAGMENT_SHADER,
-    GEOMETRY_SHADER
-};
-
 class ShaderParameter
 {
     friend class AMaterial;
 
   public:
-    template <typename Parameter_T, typename... Args_T> static std::shared_ptr<ShaderParameter> create(const std::string& name, EShaderStage stage, Args_T&&... arguments)
+    template <typename Parameter_T, typename... Args_T> static std::shared_ptr<ShaderParameter> create(const std::string& name, VkShaderStageFlagBits stage, Args_T&&... arguments)
     {
         std::shared_ptr<ShaderParameter> parameter = std::make_shared<Parameter_T>(std::forward<Args_T>(arguments)...);
         parameter->parameter_name                  = name;
@@ -44,14 +36,15 @@ class ShaderParameter
 
   private:
     std::string       parameter_name;
-    EShaderStage      shader_stage;
+    VkShaderStageFlagBits shader_stage;
     std::vector<bool> dirty_buffers;
 };
 
 struct ShaderStageConfiguration
 {
-    TAssetPtr<class AShader>                                        shader          = {};
-    std::unordered_map<std::string, TAssetPtr<class AShaderBuffer>> uniform_buffers = {};
-    std::unordered_map<std::string, TAssetPtr<class AShaderBuffer>> storage_buffers = {};
-    std::unordered_map<std::string, TAssetPtr<class ATexture>>      textures        = {};
+    TAssetPtr<class AShader>                                        shader            = {};
+    std::unordered_map<std::string, TAssetPtr<class AShaderBuffer>> uniform_buffers   = {};
+    std::unordered_map<std::string, TAssetPtr<class AShaderBuffer>> storage_buffers   = {};
+    std::unordered_map<std::string, TAssetPtr<class ATexture>>      textures          = {};
 };
+
