@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "config.h"
-#include "rendering/renderer/surface.h"
+#include "rendering/vulkan/utils.h"
+
+#include <vulkan/vulkan.hpp>
 #include <cpputils/logger.hpp>
 
 namespace capabilities

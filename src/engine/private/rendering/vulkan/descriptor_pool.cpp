@@ -3,8 +3,7 @@
 #include "rendering/vulkan/descriptor_pool.h"
 
 #include "config.h"
-#include "rendering/gfx_context.h"
-#include "rendering/renderer/surface.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 
 #include <array>
@@ -26,7 +25,7 @@ void DescriptorPool::alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos)
         }
     }
     LOG_INFO("create new descriptor pool");
-    context_pools.push_back(new DescriptorPoolItem(window_context, alloc_infos));
+    context_pools.push_back(new DescriptorPoolItem(alloc_infos));
 }
 
 void DescriptorPoolItem::bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos)
@@ -35,7 +34,7 @@ void DescriptorPoolItem::bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfo
     allocInfos.descriptorPool = pool;
 }
 
-DescriptorPool::DescriptorPool(Surface* context) : window_context(context)
+DescriptorPool::DescriptorPool()
 {
 }
 
@@ -47,7 +46,7 @@ DescriptorPool::~DescriptorPool()
         delete pool;
 }
 
-DescriptorPoolItem::DescriptorPoolItem(Surface* context, VkDescriptorSetAllocateInfo& allocInfos) : pool_thread_id(std::this_thread::get_id()), window_context(context)
+DescriptorPoolItem::DescriptorPoolItem(VkDescriptorSetAllocateInfo& allocInfos) : pool_thread_id(std::this_thread::get_id())
 {
     std::array<VkDescriptorPoolSize, 11> poolSizes;
     poolSizes[0]  = {VK_DESCRIPTOR_TYPE_SAMPLER, config::max_descriptor_per_type};
@@ -69,14 +68,14 @@ DescriptorPoolItem::DescriptorPoolItem(Surface* context, VkDescriptorSetAllocate
     poolInfo.pPoolSizes    = poolSizes.data();
     poolInfo.maxSets       = config::max_descriptor_per_pool;
 
-    VK_ENSURE(vkCreateDescriptorPool(GfxContext::get()->logical_device, &poolInfo, vulkan_common::allocation_callback, &pool), "Failed to create descriptor pool");
+    VK_ENSURE(vkCreateDescriptorPool(Graphics::get()->get_logical_device(), &poolInfo, vulkan_common::allocation_callback, &pool), "Failed to create descriptor pool");
 
     bind_alloc_infos(allocInfos);
 }
 
 DescriptorPoolItem::~DescriptorPoolItem()
 {
-    vkDestroyDescriptorPool(GfxContext::get()->logical_device, pool, vulkan_common::allocation_callback);
+    vkDestroyDescriptorPool(Graphics::get()->get_logical_device(), pool, vulkan_common::allocation_callback);
 }
 
 DescriptorPoolItem::operator bool() const

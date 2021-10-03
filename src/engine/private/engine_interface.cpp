@@ -3,19 +3,41 @@
 #include "engine_interface.h"
 
 #include "assets/asset_base.h"
-#include "imgui.h"
-#include "statsRecorder.h"
-#include "rendering/gfx_context.h"
+#include "game_engine.h"
+#include "rendering/graphics.h"
+#include "rendering/renderer/renderer.h"
+#include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
+#include "statsRecorder.h"
 
 static std::shared_ptr<IEngineInterface> engine_interface_reference;
 
 void IEngineInterface::close()
 {
-    glfwSetWindowShouldClose(get_window()->get_handle(), true);
+    glfwSetWindowShouldClose(Graphics::get()->get_glfw_handle(), true);
 }
 
-IEngineInterface::IEngineInterface() : last_delta_second_time(std::chrono::steady_clock::now())
+GfxInterface* IEngineInterface::create_graphic_interface()
+{
+    return new GfxInterface();
+}
+
+InputManager* IEngineInterface::create_input_manager()
+{
+    return new InputManager(Graphics::get()->get_glfw_handle());
+}
+
+void IEngineInterface::enable_logs(uint32_t log_level)
+{
+    Logger::get().enable_logs(log_level);
+}
+
+void IEngineInterface::disable_logs(uint32_t log_level)
+{
+    Logger::get().disable_logs(log_level);
+}
+
+IEngineInterface::IEngineInterface()
 {
 }
 
@@ -29,65 +51,49 @@ IEngineInterface* IEngineInterface::get_internal()
     return engine_interface_reference.get();
 }
 
-void IEngineInterface::run_main_task(WindowParameters window_parameters)
+void IEngineInterface::run_main_task(const WindowParameters& window_parameters)
 {
-    game_window    = std::make_unique<Surface>(window_parameters);
-    window_manager = std::make_unique<WindowManager>();
+    // Initialize engine
+    GameEngine::init();
+
     AssetManager::initialize<AssetManager>();
-    input_manager = std::make_unique<InputManager>(game_window->get_handle());
 
-    load_resources();
-    pre_initialize();
+    // Create graphic context
+    Graphics::create(create_graphic_interface(), window_parameters);
 
-    while (game_window->begin_frame())
+    // Create input manager
+    input_manager = std::unique_ptr<InputManager>(create_input_manager());
+
+    // Load resource
+    engine_load_resources();
+
+    do
     {
+        // poll inputs
         input_manager->poll_events(get_delta_second());
 
+        // Compute delta second
         const auto now         = std::chrono::steady_clock::now();
         delta_second           = static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(now - last_delta_second_time).count()) / 1000000000.0;
         last_delta_second_time = now;
 
-        if (auto render_context = game_window->prepare_frame(); render_context.is_valid)
-        {
-            pre_draw();
-            BEGIN_NAMED_RECORD(RENDER_SCENE);
-            render_scene(render_context);
-            END_NAMED_RECORD(RENDER_SCENE);
-            BEGIN_NAMED_RECORD(DRAW_UI);
-            game_window->prepare_ui(render_context);
+        engine_tick(delta_second);
+        AssetManager::get()->try_delete_dirty_items();
 
-            ImGui::SetNextWindowPos(ImVec2(-4, -4));
-            ImGui::SetNextWindowSize(ImVec2(get_window()->get_size().width + 8.f, get_window()->get_size().width + 8.f));
-            if (ImGui::Begin("BackgroundHUD", nullptr, ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground))
-            {
-                ImGui::DockSpace(ImGui::GetID("Master dockSpace"), ImVec2(0.f, 0.f), ImGuiDockNodeFlags_PassthruCentralNode);
-            }
-            ImGui::End();
-            ImGui::SetNextWindowPos(ImVec2(-4, -4));
-            ImGui::SetNextWindowSize(ImVec2(get_window()->get_size().width + 8.f, get_window()->get_size().width + 8.f));
-            if (ImGui::Begin("BackgroundHUD", nullptr, ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground))
-            {
-                render_hud();
-            }
-            ImGui::End();
+        // render scene
+        auto swapchain_frame = Graphics::get()->begin_frame();
+        Graphics::get()->get_renderer()->render_frame(swapchain_frame);
+        Graphics::get()->end_frame(swapchain_frame);
+    } while (!glfwWindowShouldClose(Graphics::get()->get_glfw_handle()));
 
-            window_manager->draw();
-            render_ui();
+    vkDeviceWaitIdle(Graphics::get()->get_logical_device());
 
-            END_NAMED_RECORD(DRAW_UI);
-
-            BEGIN_NAMED_RECORD(RENDER_DATA);
-            game_window->render_data(render_context);
-            END_NAMED_RECORD(RENDER_DATA);
-        }
-        post_draw();
-    }
-    vkDeviceWaitIdle(GfxContext::get()->logical_device);
-
-    unload_resources();
+    engine_unload_resources();
     AssetManager::destroy();
 
-    pre_shutdown();
-    window_manager = nullptr;
-    game_window    = nullptr;
+    // Destroy graphic context
+    Graphics::destroy();
+
+    // Shutdown engine
+    GameEngine::cleanup();
 }

@@ -2,85 +2,101 @@
 
 #include "rendering/vulkan/material_pipeline.h"
 
+#include "assets/asset_material.h"
 #include "assets/asset_mesh_data.h"
-#include "engine_interface.h"
-#include "rendering/gfx_context.h"
+#include "assets/asset_shader.h"
+#include "rendering/graphics.h"
 #include "rendering/renderer/render_pass.h"
+#include "rendering/renderer/renderer.h"
+#include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/descriptor_pool.h"
 #include "rendering/vulkan/utils.h"
 
 #include <vulkan/vulkan.h>
 
-void MaterialPipeline::rebuild()
+const std::vector<VkDescriptorSet>& MaterialPipeline::get_descriptor_sets() const
 {
-    if (should_recreate)
+    if (descriptor_sets.empty())
     {
-        destroy();
-        create_descriptor_sets(layout_bindings);
-        create_pipeline_layout();
-        create_pipeline();
-        should_recreate = false;
+        if (pipeline_configuration.is_valid())
+            LOG_WARNING("pipeline is ready to be rebuild. Maybe you forget to call init_or_rebuild_pipeline()");
+        LOG_FATAL("descriptor sets are null");
     }
+    return descriptor_sets;
 }
 
-void MaterialPipeline::destroy()
+const MaterialPipelineConfiguration& MaterialPipeline::get_pipeline_configuration() const
 {
-    if (pipeline_layout != VK_NULL_HANDLE)
-        vkDestroyPipelineLayout(GfxContext::get()->logical_device, pipeline_layout, vulkan_common::allocation_callback);
-    if (pipeline != VK_NULL_HANDLE)
-        vkDestroyPipeline(GfxContext::get()->logical_device, pipeline, vulkan_common::allocation_callback);
-    if (descriptor_set_layout != VK_NULL_HANDLE)
-        vkDestroyDescriptorSetLayout(GfxContext::get()->logical_device, descriptor_set_layout, vulkan_common::allocation_callback);
-
-    pipeline_layout       = VK_NULL_HANDLE;
-    pipeline              = VK_NULL_HANDLE;
-    descriptor_sets       = {};
-    descriptor_set_layout = VK_NULL_HANDLE;
-}
-
-void MaterialPipeline::create_pipeline_layout()
-{
-
-    /** Pipeline layout */
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{
-        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount         = 1,
-        .pSetLayouts            = &descriptor_set_layout,
-        .pushConstantRangeCount = static_cast<uint32_t>(push_constant_range ? 1 : 0),
-        .pPushConstantRanges    = push_constant_range.get(),
-    };
-    VK_ENSURE(vkCreatePipelineLayout(GfxContext::get()->logical_device, &pipelineLayoutInfo, nullptr, &pipeline_layout), "Failed to create pipeline layout");
+    return pipeline_configuration;
 }
 
 void MaterialPipeline::create_pipeline()
 {
-    VK_CHECK(descriptor_set_layout, "Descriptor set layout should be initialized before graphic pipeline");
-    VK_CHECK(IEngineInterface::get()->get_window()->get_render_pass(), "Render pass should be initialized before graphic pipeline");
+    /**
+     * Create descriptor sets
+     */
 
-    VK_CHECK(vertex_module, "vertex module should not be null");
-    VK_CHECK(fragment_module, "fragment module should not be null");
+    /** Create descriptor set layout */
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(pipeline_configuration.descriptor_bindings.descriptor_bindings.size());
+    layoutInfo.pBindings    = pipeline_configuration.descriptor_bindings.descriptor_bindings.data();
+    VK_ENSURE(vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &layoutInfo, vulkan_common::allocation_callback, &descriptor_set_layout), "Failed to create descriptor set layout");
+
+    /** Allocate descriptor set */
+    const uint32_t                     swapchain_image_count = Graphics::get()->get_swapchain_config()->get_image_count();
+    std::vector<VkDescriptorSetLayout> layouts(swapchain_image_count, descriptor_set_layout);
+    descriptor_sets.resize(swapchain_image_count);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorSetCount = swapchain_image_count;
+    allocInfo.pSetLayouts        = layouts.data();
+    allocInfo.descriptorPool     = VK_NULL_HANDLE;
+    Graphics::get()->get_descriptor_pool()->alloc_memory(allocInfo);
+    VK_ENSURE(vkAllocateDescriptorSets(Graphics::get()->get_logical_device(), &allocInfo, descriptor_sets.data()), "Failed to allocate descriptor sets");
+
+    /**
+     * Create pipeline layout
+     */
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{
+        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount         = 1,
+        .pSetLayouts            = &descriptor_set_layout,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges    = nullptr,
+    };
+    VK_ENSURE(vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &pipelineLayoutInfo, nullptr, &pipeline_layout), "Failed to create pipeline layout");
+
+    /**
+     * Create pipeline
+     */
 
     /** AShader pipeline */
     VkPipelineShaderStageCreateInfo vertex_shader_stage{
         .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage  = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertex_module->get_shader_module(),
+        .module = pipeline_configuration.vertex_module->get_shader_module(),
         .pName  = "main",
     };
 
     VkPipelineShaderStageCreateInfo fragment_shader_stage{
         .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragment_module->get_shader_module(),
+        .module = pipeline_configuration.fragment_module->get_shader_module(),
         .pName  = "main",
     };
 
-    // PUSH CONSTANTS
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertex_shader_stage, fragment_shader_stage};
+    std::vector shaderStages = {vertex_shader_stage, fragment_shader_stage};
 
     auto bindingDescription    = Vertex::get_binding_description();
     auto attributeDescriptions = Vertex::get_attribute_descriptions();
+
+    auto* pass_configuration = Graphics::get()->get_renderer()->get_render_pass_configuration(pipeline_configuration.renderer_stages);
+
+    if (!pass_configuration)
+        LOG_FATAL("pass configuration is null for stage %s", pipeline_configuration.renderer_stages.c_str());
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state{
         .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -92,7 +108,7 @@ void MaterialPipeline::create_pipeline()
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology               = topology,
+        .topology               = pipeline_configuration.topology,
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -106,110 +122,116 @@ void MaterialPipeline::create_pipeline()
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable        = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode             = polygon_mode,
+        .polygonMode             = pipeline_configuration.polygon_mode,
         .cullMode                = VK_CULL_MODE_BACK_BIT,
         .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable         = VK_FALSE,
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp          = 0.0f,
         .depthBiasSlopeFactor    = 0.0f,
-        .lineWidth               = wireframe_lines_width,
+        .lineWidth               = pipeline_configuration.wireframe_lines_width,
     };
 
     VkPipelineMultisampleStateCreateInfo multisampling{
         .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples  = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count()),
-        .sampleShadingEnable   = static_cast<VkBool32>(vulkan_common::get_msaa_sample_count() > 1 ? VK_TRUE : VK_FALSE),
-        .minSampleShading      = 1.0f,     // Optional
-        .pSampleMask           = nullptr,  // Optional
-        .alphaToCoverageEnable = VK_FALSE, // Optional
-        .alphaToOneEnable      = VK_FALSE, // Optional
+        .rasterizationSamples  = pass_configuration->sample_count,
+        .sampleShadingEnable   = static_cast<VkBool32>(pass_configuration->sample_count > 1 ? VK_TRUE : VK_FALSE),
+        .minSampleShading      = 1.0f,
+        .pSampleMask           = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable      = VK_FALSE,
     };
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil{
         .sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable       = static_cast<VkBool32>(depth_test ? VK_TRUE : VK_FALSE),
-        .depthWriteEnable      = static_cast<VkBool32>(depth_test ? VK_TRUE : VK_FALSE),
+        .depthTestEnable       = pipeline_configuration.depth_test,
+        .depthWriteEnable      = pipeline_configuration.depth_test,
         .depthCompareOp        = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable     = VK_FALSE,
-        .minDepthBounds        = 0.0f, // Optional
-        .maxDepthBounds        = 1.0f, // Optional
+        .minDepthBounds        = 0.0f,
+        .maxDepthBounds        = 1.0f,
     };
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment{
-        .blendEnable         = VK_FALSE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .colorBlendOp        = VK_BLEND_OP_ADD,      // Optional
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .alphaBlendOp        = VK_BLEND_OP_ADD,      // Optional
-        .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    };
+    std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment;
+    for (const auto& attachment : pass_configuration->color_attachments)
+    {
+        color_blend_attachment.emplace_back(VkPipelineColorBlendAttachmentState{
+            .blendEnable         = VK_FALSE,
+            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .colorBlendOp        = VK_BLEND_OP_ADD,
+            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .alphaBlendOp        = VK_BLEND_OP_ADD,
+            .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        });
+    }
 
     VkPipelineColorBlendStateCreateInfo color_blending{
         .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable   = VK_FALSE,
-        .logicOp         = VK_LOGIC_OP_COPY, // Optional
-        .attachmentCount = 1,
-        .pAttachments    = &color_blend_attachment,
-        .blendConstants  = {0.0f, 0.f, 0.f, 0.f}, // Optional
+        .logicOp         = VK_LOGIC_OP_COPY,
+        .attachmentCount = static_cast<uint32_t>(color_blend_attachment.size()),
+        .pAttachments    = color_blend_attachment.data(),
+        .blendConstants  = {0.0f, 0.f, 0.f, 0.f},
     };
 
-    VkDynamicState                   dynamic_states_array[] = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
+    std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
     VkPipelineDynamicStateCreateInfo dynamic_states{
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = 2,
-        .pDynamicStates    = dynamic_states_array,
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states_array.size()),
+        .pDynamicStates    = dynamic_states_array.data(),
     };
 
     VkGraphicsPipelineCreateInfo pipelineInfo{
         .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount          = 2,
-        .pStages             = shaderStages,
+        .stageCount          = static_cast<uint32_t>(shaderStages.size()),
+        .pStages             = shaderStages.data(),
         .pVertexInputState   = &vertex_input_state,
         .pInputAssemblyState = &input_assembly,
         .pViewportState      = &viewport_state,
         .pRasterizationState = &rasterizer,
         .pMultisampleState   = &multisampling,
-        .pDepthStencilState  = &depth_stencil, // Optional
+        .pDepthStencilState  = &depth_stencil,
         .pColorBlendState    = &color_blending,
-        .pDynamicState       = &dynamic_states, // Optional
+        .pDynamicState       = &dynamic_states,
         .layout              = pipeline_layout,
-        .renderPass          = IEngineInterface::get()->get_window()->get_render_pass()->get_render_pass(),
+        .renderPass          = Graphics::get()->get_renderer()->get_render_pass(pipeline_configuration.renderer_stages)->get_render_pass(),
         .subpass             = 0,
-        .basePipelineHandle  = VK_NULL_HANDLE, // Optional
-        .basePipelineIndex   = -1,             // Optional
+        .basePipelineHandle  = VK_NULL_HANDLE,
+        .basePipelineIndex   = -1,
     };
 
-    VK_ENSURE(vkCreateGraphicsPipelines(GfxContext::get()->logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, vulkan_common::allocation_callback, &pipeline), "Failed to create material graphic pipeline");
+    VK_ENSURE(vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), VK_NULL_HANDLE, 1, &pipelineInfo, vulkan_common::allocation_callback, &pipeline), "Failed to create material graphic pipeline");
 }
 
-void MaterialPipeline::mark_dirty()
+void MaterialPipeline::destroy()
 {
-    should_recreate = true;
+    if (pipeline_layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(Graphics::get()->get_logical_device(), pipeline_layout, vulkan_common::allocation_callback);
+    pipeline_layout = VK_NULL_HANDLE;
+
+    if (pipeline != VK_NULL_HANDLE)
+        vkDestroyPipeline(Graphics::get()->get_logical_device(), pipeline, vulkan_common::allocation_callback);
+    pipeline = VK_NULL_HANDLE;
+
+    if (descriptor_set_layout != VK_NULL_HANDLE)
+        vkDestroyDescriptorSetLayout(Graphics::get()->get_logical_device(), descriptor_set_layout, vulkan_common::allocation_callback);
+    descriptor_sets       = {};
+    descriptor_set_layout = VK_NULL_HANDLE;
 }
 
-void MaterialPipeline::create_descriptor_sets(std::vector<VkDescriptorSetLayoutBinding> layoutBindings)
+void MaterialPipeline::update_configuration(const MaterialPipelineConfiguration& in_configuration)
 {
-    /** Create descriptor set layout */
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-    layoutInfo.pBindings    = layoutBindings.data();
-    VK_ENSURE(vkCreateDescriptorSetLayout(GfxContext::get()->logical_device, &layoutInfo, vulkan_common::allocation_callback, &descriptor_set_layout), "Failed to create descriptor set layout");
-
-    /** Allocate descriptor set */
-    std::vector<VkDescriptorSetLayout> layouts(IEngineInterface::get()->get_window()->get_swapchain()->get_image_count(), descriptor_set_layout);
-    descriptor_sets.resize(IEngineInterface::get()->get_window()->get_swapchain()->get_image_count());
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorSetCount = IEngineInterface::get()->get_window()->get_swapchain()->get_image_count();
-    allocInfo.pSetLayouts        = layouts.data();
-    allocInfo.descriptorPool     = VK_NULL_HANDLE;
-    IEngineInterface::get()->get_window()->get_descriptor_pool()->alloc_memory(allocInfo);
-    VK_ENSURE(vkAllocateDescriptorSets(GfxContext::get()->logical_device, &allocInfo, descriptor_sets.data()), "Failed to allocate descriptor sets");
+    if (!in_configuration.is_valid())
+    {
+        LOG_ERROR("material configuration is not valid : vertex = %s, fragment = %s, render stage count = %d", in_configuration.vertex_module.to_string().c_str(), in_configuration.fragment_module.to_string().c_str(),
+                  in_configuration.renderer_stages.size());
+        return;
+    }
+    pipeline_configuration = in_configuration;
+    is_dirty               = true;
 }
 
 MaterialPipeline::~MaterialPipeline()
@@ -217,56 +239,36 @@ MaterialPipeline::~MaterialPipeline()
     destroy();
 }
 
-void MaterialPipeline::set_vertex_module(std::shared_ptr<ShaderModule> in_module)
+VkPipelineLayout MaterialPipeline::get_pipeline_layout() const
 {
-    vertex_module = in_module;
-    mark_dirty();
+    if (!pipeline_configuration.is_valid() || !pipeline_layout)
+    {
+        if (pipeline_configuration.is_valid())
+            LOG_WARNING("pipeline is ready to be rebuild. Maybe you forget to call init_or_rebuild_pipeline()");
+        LOG_FATAL("pipeline layout is not valid");
+    }
+
+    return pipeline_layout;
 }
 
-void MaterialPipeline::set_fragment_module(std::shared_ptr<ShaderModule> in_module)
+VkPipeline MaterialPipeline::get_pipeline() const
 {
-    fragment_module = in_module;
-    mark_dirty();
+    if (!pipeline_configuration.is_valid() || !pipeline)
+    {
+        if (pipeline_configuration.is_valid())
+            LOG_WARNING("pipeline is ready to be rebuild. Maybe you forget to call init_or_rebuild_pipeline()");
+        LOG_FATAL("pipeline is not valid");
+    }
+
+    return pipeline;
 }
 
-void MaterialPipeline::enable_depth_test(bool b_in_depth_test)
+void MaterialPipeline::init_or_rebuild_pipeline()
 {
-    depth_test = b_in_depth_test;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_wireframe(bool b_in_wireframe)
-{
-    wireframe = b_in_wireframe;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_wireframe_width(float in_width)
-{
-    wireframe_lines_width = in_width;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_push_constant_ranges(std::shared_ptr<VkPushConstantRange> in_push_constants)
-{
-    push_constant_range = in_push_constants;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_topology(VkPrimitiveTopology in_topology)
-{
-    topology = in_topology;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_polygon_mode(VkPolygonMode in_mode)
-{
-    polygon_mode = in_mode;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_layout_bindings(const std::vector<VkDescriptorSetLayoutBinding>& in_bindings)
-{
-    layout_bindings = in_bindings;
-    mark_dirty();
+    if (is_dirty)
+    {
+        is_dirty = false;
+        destroy();
+        create_pipeline();
+    }
 }

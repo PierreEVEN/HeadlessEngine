@@ -9,6 +9,8 @@ layout (location = 11) in vec4 color;
 
 // OUT
 layout(location = 0) out vec4 outColor;
+layout (location = 1) out vec4 outNormal;
+layout (location = 2) out vec4 outPosition;
 
 // PARAMS
 const vec4 big_color = vec4(1, 0.8, 0.2, 1);

@@ -5,7 +5,7 @@
         "commandLine": "",
         "environment": [
         ],
-        "executable": "C:\\Users\\pierre\\Documents\\projects\\TestFlightSimulator\\bin\\Bin\\Debug\\Game_test.exe",
+        "executable": "C:\\Users\\pierre\\Documents\\projects\\HeadlessEngine\\bin\\Bin\\Release\\heGameTest.exe",
         "inject": false,
         "numQueuedFrames": 0,
         "options": {
@@ -22,6 +22,6 @@
             "verifyBufferAccess": false
         },
         "queuedFrameCap": 0,
-        "workingDir": "C:/Users/pierre/Documents/projects/TestFlightSimulator"
+        "workingDir": "C:/Users/pierre/Documents/projects/HeadlessEngine"
     }
 }

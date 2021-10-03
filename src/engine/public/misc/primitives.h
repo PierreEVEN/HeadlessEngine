@@ -15,11 +15,19 @@ template <typename Primitive_T> TAssetPtr<AMeshData> create_primitive(const Asse
 class Primitive
 {
   public:
+    virtual                                     ~Primitive() = default;
     [[nodiscard]] virtual std::vector<Vertex>   get_vertices() const = 0;
     [[nodiscard]] virtual std::vector<uint32_t> get_indices() const  = 0;
 };
 
 class CubePrimitive final : public Primitive
+{
+  public:
+    [[nodiscard]] std::vector<Vertex>   get_vertices() const override;
+    [[nodiscard]] std::vector<uint32_t> get_indices() const override;
+};
+
+class SquarePrimitive final : public Primitive
 {
   public:
     [[nodiscard]] std::vector<Vertex>   get_vertices() const override;

@@ -4,7 +4,6 @@
 
 #include "asset_id.h"
 
-class Surface;
 class AssetBase;
 
 class IAssetPtr
@@ -13,9 +12,8 @@ class IAssetPtr
     IAssetPtr();
     IAssetPtr(const AssetId& in_asset_id);
     IAssetPtr(AssetBase* in_asset);
-    explicit IAssetPtr(const IAssetPtr& other) : asset_id(other.asset_id), asset(other.asset)
-    {
-    }
+    explicit IAssetPtr(const IAssetPtr& other);
+    virtual ~IAssetPtr();
 
     void set(AssetBase* in_asset);
     void set(const AssetId& in_asset_id);
@@ -27,8 +25,7 @@ class IAssetPtr
     {
         return *asset_id.get();
     }
-
-    virtual ~IAssetPtr();
+    [[nodiscard]] std::string to_string() const;
 
     bool operator!() const
     {
@@ -41,6 +38,8 @@ class IAssetPtr
     }
 
   private:
+    void on_delete_asset(AssetBase* deleted_asset);
+
     std::shared_ptr<AssetId> asset_id = nullptr;
     AssetBase*               asset    = nullptr;
 };

@@ -1,6 +1,6 @@
 
 file(GLOB_RECURSE SOURCES *.cpp *.h)
-add_library(HeadlessEngine STATIC ${SOURCES})
+add_library(HeadlessEngine SHARED ${SOURCES})
 configure_project(HeadlessEngine "${SOURCES}")
 
 # VMA
@@ -21,9 +21,8 @@ target_link_libraries(HeadlessEngine JobSystem)
 target_link_libraries(HeadlessEngine assimp)
 target_link_libraries(HeadlessEngine glfw)
 target_link_libraries(HeadlessEngine cpputils)
-target_link_libraries(HeadlessEngine spirv-cross-core)
-target_link_libraries(HeadlessEngine spirv-cross-glsl)
-target_link_libraries(HeadlessEngine glslang OSDependent OGLCompiler SPIRV)
+target_link_libraries(HeadlessEngine SPIRV-Cross_lib)
+target_link_libraries(HeadlessEngine glslang_lib)
 target_link_libraries(HeadlessEngine glm)
 target_link_libraries(HeadlessEngine imgui_interface)
 target_link_libraries(HeadlessEngine imguizmo_interface)

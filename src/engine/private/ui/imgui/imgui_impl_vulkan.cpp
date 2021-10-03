@@ -20,9 +20,10 @@
 
 #include "backends/imgui_impl_glfw.h"
 #include "rendering/vulkan/descriptor_pool.h"
-#include "rendering/renderer/surface.h"
 #include "rendering/vulkan/common.h"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
+#include "rendering/swapchain_config.h"
+#include "rendering/renderer/renderer.h"
 #include "rendering/renderer/render_pass.h"
 
 static uint32_t instance_count = 0;
@@ -101,12 +102,11 @@ static uint32_t __glsl_shader_frag_spv[] = {
 
 void ImGuiInstance::CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
 {
-    Surface*  v = g_window_context;
     VkResult err;
     if (buffer != VK_NULL_HANDLE)
-        vkDestroyBuffer(GfxContext::get()->logical_device, buffer, vulkan_common::allocation_callback);
+        vkDestroyBuffer(Graphics::get()->get_logical_device(), buffer, vulkan_common::allocation_callback);
     if (buffer_memory != VK_NULL_HANDLE)
-        vkFreeMemory(GfxContext::get()->logical_device, buffer_memory, vulkan_common::allocation_callback);
+        vkFreeMemory(Graphics::get()->get_logical_device(), buffer_memory, vulkan_common::allocation_callback);
 
     VkDeviceSize       vertex_buffer_size_aligned = ((new_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
     VkBufferCreateInfo buffer_info                = {};
@@ -114,20 +114,20 @@ void ImGuiInstance::CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffe
     buffer_info.size                              = vertex_buffer_size_aligned;
     buffer_info.usage                             = usage;
     buffer_info.sharingMode                       = VK_SHARING_MODE_EXCLUSIVE;
-    err                                           = vkCreateBuffer(GfxContext::get()->logical_device, &buffer_info, vulkan_common::allocation_callback, &buffer);
+    err                                           = vkCreateBuffer(Graphics::get()->get_logical_device(), &buffer_info, vulkan_common::allocation_callback, &buffer);
     VK_ENSURE(err);
 
     VkMemoryRequirements req;
-    vkGetBufferMemoryRequirements(GfxContext::get()->logical_device, buffer, &req);
+    vkGetBufferMemoryRequirements(Graphics::get()->get_logical_device(), buffer, &req);
     g_BufferMemoryAlignment         = (g_BufferMemoryAlignment > req.alignment) ? g_BufferMemoryAlignment : req.alignment;
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize       = req.size;
-    alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(GfxContext::get()->physical_device, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    err                             = vkAllocateMemory(GfxContext::get()->logical_device, &alloc_info, vulkan_common::allocation_callback, &buffer_memory);
+    alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(Graphics::get()->get_physical_device(), req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    err                             = vkAllocateMemory(Graphics::get()->get_logical_device(), &alloc_info, vulkan_common::allocation_callback, &buffer_memory);
     VK_ENSURE(err);
 
-    err = vkBindBufferMemory(GfxContext::get()->logical_device, buffer, buffer_memory, 0);
+    err = vkBindBufferMemory(Graphics::get()->get_logical_device(), buffer, buffer_memory, 0);
     VK_ENSURE(err);
     p_buffer_size = new_size;
 }
@@ -182,20 +182,18 @@ void ImGuiInstance::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCom
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
-
-    Surface* v = g_window_context;
-
+    
     // Allocate array to store enough vertex/index buffers
     ImGui_ImplVulkanH_WindowRenderBuffers* wrb = &g_MainWindowRenderBuffers;
     if (wrb->FrameRenderBuffers == NULL)
     {
         wrb->Index              = 0;
-        wrb->Count              = v->get_swapchain()->get_image_count();
+        wrb->Count              = Graphics::get()->get_swapchain_config()->get_image_count();
         wrb->FrameRenderBuffers = static_cast<ImGui_ImplVulkanH_FrameRenderBuffers*>(IM_ALLOC(sizeof(ImGui_ImplVulkanH_FrameRenderBuffers) * wrb->Count));
         memset(wrb->FrameRenderBuffers, 0, sizeof(ImGui_ImplVulkanH_FrameRenderBuffers) * wrb->Count);
     }
 
-    IM_ASSERT(wrb->Count == v->get_swapchain()->get_image_count());
+    IM_ASSERT(wrb->Count == Graphics::get()->get_swapchain_config()->get_image_count());
     wrb->Index                               = (wrb->Index + 1) % wrb->Count;
     ImGui_ImplVulkanH_FrameRenderBuffers* rb = &wrb->FrameRenderBuffers[wrb->Index];
 
@@ -213,9 +211,9 @@ void ImGuiInstance::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCom
     {
         ImDrawVert* vtx_dst = NULL;
         ImDrawIdx*  idx_dst = NULL;
-        err                 = vkMapMemory(GfxContext::get()->logical_device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
+        err                 = vkMapMemory(Graphics::get()->get_logical_device(), rb->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
         VK_ENSURE(err);
-        err = vkMapMemory(GfxContext::get()->logical_device, rb->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
+        err = vkMapMemory(Graphics::get()->get_logical_device(), rb->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
         VK_ENSURE(err);
         for (int n = 0; n < draw_data->CmdListsCount; n++)
         {
@@ -225,8 +223,8 @@ void ImGuiInstance::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCom
             vtx_dst += cmd_list->VtxBuffer.Size;
             idx_dst += cmd_list->IdxBuffer.Size;
         }
-        vkUnmapMemory(GfxContext::get()->logical_device, rb->VertexBufferMemory);
-        vkUnmapMemory(GfxContext::get()->logical_device, rb->IndexBufferMemory);
+        vkUnmapMemory(Graphics::get()->get_logical_device(), rb->VertexBufferMemory);
+        vkUnmapMemory(Graphics::get()->get_logical_device(), rb->IndexBufferMemory);
     }
 
     // Setup desired Vulkan state
@@ -296,7 +294,6 @@ void ImGuiInstance::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCom
 
 bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
 {
-    Surface*  v  = g_window_context;
     ImGuiIO& io = ImGui::GetIO();
 
     unsigned char* pixels;
@@ -322,17 +319,17 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_
         info.usage             = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         info.sharingMode       = VK_SHARING_MODE_EXCLUSIVE;
         info.initialLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
-        err                    = vkCreateImage(GfxContext::get()->logical_device, &info, vulkan_common::allocation_callback, &g_FontImage);
+        err                    = vkCreateImage(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_FontImage);
         VK_ENSURE(err);
         VkMemoryRequirements req;
-        vkGetImageMemoryRequirements(GfxContext::get()->logical_device, g_FontImage, &req);
+        vkGetImageMemoryRequirements(Graphics::get()->get_logical_device(), g_FontImage, &req);
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize       = req.size;
-        alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(GfxContext::get()->physical_device, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        err                             = vkAllocateMemory(GfxContext::get()->logical_device, &alloc_info, vulkan_common::allocation_callback, &g_FontMemory);
+        alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(Graphics::get()->get_physical_device(), req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        err                             = vkAllocateMemory(Graphics::get()->get_logical_device(), &alloc_info, vulkan_common::allocation_callback, &g_FontMemory);
         VK_ENSURE(err);
-        err = vkBindImageMemory(GfxContext::get()->logical_device, g_FontImage, g_FontMemory, 0);
+        err = vkBindImageMemory(Graphics::get()->get_logical_device(), g_FontImage, g_FontMemory, 0);
         VK_ENSURE(err);
     }
 
@@ -346,7 +343,7 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_
         info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         info.subresourceRange.levelCount = 1;
         info.subresourceRange.layerCount = 1;
-        err                              = vkCreateImageView(GfxContext::get()->logical_device, &info, vulkan_common::allocation_callback, &g_FontView);
+        err                              = vkCreateImageView(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_FontView);
         VK_ENSURE(err);
     }
 
@@ -359,34 +356,34 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_
         buffer_info.size               = upload_size;
         buffer_info.usage              = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffer_info.sharingMode        = VK_SHARING_MODE_EXCLUSIVE;
-        err                            = vkCreateBuffer(GfxContext::get()->logical_device, &buffer_info, vulkan_common::allocation_callback, &g_UploadBuffer);
+        err                            = vkCreateBuffer(Graphics::get()->get_logical_device(), &buffer_info, vulkan_common::allocation_callback, &g_UploadBuffer);
         VK_ENSURE(err);
         VkMemoryRequirements req;
-        vkGetBufferMemoryRequirements(GfxContext::get()->logical_device, g_UploadBuffer, &req);
+        vkGetBufferMemoryRequirements(Graphics::get()->get_logical_device(), g_UploadBuffer, &req);
         g_BufferMemoryAlignment         = (g_BufferMemoryAlignment > req.alignment) ? g_BufferMemoryAlignment : req.alignment;
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize       = req.size;
-        alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(GfxContext::get()->physical_device, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        err                             = vkAllocateMemory(GfxContext::get()->logical_device, &alloc_info, vulkan_common::allocation_callback, &g_UploadBufferMemory);
+        alloc_info.memoryTypeIndex      = vulkan_utils::find_memory_type(Graphics::get()->get_physical_device(), req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        err                             = vkAllocateMemory(Graphics::get()->get_logical_device(), &alloc_info, vulkan_common::allocation_callback, &g_UploadBufferMemory);
         VK_ENSURE(err);
-        err = vkBindBufferMemory(GfxContext::get()->logical_device, g_UploadBuffer, g_UploadBufferMemory, 0);
+        err = vkBindBufferMemory(Graphics::get()->get_logical_device(), g_UploadBuffer, g_UploadBufferMemory, 0);
         VK_ENSURE(err);
     }
 
     // Upload to Buffer:
     {
         char* map = NULL;
-        err       = vkMapMemory(GfxContext::get()->logical_device, g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map));
+        err       = vkMapMemory(Graphics::get()->get_logical_device(), g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map));
         VK_ENSURE(err);
         memcpy(map, pixels, upload_size);
         VkMappedMemoryRange range[1] = {};
         range[0].sType               = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[0].memory              = g_UploadBufferMemory;
         range[0].size                = upload_size;
-        err                          = vkFlushMappedMemoryRanges(GfxContext::get()->logical_device, 1, range);
+        err                          = vkFlushMappedMemoryRanges(Graphics::get()->get_logical_device(), 1, range);
         VK_ENSURE(err);
-        vkUnmapMemory(GfxContext::get()->logical_device, g_UploadBufferMemory);
+        vkUnmapMemory(Graphics::get()->get_logical_device(), g_UploadBufferMemory);
     }
 
     // Copy to Image:
@@ -435,7 +432,6 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_
 
 bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
 {
-    Surface*        v = g_window_context;
     VkResult       err;
     VkShaderModule vert_module;
     VkShaderModule frag_module;
@@ -446,13 +442,13 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
         vert_info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vert_info.codeSize                 = sizeof(__glsl_shader_vert_spv);
         vert_info.pCode                    = (uint32_t*)__glsl_shader_vert_spv;
-        err                                = vkCreateShaderModule(GfxContext::get()->logical_device, &vert_info, vulkan_common::allocation_callback, &vert_module);
+        err                                = vkCreateShaderModule(Graphics::get()->get_logical_device(), &vert_info, vulkan_common::allocation_callback, &vert_module);
         VK_ENSURE(err);
         VkShaderModuleCreateInfo frag_info = {};
         frag_info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         frag_info.codeSize                 = sizeof(__glsl_shader_frag_spv);
         frag_info.pCode                    = (uint32_t*)__glsl_shader_frag_spv;
-        err                                = vkCreateShaderModule(GfxContext::get()->logical_device, &frag_info, vulkan_common::allocation_callback, &frag_module);
+        err                                = vkCreateShaderModule(Graphics::get()->get_logical_device(), &frag_info, vulkan_common::allocation_callback, &frag_module);
         VK_ENSURE(err);
     }
 
@@ -469,7 +465,7 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
         info.minLod              = -1000;
         info.maxLod              = 1000;
         info.maxAnisotropy       = 1.0f;
-        err                      = vkCreateSampler(GfxContext::get()->logical_device, &info, vulkan_common::allocation_callback, &g_FontSampler);
+        err                      = vkCreateSampler(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_FontSampler);
         VK_ENSURE(err);
     }
 
@@ -484,7 +480,7 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
         info.sType                              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         info.bindingCount                       = 1;
         info.pBindings                          = binding;
-        err                                     = vkCreateDescriptorSetLayout(GfxContext::get()->logical_device, &info, vulkan_common::allocation_callback, &g_DescriptorSetLayout);
+        err                                     = vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_DescriptorSetLayout);
         VK_ENSURE(err);
     }
 
@@ -502,7 +498,7 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
         layout_info.pSetLayouts                  = set_layout;
         layout_info.pushConstantRangeCount       = 1;
         layout_info.pPushConstantRanges          = push_constants;
-        err                                      = vkCreatePipelineLayout(GfxContext::get()->logical_device, &layout_info, vulkan_common::allocation_callback, &g_PipelineLayout);
+        err                                      = vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &layout_info, vulkan_common::allocation_callback, &g_PipelineLayout);
         VK_ENSURE(err);
     }
 
@@ -602,87 +598,84 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
     info.pColorBlendState             = &blend_info;
     info.pDynamicState                = &dynamic_state;
     info.layout                       = g_PipelineLayout;
-    info.renderPass                   = g_window_context->get_render_pass()->get_render_pass();
-    err                               = vkCreateGraphicsPipelines(GfxContext::get()->logical_device, g_pipeline_cache, 1, &info, vulkan_common::allocation_callback, &g_Pipeline);
+    //info.renderPass                   = Graphics::get()->get_renderer()->get_render_pass().get_render_pass(); //@TODO update to new system
+    err                               = vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), g_pipeline_cache, 1, &info, vulkan_common::allocation_callback, &g_Pipeline);
     VK_ENSURE(err);
 
-    vkDestroyShaderModule(GfxContext::get()->logical_device, vert_module, vulkan_common::allocation_callback);
-    vkDestroyShaderModule(GfxContext::get()->logical_device, frag_module, vulkan_common::allocation_callback);
+    vkDestroyShaderModule(Graphics::get()->get_logical_device(), vert_module, vulkan_common::allocation_callback);
+    vkDestroyShaderModule(Graphics::get()->get_logical_device(), frag_module, vulkan_common::allocation_callback);
 
     return true;
 }
 
 void ImGuiInstance::ImGui_ImplVulkan_DestroyFontUploadObjects()
 {
-    Surface* v = g_window_context;
     if (g_UploadBuffer)
     {
-        vkDestroyBuffer(GfxContext::get()->logical_device, g_UploadBuffer, vulkan_common::allocation_callback);
+        vkDestroyBuffer(Graphics::get()->get_logical_device(), g_UploadBuffer, vulkan_common::allocation_callback);
         g_UploadBuffer = VK_NULL_HANDLE;
     }
     if (g_UploadBufferMemory)
     {
-        vkFreeMemory(GfxContext::get()->logical_device, g_UploadBufferMemory, vulkan_common::allocation_callback);
+        vkFreeMemory(Graphics::get()->get_logical_device(), g_UploadBufferMemory, vulkan_common::allocation_callback);
         g_UploadBufferMemory = VK_NULL_HANDLE;
     }
 }
 
 void ImGuiInstance::ImGui_ImplVulkan_DestroyDeviceObjects()
 {
-    Surface* v = g_window_context;
-    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(GfxContext::get()->logical_device, &g_MainWindowRenderBuffers, vulkan_common::allocation_callback);
+    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(Graphics::get()->get_logical_device(), &g_MainWindowRenderBuffers, vulkan_common::allocation_callback);
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
     if (g_FontView)
     {
-        vkDestroyImageView(GfxContext::get()->logical_device, g_FontView, vulkan_common::allocation_callback);
+        vkDestroyImageView(Graphics::get()->get_logical_device(), g_FontView, vulkan_common::allocation_callback);
         g_FontView = VK_NULL_HANDLE;
     }
     if (g_FontImage)
     {
-        vkDestroyImage(GfxContext::get()->logical_device, g_FontImage, vulkan_common::allocation_callback);
+        vkDestroyImage(Graphics::get()->get_logical_device(), g_FontImage, vulkan_common::allocation_callback);
         g_FontImage = VK_NULL_HANDLE;
     }
     if (g_FontMemory)
     {
-        vkFreeMemory(GfxContext::get()->logical_device, g_FontMemory, vulkan_common::allocation_callback);
+        vkFreeMemory(Graphics::get()->get_logical_device(), g_FontMemory, vulkan_common::allocation_callback);
         g_FontMemory = VK_NULL_HANDLE;
     }
     if (g_FontSampler)
     {
-        vkDestroySampler(GfxContext::get()->logical_device, g_FontSampler, vulkan_common::allocation_callback);
+        vkDestroySampler(Graphics::get()->get_logical_device(), g_FontSampler, vulkan_common::allocation_callback);
         g_FontSampler = VK_NULL_HANDLE;
     }
     if (g_DescriptorSetLayout)
     {
-        vkDestroyDescriptorSetLayout(GfxContext::get()->logical_device, g_DescriptorSetLayout, vulkan_common::allocation_callback);
+        vkDestroyDescriptorSetLayout(Graphics::get()->get_logical_device(), g_DescriptorSetLayout, vulkan_common::allocation_callback);
         g_DescriptorSetLayout = VK_NULL_HANDLE;
     }
     if (g_PipelineLayout)
     {
-        vkDestroyPipelineLayout(GfxContext::get()->logical_device, g_PipelineLayout, vulkan_common::allocation_callback);
+        vkDestroyPipelineLayout(Graphics::get()->get_logical_device(), g_PipelineLayout, vulkan_common::allocation_callback);
         g_PipelineLayout = VK_NULL_HANDLE;
     }
     if (g_Pipeline)
     {
-        vkDestroyPipeline(GfxContext::get()->logical_device, g_Pipeline, vulkan_common::allocation_callback);
+        vkDestroyPipeline(Graphics::get()->get_logical_device(), g_Pipeline, vulkan_common::allocation_callback);
         g_Pipeline = VK_NULL_HANDLE;
     }
 }
 
-bool ImGuiInstance::ImGui_ImplVulkan_Init(Surface* info)
+bool ImGuiInstance::ImGui_ImplVulkan_Init()
 {
     // Setup back-end capabilities flags
     ImGuiIO& io            = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_vulkan";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     IM_ASSERT(vulkan_common::instance != VK_NULL_HANDLE);
-    IM_ASSERT(GfxContext::get()->physical_device != VK_NULL_HANDLE);
-    IM_ASSERT(GfxContext::get()->logical_device != VK_NULL_HANDLE);
-    IM_ASSERT(info->get_swapchain()->get_image_count() >= 2);
-    IM_ASSERT(info->get_swapchain()->get_image_count() >= info->get_swapchain()->get_image_count());
+    IM_ASSERT(Graphics::get()->get_physical_device() != VK_NULL_HANDLE);
+    IM_ASSERT(Graphics::get()->get_logical_device() != VK_NULL_HANDLE);
+    IM_ASSERT(Graphics::get()->get_swapchain_config()->get_image_count() >= 2);
+    IM_ASSERT(Graphics::get()->get_swapchain_config()->get_image_count() >= Graphics::get()->get_swapchain_config()->get_image_count());
 
-    g_window_context = info;
     ImGui_ImplVulkan_CreateDeviceObjects();
 
     return true;
@@ -696,13 +689,12 @@ void ImGuiInstance::ImGui_ImplVulkan_Shutdown()
 void ImGuiInstance::ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
 {
     IM_ASSERT(min_image_count >= 2);
-    if (g_window_context->get_swapchain()->get_image_count() == min_image_count)
+    if (Graphics::get()->get_swapchain_config()->get_image_count() == min_image_count)
         return;
 
-    Surface*  v   = g_window_context;
-    VkResult err = vkDeviceWaitIdle(GfxContext::get()->logical_device);
+    VkResult err = vkDeviceWaitIdle(Graphics::get()->get_logical_device());
     VK_ENSURE(err);
-    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(GfxContext::get()->logical_device, &g_MainWindowRenderBuffers, vulkan_common::allocation_callback);
+    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(Graphics::get()->get_logical_device(), &g_MainWindowRenderBuffers, vulkan_common::allocation_callback);
 }
 
 //-------------------------------------------------------------------------
@@ -777,7 +769,6 @@ ImTextureID ImGuiInstance::ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImag
 {
     VkResult err;
 
-    Surface*         v = g_window_context;
     VkDescriptorSet descriptor_set;
     // Create Descriptor Set:
     {
@@ -787,9 +778,9 @@ ImTextureID ImGuiInstance::ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImag
         alloc_info.descriptorSetCount          = 1;
         alloc_info.pSetLayouts                 = &g_DescriptorSetLayout;
 
-        g_window_context->get_descriptor_pool()->alloc_memory(alloc_info);
+        Graphics::get()->get_descriptor_pool()->alloc_memory(alloc_info);
 
-        err = vkAllocateDescriptorSets(GfxContext::get()->logical_device, &alloc_info, &descriptor_set);
+        err = vkAllocateDescriptorSets(Graphics::get()->get_logical_device(), &alloc_info, &descriptor_set);
         VK_ENSURE(err);
     }
 
@@ -805,13 +796,13 @@ ImTextureID ImGuiInstance::ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImag
         write_desc[0].descriptorCount       = 1;
         write_desc[0].descriptorType        = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write_desc[0].pImageInfo            = desc_image;
-        vkUpdateDescriptorSets(GfxContext::get()->logical_device, 1, write_desc, 0, NULL);
+        vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), 1, write_desc, 0, NULL);
     }
 
     return (ImTextureID)descriptor_set;
 }
 
-ImGuiInstance::ImGuiInstance(Surface* context) : g_window_context(context)
+ImGuiInstance::ImGuiInstance()
 {
     if (instance_count > 0)
     {
@@ -823,7 +814,7 @@ ImGuiInstance::ImGuiInstance(Surface* context) : g_window_context(context)
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    context = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
@@ -848,14 +839,13 @@ ImGuiInstance::ImGuiInstance(Surface* context) : g_window_context(context)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 
-    //@TODO set font
+    //@TODO handle imgui font
     // G_IMGUI_DEFAULT_FONT = io.Fonts->AddFontFromFileTTF(G_DEFAULT_FONT_PATH.GetValue().GetData(), 20.f);
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplGlfw_InitForVulkan(context->get_handle(), true);
+    ImGui_ImplGlfw_InitForVulkan(Graphics::get()->get_glfw_handle(), true);
 
-    ImGui_ImplVulkan_Init(context);
-
+    ImGui_ImplVulkan_Init();
     // Upload Fonts
     {
         VkCommandBuffer command_buffer = vulkan_utils::begin_single_time_commands();

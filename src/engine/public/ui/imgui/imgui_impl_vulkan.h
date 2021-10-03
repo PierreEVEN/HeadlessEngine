@@ -25,7 +25,6 @@
 #include "rendering/vulkan/utils.h"
 
 struct ImDrawData;
-class Surface;
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 
@@ -57,13 +56,19 @@ class ImGuiInstance
 
   public:
     void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
-    explicit ImGuiInstance(Surface* context);
+    explicit ImGuiInstance();
     ~ImGuiInstance();
+    void init()
+    {
+        ImGui::SetCurrentContext(context);
+    }
 
   private:
+
+    ImGuiContext* context = nullptr;
     void        ImGui_ImplVulkanH_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkanH_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
     void        ImGui_ImplVulkanH_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVulkanH_WindowRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
-    bool        ImGui_ImplVulkan_Init(Surface* info);
+    bool        ImGui_ImplVulkan_Init();
     void        ImGui_ImplVulkan_Shutdown();
     void        CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage);
     void        ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkCommandBuffer command_buffer, ImGui_ImplVulkanH_FrameRenderBuffers* rb, int fb_width, int fb_height);
@@ -75,7 +80,6 @@ class ImGuiInstance
     ImTextureID ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout);
 
     // Vulkan data
-    Surface*               g_window_context        = {};
     VkPipelineCache       g_pipeline_cache        = VK_NULL_HANDLE;
     VkDeviceSize          g_BufferMemoryAlignment = 256;
     VkPipelineCreateFlags g_PipelineCreateFlags   = 0x00;

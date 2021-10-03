@@ -3,7 +3,8 @@
 
 #include "engine_interface.h"
 #include "imgui.h"
-#include "rendering/renderer/surface.h"
+
+std::unique_ptr<WindowManager> window_manager = nullptr;
 
 WindowManager::~WindowManager()
 {
@@ -43,6 +44,18 @@ void WindowManager::remove_window(WindowBase* window)
     window_ids.erase(window_ids.find(window->window_id));
 
     delete window;
+}
+
+WindowManager* WindowManager::get()
+{
+    return window_manager.get();
+}
+
+void WindowManager::add_window_memory_internal(WindowBase* memory)
+{
+    if (!window_manager)
+        window_manager = std::make_unique<WindowManager>();
+    window_manager->add_window(memory);
 }
 
 WindowBase::~WindowBase()

@@ -3,7 +3,7 @@
 #include "rendering/vulkan/shader_module.h"
 
 #include "cpputils/logger.hpp"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 
 #include <StandAlone/ResourceLimits.h>
@@ -217,6 +217,15 @@ const VkShaderModule& ShaderModule::get_shader_module()
     return module;
 }
 
+bool ShaderModule::is_valid() const
+{
+    if (shader_stage != EShaderStage::UNKNOWN)
+        return false;
+    if (bytecode.empty())
+        return false;
+    return true;
+}
+
 const std::vector<uint32_t>& ShaderModule::get_bytecode()
 {
     access_lock.lock();
@@ -243,7 +252,7 @@ void ShaderModule::create_shader_module()
     createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = bytecode.size() * sizeof(uint32_t);
     createInfo.pCode    = reinterpret_cast<const uint32_t*>(bytecode.data());
-    if (VkResult res = vkCreateShaderModule(GfxContext::get()->logical_device, &createInfo, vulkan_common::allocation_callback, &module); !res == VK_SUCCESS)
+    if (VkResult res = vkCreateShaderModule(Graphics::get()->get_logical_device(), &createInfo, vulkan_common::allocation_callback, &module); !res == VK_SUCCESS)
     {
         LOG_ERROR("Failed to create shader module : %d", static_cast<uint32_t>(res));
         module = VK_NULL_HANDLE;
@@ -253,7 +262,7 @@ void ShaderModule::create_shader_module()
 void ShaderModule::destroy()
 {
     if (module != VK_NULL_HANDLE)
-        vkDestroyShaderModule(GfxContext::get()->logical_device, module, vulkan_common::allocation_callback);
+        vkDestroyShaderModule(Graphics::get()->get_logical_device(), module, vulkan_common::allocation_callback);
     module = VK_NULL_HANDLE;
 }
 

@@ -5,7 +5,6 @@
 #include <vector>
 
 class IEngineInterface;
-class Surface;
 class WindowBase;
 
 class WindowBase
@@ -35,7 +34,6 @@ class WindowBase
 
 class WindowManager final
 {
-    friend Surface;
     friend WindowBase;
 
   public:
@@ -63,11 +61,14 @@ class WindowManager final
             window_memory = nullptr;
         }
 
-        IEngineInterface::get()->get_window_manager()->add_window(window_memory);
+        add_window_memory_internal(window_memory);
         return window_memory;
     }
 
+    [[nodiscard]] static WindowManager* get();
+
   private:
+    static void add_window_memory_internal(WindowBase* memory);
     void add_window(WindowBase* window);
     void remove_window(WindowBase* window);
 

@@ -2,9 +2,9 @@
 
 #include "assets/asset_mesh_data.h"
 #include "misc/Frustum.h"
+#include "rendering/renderer/swapchain.h"
 #include "types/fast_mutex.h"
 #include "vulkan/material_pipeline.h"
-#include "rendering/renderer/swapchain.h"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -21,7 +21,7 @@ class DebugDraw final
     void draw_box(const Box3D& box);
     void draw_sphere(const glm::dvec3& center, double radius, int subdivisions = 5);
 
-    void render_wireframe(const SwapchainStatus& in_render_context);
+    void render_wireframe(const SwapchainFrame& in_render_context);
 
   private:
     void create_or_resize_buffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlags usage);
@@ -35,9 +35,7 @@ class DebugDraw final
 
     FastMutex write_lock;
 
-    std::shared_ptr<ShaderModule> vertex_module;
-    std::shared_ptr<ShaderModule> fragment_module;
-    MaterialPipeline              material;
+    MaterialPipeline        material_pipeline;
 
     NCamera* context_camera = nullptr;
 };

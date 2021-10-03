@@ -6,10 +6,9 @@
 #include "vk_mem_alloc.h"
 
 #include "config.h"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 
 #include "rendering/vulkan/command_pool.h"
-#include "rendering/renderer/surface.h"
 #include <cpputils/logger.hpp>
 
 namespace vulkan_utils
@@ -58,175 +57,10 @@ std::vector<const char*> get_required_extensions()
     return extensions;
 }
 
-/*
- * PHYSICAL DEVICE
- */
-
-QueueFamilyIndices find_device_queue_families(VkSurfaceKHR surface, VkPhysicalDevice device)
-{
-    QueueFamilyIndices indices;
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for (const auto& queueFamily : queueFamilies)
-    {
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            indices.graphic_family = i;
-        }
-        if (!indices.transfert_family.has_value() && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
-        {
-            indices.transfert_family = i;
-        }
-
-        if (queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT)
-        {
-            indices.transfert_family = i;
-        }
-        VkBool32 presentSupport = false;
-        VK_ENSURE(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport), "failed to get physical device present support");
-        if (presentSupport)
-        {
-            indices.present_family = i;
-        }
-
-        if (indices.is_complete())
-        {
-            break;
-        }
-
-        i++;
-    }
-    if (!indices.is_complete())
-    {
-        LOG_FATAL("queue family indices are not complete");
-    }
-    return indices;
-}
-
-SwapchainSupportDetails get_swapchain_support_details(VkSurfaceKHR surface, VkPhysicalDevice device)
-{
-    SwapchainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-    if (formatCount != 0)
-    {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0)
-    {
-        details.present_modes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.present_modes.data());
-    }
-
-    return details;
-}
-
-bool CheckDeviceExtensionSupport(VkPhysicalDevice device)
-{
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-    for (const auto& ext : config::required_device_extensions)
-    {
-        bool bContains = false;
-        for (const auto& extension : availableExtensions)
-        {
-            if (!std::strcmp(ext, extension.extensionName))
-                bContains = true;
-        }
-        if (!bContains)
-            return false;
-    }
-
-    return true;
-}
-
-bool is_physical_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice device)
-{
-    QueueFamilyIndices indices = find_device_queue_families(surface, device);
-
-    bool bAreExtensionSupported = CheckDeviceExtensionSupport(device);
-
-    bool swapChainAdequate = false;
-    if (bAreExtensionSupported)
-    {
-        SwapchainSupportDetails swapChainSupport = get_swapchain_support_details(surface, device);
-        swapChainAdequate                        = !swapChainSupport.formats.empty() && !swapChainSupport.present_modes.empty();
-    }
-
-    VkPhysicalDeviceFeatures supportedFeatures;
-    vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-
-    return indices.is_complete() && bAreExtensionSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
-}
-
-VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceKHR surface)
-{
-    const VkPhysicalDevice device = GfxContext::get()->physical_device;
-    uint32_t               formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, NULL);
-    assert(formatCount > 0);
-
-    std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, surfaceFormats.data());
-
-    VkSurfaceFormatKHR format;
-
-    // If the surface log_format list only includes one entry with VK_FORMAT_UNDEFINED,
-    // there is no preferered log_format, so we assume VK_FORMAT_B8G8R8A8_UNORM
-    if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED))
-    {
-        format.format     = VK_FORMAT_B8G8R8A8_UNORM;
-        format.colorSpace = surfaceFormats[0].colorSpace;
-    }
-    else
-    {
-        // iterate over the list of available surface log_format and
-        // check for the presence of VK_FORMAT_B8G8R8A8_UNORM
-        bool found_B8G8R8A8_UNORM = false;
-        for (auto&& surfaceFormat : surfaceFormats)
-        {
-            if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM)
-            {
-                format.format        = surfaceFormat.format;
-                format.colorSpace    = surfaceFormat.colorSpace;
-                found_B8G8R8A8_UNORM = true;
-                break;
-            }
-        }
-
-        // in case VK_FORMAT_B8G8R8A8_UNORM is not available
-        // select the first available color log_format
-        if (!found_B8G8R8A8_UNORM)
-        {
-            format.format     = surfaceFormats[0].format;
-            format.colorSpace = surfaceFormats[0].colorSpace;
-        }
-    }
-    return format;
-}
 
 VkSampleCountFlagBits get_max_usable_sample_count()
 {
-    const VkPhysicalDevice     physical_device = GfxContext::get()->physical_device;
+    const VkPhysicalDevice     physical_device = Graphics::get()->get_physical_device();
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(physical_device, &physicalDeviceProperties);
 
@@ -259,22 +93,10 @@ VkSampleCountFlagBits get_max_usable_sample_count()
     return VK_SAMPLE_COUNT_1_BIT;
 }
 
-VkPresentModeKHR choose_swapchain_present_mode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+VkFormat get_depth_format()
 {
-    for (const auto& availablePresentMode : availablePresentModes)
-    {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-        {
-            return availablePresentMode;
-        }
-    }
-
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkFormat get_depth_format(VkPhysicalDevice physical_device)
-{
-    return find_texture_format({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, physical_device);
+    return find_texture_format({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                               Graphics::get()->get_physical_device());
 }
 
 VkFormat find_texture_format(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features, VkPhysicalDevice physical_device)
@@ -340,7 +162,7 @@ VkCommandBuffer begin_single_time_commands()
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(GfxContext::get()->logical_device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(Graphics::get()->get_logical_device(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -363,15 +185,15 @@ void end_single_time_commands(VkCommandBuffer commandBuffer)
     fenceInfo.sType     = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags     = VK_FENCE_CREATE_SIGNALED_BIT;
     VkFence submitFence = VK_NULL_HANDLE;
-    vkCreateFence(GfxContext::get()->logical_device, &fenceInfo, vulkan_common::allocation_callback, &submitFence);
+    vkCreateFence(Graphics::get()->get_logical_device(), &fenceInfo, vulkan_common::allocation_callback, &submitFence);
 
-    vkResetFences(GfxContext::get()->logical_device, 1, &submitFence);
+    vkResetFences(Graphics::get()->get_logical_device(), 1, &submitFence);
     {
-        GfxContext::get()->submit_graphic_queue(submitInfo, submitFence);
+        Graphics::get()->submit_graphic_queue(submitInfo, submitFence);
     }
-    vkWaitForFences(GfxContext::get()->logical_device, 1, &submitFence, VK_TRUE, UINT64_MAX);
-    vkDestroyFence(GfxContext::get()->logical_device, submitFence, vulkan_common::allocation_callback);
-    vkFreeCommandBuffers(GfxContext::get()->logical_device, command_pool::get(), 1, &commandBuffer);
+    vkWaitForFences(Graphics::get()->get_logical_device(), 1, &submitFence, VK_TRUE, UINT64_MAX);
+    vkDestroyFence(Graphics::get()->get_logical_device(), submitFence, vulkan_common::allocation_callback);
+    vkFreeCommandBuffers(Graphics::get()->get_logical_device(), command_pool::get(), 1, &commandBuffer);
 }
 
 void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
@@ -382,28 +204,28 @@ void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryProperty
     bufferInfo.usage       = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(GfxContext::get()->logical_device, &bufferInfo, vulkan_common::allocation_callback, &buffer) != VK_SUCCESS)
+    if (vkCreateBuffer(Graphics::get()->get_logical_device(), &bufferInfo, vulkan_common::allocation_callback, &buffer) != VK_SUCCESS)
     {
         LOG_FATAL("Failed to create buffer");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(GfxContext::get()->logical_device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(Graphics::get()->get_logical_device(), buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize  = memRequirements.size;
-    allocInfo.memoryTypeIndex = find_memory_type(GfxContext::get()->physical_device, memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = find_memory_type(Graphics::get()->get_physical_device(), memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(GfxContext::get()->logical_device, &allocInfo, vulkan_common::allocation_callback, &bufferMemory) != VK_SUCCESS)
+    if (vkAllocateMemory(Graphics::get()->get_logical_device(), &allocInfo, vulkan_common::allocation_callback, &bufferMemory) != VK_SUCCESS)
     {
         LOG_FATAL("Failled to allocate buffer memory");
     }
 
-    vkBindBufferMemory(GfxContext::get()->logical_device, buffer, bufferMemory, 0);
+    vkBindBufferMemory(Graphics::get()->get_logical_device(), buffer, bufferMemory, 0);
 }
 
-void copy_buffer(Surface* context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+void copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     const VkCommandBuffer commandBuffer = begin_single_time_commands();
 
@@ -414,7 +236,7 @@ void copy_buffer(Surface* context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDev
     end_single_time_commands(commandBuffer);
 }
 
-void create_vma_buffer(Surface* context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationInfo& allocInfos)
+void create_vma_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationInfo& allocInfos)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -424,7 +246,35 @@ void create_vma_buffer(Surface* context, VkDeviceSize size, VkBufferUsageFlags u
 
     VmaAllocationCreateInfo vmaInfos{};
     vmaInfos.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateBuffer(GfxContext::get()->vulkan_memory_allocator, &bufferInfo, &vmaInfos, &buffer, &allocation, &allocInfos);
+    vmaCreateBuffer(Graphics::get()->get_allocator(), &bufferInfo, &vmaInfos, &buffer, &allocation, &allocInfos);
+}
+
+SwapchainSupportDetails get_swapchain_support_details(VkSurfaceKHR surface, VkPhysicalDevice device)
+{
+    SwapchainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+    if (formatCount != 0)
+    {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+    if (presentModeCount != 0)
+    {
+        details.present_modes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.present_modes.data());
+    }
+
+    return details;
 }
 
 } // namespace vulkan_utils
+

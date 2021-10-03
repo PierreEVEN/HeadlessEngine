@@ -1,18 +1,11 @@
 #pragma once
 
+#include "shader_structures.h"
 #include "types/fast_mutex.h"
 
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
-
-enum class EShaderStage
-{
-    UNKNOWN,
-    VERTEX_SHADER,
-    FRAGMENT_SHADER,
-    GEOMETRY_SHADER
-};
 
 class ShaderModule final
 {
@@ -23,7 +16,7 @@ class ShaderModule final
 
     [[nodiscard]] const std::vector<uint32_t>& get_bytecode();
     [[nodiscard]] const VkShaderModule&        get_shader_module();
-
+    [[nodiscard]] bool                         is_valid() const;
     ShaderModule() = default;
     ~ShaderModule();
 

@@ -52,11 +52,11 @@ class NCamera : public NodeBase
         return debug_draws.get();
     }
 
-    void update_view(SwapchainStatus& render_context);
+    void update_view(SwapchainFrame& render_context);
 
   private:
-    TAssetPtr<AShaderBuffer> camera_uniform_buffer = nullptr;
-    TAssetPtr<AShaderBuffer> global_model_ssbo     = nullptr;
+    TAssetPtr<AShaderBuffer> camera_uniform_buffer;
+    TAssetPtr<AShaderBuffer> global_model_ssbo;
     float                    near_clip_plane       = 1.f;
     float                    far_clip_plane        = 1000000.f;
     float                    field_of_view         = 45.f;

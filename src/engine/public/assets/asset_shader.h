@@ -1,8 +1,9 @@
 #pragma once
 #include "asset_base.h"
 #include "rendering/vulkan/shader_module.h"
-#include "spirv_cross.hpp"
 
+#include <optional>
+#include <spirv_cross.hpp>
 #include <vulkan/vulkan_core.h>
 
 constexpr const char* G_SCENE_DATA_BUFFER_NAME   = "GlobalCameraUniformBuffer";
@@ -26,8 +27,8 @@ class AShader : public AssetBase
     AShader(const std::filesystem::path& source_mesh_path, EShaderStage in_shader_kind);
     virtual ~AShader() override = default;
 
-    [[nodiscard]] VkShaderModule                get_shader_module() const;
-    [[nodiscard]] std::shared_ptr<ShaderModule> get_shader_module_ptr() const;
+    [[nodiscard]] VkShaderModule          get_shader_module() const;
+    [[nodiscard]] ShaderModule* get_shader_module_ptr() const;
 
     [[nodiscard]] const std::optional<ShaderProperty>& get_push_constants() const;
     [[nodiscard]] const std::vector<ShaderProperty>&   get_uniform_buffers() const;
@@ -43,7 +44,7 @@ class AShader : public AssetBase
 
     const EShaderStage shader_stage;
 
-    std::shared_ptr<ShaderModule> shader_module;
+    std::unique_ptr<ShaderModule> shader_module;
 
     // Reflection data
     std::string                   entry_point;

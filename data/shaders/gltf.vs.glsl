@@ -9,8 +9,11 @@ layout(location = 4) in vec3 tang;
 layout(location = 5) in vec3 bitang;
 
 // OUT
-layout (location = 9) out vec3 normal;
-layout (location = 10) out vec2 uvs;
+layout (location = 6) out vec3 out_normal;
+layout (location = 7) out vec2 out_uvs;
+layout (location = 8) out vec4 out_color;
+layout (location = 9) out vec3 out_pos;
+layout (location = 10) out vec3 out_tangent;
 
 // UNIFORM BUFFER
 layout(binding = 9) uniform GlobalCameraUniformBuffer {
@@ -28,7 +31,23 @@ layout(std140, binding = 0) readonly buffer ObjectBuffer{
 } objectBuffer;
 
 void main() {
-	normal = norm;
-	uvs = uv;
-	gl_Position = ubo.worldProjection * ubo.viewMatrix * objectBuffer.objects[gl_InstanceIndex].model * vec4(pos.xyz, 1.0);
+
+	mat4 model = objectBuffer.objects[gl_InstanceIndex].model;
+	
+	vec4 tmpPos = vec4(pos.xyz, 1.0);
+
+	gl_Position = ubo.worldProjection * ubo.viewMatrix * model * tmpPos;
+
+	out_uvs = uv;
+	
+	// Vertex position in world space
+	out_pos = vec3(model * tmpPos);
+	
+	// Normal in world space
+	mat3 mNormal = transpose(inverse(mat3(model)));
+	out_normal = mNormal * normalize(norm);	
+	out_tangent = mNormal * normalize(tang);
+	
+	// Currently just vertex color
+	out_color = col;
 }

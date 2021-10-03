@@ -1,5 +1,4 @@
 #pragma once
-#include <string>
 #include <vector>
 
 namespace config {
@@ -24,8 +23,8 @@ namespace config {
 	 */
 	
 	inline const bool use_validation_layers = true;
-	inline const std::vector<const char*> required_validation_layers = { "VK_LAYER_KHRONOS_validation" };
-	inline const std::vector<const char*> required_device_extensions = { "VK_KHR_swapchain" };
+        inline const std::vector required_validation_layers = {"VK_LAYER_KHRONOS_validation"};
+	inline const std::vector required_device_extensions = { "VK_KHR_swapchain" };
 	inline const uint32_t max_frame_in_flight = 2;
 
 	inline const uint32_t max_descriptor_per_pool = 64;

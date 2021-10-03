@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "config.h"
+#include "rendering/vulkan/command_pool.h"
 
 #include <cpputils/logger.hpp>
 
@@ -20,6 +21,7 @@ void vulkan_init()
 {
     create_instance();
     create_validation_layers();
+
     LOG_VALIDATE("initialized vulkan");
 }
 
@@ -119,6 +121,7 @@ void set_msaa_sample_count(uint32_t in_sample_count)
 
 uint32_t get_msaa_sample_count()
 {
-    return G_MSAA_CURRENT_SAMPLE_COUNT;
+    return VK_SAMPLE_COUNT_1_BIT;
+    //G_MSAA_CURRENT_SAMPLE_COUNT;
 }
 } // namespace vulkan_common

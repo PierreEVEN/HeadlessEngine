@@ -1,13 +1,30 @@
 
 
 #include "assets/asset_texture.h"
+#include <cmath>
 
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/texture.h"
 #include "rendering/vulkan/utils.h"
 
-ATexture::ATexture(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
+VkDescriptorImageInfo* ATexture::get_descriptor_image_info(uint32_t image_index)
+{
+    if (image_index >= descriptor_image_infos.size())
+    {
+        for (int64_t i = descriptor_image_infos.size(); i <= image_index; ++i)
+        {
+            descriptor_image_infos.emplace_back(VkDescriptorImageInfo{
+                .sampler     = get_sampler(image_index),
+                .imageView   = get_view(image_index),
+                .imageLayout = get_image_layout(image_index),
+            });
+        }
+    }
+    return &descriptor_image_infos[image_index];
+}
+
+ATexture2D::ATexture2D(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
 {
     channels = 4; // = in_channels; @TODO handle channels properly
 
@@ -35,17 +52,17 @@ ATexture::ATexture(const std::vector<uint8_t>& data, uint32_t width, uint32_t he
     create_sampler();
 }
 
-ATexture::~ATexture()
+ATexture2D::~ATexture2D()
 {
     if (sampler != VK_NULL_HANDLE)
-        vkDestroySampler(GfxContext::get()->logical_device, sampler, vulkan_common::allocation_callback);
+        vkDestroySampler(Graphics::get()->get_logical_device(), sampler, vulkan_common::allocation_callback);
     if (view != VK_NULL_HANDLE)
-        vkDestroyImageView(GfxContext::get()->logical_device, view, vulkan_common::allocation_callback);
+        vkDestroyImageView(Graphics::get()->get_logical_device(), view, vulkan_common::allocation_callback);
 
     if (image != VK_NULL_HANDLE)
-        vkDestroyImage(GfxContext::get()->logical_device, image, vulkan_common::allocation_callback);
+        vkDestroyImage(Graphics::get()->get_logical_device(), image, vulkan_common::allocation_callback);
     if (memory != VK_NULL_HANDLE)
-        vkFreeMemory(GfxContext::get()->logical_device, memory, vulkan_common::allocation_callback);
+        vkFreeMemory(Graphics::get()->get_logical_device(), memory, vulkan_common::allocation_callback);
 
     /*
     if (uiDisplayLayout != VK_NULL_HANDLE)
@@ -59,23 +76,7 @@ ATexture::~ATexture()
     // uiDisplayLayout    = VK_NULL_HANDLE;
 }
 
-VkDescriptorImageInfo* ATexture::get_descriptor_image_info(uint32_t image_index)
-{
-    if (image_index >= descriptor_image_infos.size())
-    {
-        for (int64_t i = descriptor_image_infos.size(); i <= image_index; ++i)
-        {
-            descriptor_image_infos.emplace_back(VkDescriptorImageInfo{
-                .sampler     = sampler,
-                .imageView   = view,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            });
-        }
-    }
-    return &descriptor_image_infos[image_index];
-}
-
-void ATexture::create_image_and_view(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
+void ATexture2D::create_image_and_view(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
 {
 
     mips_levels = static_cast<uint32_t>(std::floor(log2(std::max(width, height)))) + 1;
@@ -86,9 +87,9 @@ void ATexture::create_image_and_view(const std::vector<uint8_t>& data, uint32_t 
     vulkan_utils::create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void* raw_data;
-    vkMapMemory(GfxContext::get()->logical_device, stagingBufferMemory, 0, data_size, 0, &raw_data);
+    vkMapMemory(Graphics::get()->get_logical_device(), stagingBufferMemory, 0, data_size, 0, &raw_data);
     memcpy(raw_data, data.data(), static_cast<size_t>(data_size));
-    vkUnmapMemory(GfxContext::get()->logical_device, stagingBufferMemory);
+    vkUnmapMemory(Graphics::get()->get_logical_device(), stagingBufferMemory);
 
     vulkan_texture::create_image_2d(width, height, mips_levels, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL,
                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, memory);
@@ -102,11 +103,11 @@ void ATexture::create_image_and_view(const std::vector<uint8_t>& data, uint32_t 
 
     vulkan_texture::create_image_view_2d(image, view, format, VK_IMAGE_ASPECT_COLOR_BIT, mips_levels);
 
-    vkDestroyBuffer(GfxContext::get()->logical_device, stagingBuffer, vulkan_common::allocation_callback);
-    vkFreeMemory(GfxContext::get()->logical_device, stagingBufferMemory, vulkan_common::allocation_callback);
+    vkDestroyBuffer(Graphics::get()->get_logical_device(), stagingBuffer, vulkan_common::allocation_callback);
+    vkFreeMemory(Graphics::get()->get_logical_device(), stagingBufferMemory, vulkan_common::allocation_callback);
 }
 
-void ATexture::create_sampler()
+void ATexture2D::create_sampler()
 {
     VkSamplerCreateInfo sampler_infos{
         .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -127,5 +128,5 @@ void ATexture::create_sampler()
         .unnormalizedCoordinates = VK_FALSE,
     };
 
-    VK_ENSURE(vkCreateSampler(GfxContext::get()->logical_device, &sampler_infos, vulkan_common::allocation_callback, &sampler), "failed to create sampler");
+    VK_ENSURE(vkCreateSampler(Graphics::get()->get_logical_device(), &sampler_infos, vulkan_common::allocation_callback, &sampler), "failed to create sampler");
 }

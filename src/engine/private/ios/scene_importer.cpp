@@ -9,11 +9,11 @@
 #include "assets/asset_material.h"
 #include "assets/asset_mesh.h"
 #include "assets/asset_texture.h"
-#include "engine_interface.h"
 #include "ios/mesh_importer.h"
 #include "scene/node_base.h"
 #include "scene/node_mesh.h"
 #include "scene/scene.h"
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "ui/window/windows/profiler.h"
 
@@ -74,7 +74,7 @@ std::shared_ptr<NodeBase> SceneImporter::import_file(const std::filesystem::path
     }
 
     if (object_name.empty())
-        object_name = scene->mName.data;
+        object_name = source_file.filename().string().c_str();
 
     // Generate resources
     texture_refs.resize(scene->mNumTextures);
@@ -93,7 +93,7 @@ std::shared_ptr<NodeBase> SceneImporter::import_file(const std::filesystem::path
     return root_node;
 }
 
-TAssetPtr<ATexture> SceneImporter::process_texture(aiTexture* texture, size_t id)
+TAssetPtr<ATexture2D> SceneImporter::process_texture(aiTexture* texture, size_t id)
 {
     int      width    = static_cast<int>(texture->mWidth);
     int      height   = static_cast<int>(texture->mHeight);
@@ -120,7 +120,7 @@ TAssetPtr<ATexture> SceneImporter::process_texture(aiTexture* texture, size_t id
     }
 
     const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_texture_" + std::string(texture->mFilename.C_Str()));
-    auto       text     = AssetManager::get()->create<ATexture>(asset_id, std::vector<uint8_t>(data, data + width * height * 4), width, height, channels);
+    auto       text     = AssetManager::get()->create<ATexture2D>(asset_id, std::vector<uint8_t>(data, data + width * height * 4), width, height, channels);
 
     return text;
 }
@@ -134,29 +134,38 @@ TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMat
 
     if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
     {
-        LOG_INFO("found texture");
         aiString texture_path;
         material->GetTexture(aiTextureType_DIFFUSE, 0, &texture_path);
-        const auto [texture_ptr, texture_index] = scene->GetEmbeddedTextureAndIndex(texture_path.C_Str());
-        diffuse_index                           = texture_index;
-        LOG_INFO("diffuse : %s => %d", texture_ptr->mFilename.C_Str(), texture_index);
+        const aiTexture* texture_ptr = scene->GetEmbeddedTexture(texture_path.C_Str());
+
+        for (unsigned int i = 0; i < scene->mNumTextures; i++)
+        {
+            if (texture_ptr == scene->mTextures[i])
+            {
+                diffuse_index = i;
+                break;
+            }
+        }
+
+        LOG_INFO("diffuse : %s => %d", texture_ptr->mFilename.C_Str(), diffuse_index);
     }
 
     LOG_INFO("using texture %d", diffuse_index);
 
-    ShaderStageData vertex_stage{
+    ShaderStageConfiguration vertex_stage{
         .shader = TAssetPtr<AShader>("gltf_vertex_shader"),
     };
-    ShaderStageData fragment_stage{
+    ShaderStageConfiguration fragment_stage{
         .shader   = TAssetPtr<AShader>("gltf_fragment_shader"),
         .textures = {{"diffuse_color", TAssetPtr<ATexture>("default_texture")}},
     };
 
     if (diffuse_index >= 0)
-        fragment_stage.textures = {{"diffuse_color", texture_refs[diffuse_index]}};
-    else
-        return TAssetPtr<AMaterial>("default_material");
+    {
+        TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
+        fragment_stage.textures["diffuse_color"] = texture;
+    }
 
     const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
-    return AssetManager::get()->create<AMaterial>(asset_id, vertex_stage, fragment_stage);
+    return AssetManager::get()->create<AMaterial>(asset_id, vertex_stage, fragment_stage, std::vector<std::string>{"render_scene", "combine_deferred", "post_processing_0"});
 }

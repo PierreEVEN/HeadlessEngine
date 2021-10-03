@@ -45,3 +45,8 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 	
 add_subdirectory(third_party)
 add_subdirectory(src)
+
+
+file(GLOB PREBULD_DLL_BINARIES ${PROJECT_ROOT}/temp/dlls/*)
+file(COPY ${PREBULD_DLL_BINARIES} DESTINATION ${BINARIES_DIR}/Bin/Debug)
+file(COPY ${PREBULD_DLL_BINARIES} DESTINATION ${BINARIES_DIR}/Bin/Release)

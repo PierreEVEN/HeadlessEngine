@@ -2,8 +2,7 @@
 
 #include "assets/asset_shader.h"
 
-#include "StandAlone/ResourceLimits.h"
-#include "spirv_cross.hpp"
+#include <spirv_cross/spirv_cross.hpp>
 #include <magic_enum/magic_enum.h>
 
 #define ENABLE_SHADER_LOGGING true
@@ -32,7 +31,7 @@ std::optional<std::string> AShader::read_shader_file(const std::filesystem::path
 
 AShader::AShader(const std::filesystem::path& source_mesh_path, EShaderStage in_shader_kind) : shader_stage(in_shader_kind)
 {
-    shader_module = std::make_shared<ShaderModule>();
+    shader_module = std::make_unique<ShaderModule>();
     shader_module->set_shader_stage(shader_stage);
     if (auto shader_data = read_shader_file(source_mesh_path); shader_data)
     {
@@ -91,9 +90,9 @@ const ShaderProperty* AShader::get_scene_data_buffer() const
     return nullptr;
 }
 
-std::shared_ptr<ShaderModule> AShader::get_shader_module_ptr() const
+ShaderModule* AShader::get_shader_module_ptr() const
 {
-    return shader_module;
+    return shader_module.get();
 }
 
 void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
