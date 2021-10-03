@@ -2,7 +2,7 @@
 
 #include "scene/node_mesh.h"
 
-#include "assets/asset_material.h"
+#include "assets/asset_material_instance.h"
 #include "assets/asset_mesh_data.h"
 #include "assets/asset_texture.h"
 #include "misc/Frustum.h"
@@ -10,14 +10,14 @@
 
 struct MeshProxyData
 {
-    NMesh*     owner          = nullptr;
-    AMaterial* material       = nullptr;
-    VkBuffer   vertex_buffer  = VK_NULL_HANDLE;
-    VkBuffer   index_buffer   = VK_NULL_HANDLE;
-    size_t     index_count    = 0;
-    glm::dmat4 mesh_transform = glm::dmat4(1.0);
-    size_t     instance_index = 1;
-    Box3D      bounds         = {};
+    NMesh*             owner          = nullptr;
+    AMaterialInstance* material       = nullptr;
+    VkBuffer           vertex_buffer  = VK_NULL_HANDLE;
+    VkBuffer           index_buffer   = VK_NULL_HANDLE;
+    size_t             index_count    = 0;
+    glm::dmat4         mesh_transform = glm::dmat4(1.0);
+    size_t             instance_index = 1;
+    Box3D              bounds         = {};
 
     // comparison function
     bool operator==(const MeshProxyData& other) const
@@ -48,7 +48,7 @@ struct MeshProxyData
     }
 };
 
-NMesh::NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterial> in_material) : mesh(in_mesh), material(in_material)
+NMesh::NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterialInstance> in_material) : mesh(in_mesh), material(in_material)
 {
     if (!material)
     {
@@ -58,7 +58,7 @@ NMesh::NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterial> in_material) : m
 
     proxy_entity_handle = get_render_scene()->get_scene_proxy().add_entity(MeshProxyData{
         .owner          = this,
-        .material       = dynamic_cast<AMaterial*>(material.get()),
+        .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),
         .index_count    = mesh->get_indices_count(),
@@ -81,11 +81,14 @@ void NMesh::register_component(Scene* target_scene)
                 render_context.last_used_material = entity.material;
                 if (!entity.material)
                     LOG_FATAL("material is not valid");
-                entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
+                LOG_FATAL("todo update descriptor set here")
+                //entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
+                /*
                 vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline_layout(render_context.render_pass), 0, 1,
                                         &entity.material->get_descriptor_sets(render_context.render_pass)[render_context.image_index], 0, nullptr);
 
                 vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline(render_context.render_pass));
+                */
             }
 
             VkDeviceSize offsets[] = {0};
@@ -104,7 +107,7 @@ void NMesh::update_data()
     proxy_data_lock.lock();
     *get_render_scene()->get_scene_proxy().find_entity_group<MeshProxyData>()->get_entity(proxy_entity_handle) = MeshProxyData{
         .owner          = this,
-        .material       = dynamic_cast<AMaterial*>(material.get()),
+        .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),
         .index_count    = mesh->get_indices_count(),

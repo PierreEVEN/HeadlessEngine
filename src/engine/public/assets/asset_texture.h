@@ -8,13 +8,13 @@ class ATexture : public AssetBase
 {
   public:
     [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index);
-    [[nodiscard]] virtual VkImage        get_image(uint32_t image_index = 0) const        = 0;
-    [[nodiscard]] virtual VkImageView    get_view(uint32_t image_index = 0) const         = 0;
+    [[nodiscard]] virtual VkImage        get_image(uint32_t image_index = 0) const = 0;
+    [[nodiscard]] virtual VkImageView    get_view(uint32_t image_index = 0) const  = 0;
     [[nodiscard]] virtual VkImageLayout  get_image_layout(uint32_t image_index = 0) const
     {
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
-    [[nodiscard]] virtual VkSampler      get_sampler(uint32_t image_index = 0) const
+    [[nodiscard]] virtual VkSampler get_sampler(uint32_t image_index = 0) const
     {
         return VK_NULL_HANDLE;
     }
@@ -23,13 +23,9 @@ class ATexture : public AssetBase
     std::vector<VkDescriptorImageInfo> descriptor_image_infos = {};
 };
 
-class ShaderPropertyTextureSampler final : public ShaderUserProperty
+class ShaderPropertyTextureSampler final : public ShaderPropertyTypeBase
 {
-public:
-    ShaderPropertyTextureSampler(ATexture* in_value) : value(in_value)
-    {
-    }
-
+  public:
     [[nodiscard]] std::string get_glsl_type_name() const override
     {
         return "sampler2D";
@@ -38,12 +34,10 @@ public:
     {
         return false;
     }
-
     [[nodiscard]] VkDescriptorType get_descriptor_type() const override
     {
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     }
-    TAssetPtr<ATexture>            value;
 };
 
 class ATexture2D : public ATexture

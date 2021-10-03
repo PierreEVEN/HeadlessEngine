@@ -13,7 +13,7 @@ struct SwapchainFrame;
 
 DECLARE_DELEGATE_MULTICAST(EventRenderRenderPass, SwapchainFrame*)
 
-class AMaterial;
+class AMaterialInstance;
 class NCamera;
 
 class DrawInterface;
@@ -26,7 +26,7 @@ struct SwapchainFrame
     uint32_t        image_index        = 0;
     uint32_t        res_x              = 0;
     uint32_t        res_y              = 0;
-    AMaterial*      last_used_material = nullptr;
+    AMaterialInstance* last_used_material = nullptr;
     NCamera*        view               = nullptr;
     std::string     render_pass        = "";
 };

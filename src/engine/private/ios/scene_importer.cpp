@@ -125,7 +125,7 @@ TAssetPtr<ATexture2D> SceneImporter::process_texture(aiTexture* texture, size_t 
     return text;
 }
 
-TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMaterial* material, size_t id)
+TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scene, aiMaterial* material, size_t id)
 {
     aiColor3D diffuse_color;
     material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color);
@@ -159,5 +159,7 @@ TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMat
 
     const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
 
-    return AssetManager::get()->create<AMaterial>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
+    //return AssetManager::get()->create<AMaterialInstance>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
+    LOG_ERROR("@TODO : create material instance");
+    return {};
 }

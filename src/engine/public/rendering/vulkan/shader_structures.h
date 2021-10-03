@@ -9,8 +9,6 @@
 
 class ShaderParameter
 {
-    friend class AMaterial;
-
   public:
     template <typename Parameter_T, typename... Args_T> static std::shared_ptr<ShaderParameter> create(const std::string& name, VkShaderStageFlagBits stage, Args_T&&... arguments)
     {

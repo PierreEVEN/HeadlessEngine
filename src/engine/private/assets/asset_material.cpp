@@ -139,6 +139,17 @@ std::vector<TAssetPtr<AShader>> AMaterial::get_shader_stages() const
     return shader_stages;
 }
 
+std::vector<ShaderUserProperty> AMaterial::get_shader_properties() const
+{
+    std::vector<ShaderUserProperty> properties{};
+    for (const auto& stage : get_shader_stages())
+    {
+        for (const auto& property : stage->get_shader_config().properties)
+            properties.emplace_back(property);
+    }
+    return properties;
+}
+
 const MaterialPipeline& AMaterial::get_pipeline_class(const std::string& render_pass) const
 {
     const auto found_pipeline = per_stage_pipeline.find(render_pass);
@@ -190,11 +201,11 @@ MaterialPipelineBindings AMaterial::make_layout_bindings()
          
         for (const auto& property : shader_stage->get_shader_config().properties)
         {
-            if (property->should_keep_in_buffer_structure())
+            if (property.should_keep_in_buffer_structure())
                 continue;
             wanted_properties.emplace_back(PropertySearchInfos{
-                .property_name   = property->get_property_name(),
-                .descriptor_type = property->get_descriptor_type(),
+                .property_name   = property.get_property_name(),
+                .descriptor_type = property.get_descriptor_type(),
             });
         }
         

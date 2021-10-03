@@ -10,7 +10,6 @@
 DECLARE_DELEGATE_MULTICAST(EventOnSwapchainRecreate)
 
 class GfxInterface;
-class AMaterial;
 class NCamera;
 
 class Swapchain

@@ -21,11 +21,10 @@ class AMaterial : public AssetBase
     [[nodiscard]] VkPipeline                          get_pipeline(const std::string& render_pass) const;
     [[nodiscard]] const std::vector<VkDescriptorSet>& get_descriptor_sets(const std::string& render_pass) const;
     [[nodiscard]] std::vector<TAssetPtr<AShader>>     get_shader_stages() const;
+    [[nodiscard]] std::vector<ShaderUserProperty>     get_shader_properties() const;
 
     void update_descriptor_sets(const std::string& render_pass, NCamera* in_scene, uint32_t imageIndex);
-
-    void set_property_value();
-
+    
   private:
     TAssetPtr<AShader>                                final_stage        = {};
     std::unordered_map<std::string, MaterialPipeline> per_stage_pipeline = {};
