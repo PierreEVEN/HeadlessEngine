@@ -1,0 +1,5 @@
+add_subfodler_target(config Engine)
+add_subfodler_target(engine Engine)
+add_subfodler_target(jobSystem Engine)
+add_subfodler_target(tests Engine)
+add_subfodler_target(utils Engine)

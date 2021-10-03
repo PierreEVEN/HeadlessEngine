@@ -1,0 +1,88 @@
+name: C++ CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+
+env:
+  VULKAN_SDK: C:/VulkanSDK/1.2.182.0
+
+jobs:
+  build-windows:
+  
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install vulkan
+      shell: cmd
+      run: |
+        cd ${{ github.workspace }}
+        curl -L --silent --show-error --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.2.182.0/windows/VulkanSDK-1.2.182.0-Installer.exe?Human=true
+        VulkanSDK.exe /S
+    
+    # Generate sln
+    - name: generate-sln
+      shell: cmd
+      run: |
+        cmake -B temp
+        
+    # Build engine Release
+    - name: compile-release
+      shell: cmd
+      run: |
+        cmake --build temp
+        
+  build-linux:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+          
+    - name: install-dependencies
+      shell: bash
+      run: sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libvulkan1 mesa-vulkan-drivers vulkan-utils vulkan-validationlayers libvulkan-dev libgl1-mesa-dev libglu1-mesa-dev
+          
+    # Generate makefile
+    - name: generate-makefile
+      shell: bash
+      run: |
+        cmake -B temp
+        
+    # Build engine Release
+    - name: compile-release
+      shell: bash
+      run: |
+        cmake --build temp
+
+  build-macos:
+  
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+          
+    - name: install-dependencies
+      shell: bash
+      run: |
+        brew install python
+        curl -O https://sdk.lunarg.com/sdk/download/1.2.182.0/mac/vulkansdk-macos-1.2.182.0.dmg
+        sudo hdiutil attach vulkansdk-macos-1.2.182.0.dmg
+        sudo open /Volumes/vulkansdk-macos-1.2.182.0/InstallVulkan.app
+          
+    # Generate makefile
+    - name: generate-makefile
+      shell: bash
+      run: |
+        cmake -B temp
+        
+    # Build engine Release
+    - name: compile-release
+      shell: bash
+      run: |
+        cmake --build temp
