@@ -7,7 +7,7 @@
 #include <cpputils/logger.hpp>
 
 #include "assets/asset_material.h"
-#include "assets/asset_mesh.h"
+#include "assets/asset_material_instance.h"
 #include "assets/asset_texture.h"
 #include "ios/mesh_importer.h"
 #include "scene/node_base.h"
@@ -149,17 +149,18 @@ TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scen
     }
 
     LOG_INFO("using diffuse %d", diffuse_index);
-    
+
     if (diffuse_index >= 0)
     {
         LOG_WARNING(":: @TODO set fragment shader texture");
         TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
-        //fragment_stage.textures["diffuse_color"] = texture;
+        // fragment_stage.textures["diffuse_color"] = texture;
     }
 
-    const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
+    const auto asset_id    = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
+    const auto instance_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));
 
-    //return AssetManager::get()->create<AMaterialInstance>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
-    LOG_ERROR("@TODO : create material instance");
-    return {};
+    const auto& base_material = AssetManager::get()->create<AMaterial>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
+
+    return AssetManager::get()->create<AMaterialInstance>(instance_id, base_material);
 }

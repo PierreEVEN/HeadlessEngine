@@ -81,14 +81,13 @@ void NMesh::register_component(Scene* target_scene)
                 render_context.last_used_material = entity.material;
                 if (!entity.material)
                     LOG_FATAL("material is not valid");
-                LOG_FATAL("todo update descriptor set here")
-                //entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
-                /*
+
+                entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
+
                 vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline_layout(render_context.render_pass), 0, 1,
                                         &entity.material->get_descriptor_sets(render_context.render_pass)[render_context.image_index], 0, nullptr);
 
                 vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline(render_context.render_pass));
-                */
             }
 
             VkDeviceSize offsets[] = {0};

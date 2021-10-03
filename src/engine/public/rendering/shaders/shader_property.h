@@ -22,6 +22,14 @@ class ShaderPropertyTypeBase
     {
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     }
+    [[nodiscard]] virtual VkDescriptorBufferInfo* get_descriptor_buffer_info(const std::any& value, uint32_t image_index) const
+    {
+        return nullptr;
+    }
+    [[nodiscard]] virtual VkDescriptorImageInfo* get_descriptor_image_info(const std::any& value, uint32_t image_index) const
+    {
+        return nullptr;
+    }
 };
 
 class ShaderUserProperty final
@@ -60,6 +68,14 @@ class ShaderUserProperty final
     [[nodiscard]] VkDescriptorType get_descriptor_type() const
     {
         return property_type->get_descriptor_type();
+    }
+    [[nodiscard]] VkDescriptorBufferInfo* get_descriptor_buffer_info(uint32_t image_index) const
+    {
+        return property_type->get_descriptor_buffer_info(property_value, image_index);
+    }
+    [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index) const
+    {
+        return property_type->get_descriptor_image_info(property_value, image_index);
     }
 
   protected:

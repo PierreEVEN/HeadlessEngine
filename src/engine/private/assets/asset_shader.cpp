@@ -164,6 +164,33 @@ const std::vector<ShaderReflectProperty>& AShader::get_stage_outputs() const
     return shader_outputs;
 }
 
+std::vector<ShaderReflectProperty> AShader::get_all_properties() const
+{
+    std::vector<ShaderReflectProperty> properties{};
+    for (const auto& property : uniform_buffer)
+        properties.emplace_back(property);
+    for (const auto& property : storage_buffer)
+        properties.emplace_back(property);
+    for (const auto& property : image_samplers)
+        properties.emplace_back(property);
+    for (const auto& property : shader_inputs)
+        properties.emplace_back(property);
+    for (const auto& property : shader_outputs)
+        properties.emplace_back(property);
+
+    return properties;
+}
+
+std::optional<ShaderReflectProperty> AShader::find_property_by_name(const std::string& property_name) const
+{
+    for (const auto& property : get_all_properties())
+    {
+        if (property_name == property.property_name)
+            return property;
+    }
+    return {};
+}
+
 const TAssetPtr<AShader>& AShader::get_previous_shader_stage() const
 {
     return shader_configuration.input_stage;

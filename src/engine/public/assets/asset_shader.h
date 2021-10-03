@@ -40,6 +40,8 @@ class AShader : public AssetBase
     [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_storage_buffers() const;
     [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_stage_inputs() const;
     [[nodiscard]] const std::vector<ShaderReflectProperty>&   get_stage_outputs() const;
+    [[nodiscard]] std::vector<ShaderReflectProperty>          get_all_properties() const;
+    [[nodiscard]] std::optional<ShaderReflectProperty>        find_property_by_name(const std::string& property_name) const;
 
     [[nodiscard]] const ShaderReflectProperty* get_model_matrix_buffer() const;
     [[nodiscard]] const ShaderReflectProperty* get_scene_data_buffer() const;

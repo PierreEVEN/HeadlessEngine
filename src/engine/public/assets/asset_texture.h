@@ -38,6 +38,10 @@ class ShaderPropertyTextureSampler final : public ShaderPropertyTypeBase
     {
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     }
+    [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(const std::any& value, uint32_t image_index) const override
+    {
+        return value.has_value() ? nullptr : TAssetPtr<ATexture>("default_texture")->get_descriptor_image_info(image_index);
+    }
 };
 
 class ATexture2D : public ATexture

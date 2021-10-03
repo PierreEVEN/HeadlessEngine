@@ -7,6 +7,7 @@
 #include "camera_basic_controller.h"
 #include "custom_graphic_interface.h"
 #include "imgui.h"
+#include "assets/asset_material_instance.h"
 #include "ios/mesh_importer.h"
 #include "ios/scene_importer.h"
 #include "misc/primitives.h"
@@ -55,7 +56,7 @@ static RendererConfiguration make_deferred_renderer_config(std::shared_ptr<NCame
     });
     deferred_combine_render.add_lambda([&](SwapchainFrame* render_context) {
         //@TODO fix crash when no vertex buffer is bound
-        TAssetPtr<AMaterial> material("deferred_resolve_material");
+        TAssetPtr<AMaterialInstance> material("deferred_resolve_material");
         if (!material)
         {
             LOG_WARNING("deferred_resolve_material is not valid");
@@ -69,7 +70,7 @@ static RendererConfiguration make_deferred_renderer_config(std::shared_ptr<NCame
         vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
     });
     deferred_post_process_rendering.add_lambda([&](SwapchainFrame* render_context) {
-        TAssetPtr<AMaterial> material("post_process_resolve_material");
+        TAssetPtr<AMaterialInstance> material("post_process_resolve_material");
         if (!material)
         {
             LOG_WARNING("post_process_resolve_material is not valid");

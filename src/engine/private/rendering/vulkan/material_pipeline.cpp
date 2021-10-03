@@ -39,13 +39,13 @@ void MaterialPipeline::create_pipeline()
     /** Create descriptor set layout */
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(pipeline_configuration.descriptor_bindings.descriptor_bindings.size());
-    layoutInfo.pBindings    = pipeline_configuration.descriptor_bindings.descriptor_bindings.data();
+    layoutInfo.bindingCount = static_cast<uint32_t>(pipeline_configuration.descriptor_bindings.size());
+    layoutInfo.pBindings    = pipeline_configuration.descriptor_bindings.data();
     VK_ENSURE(vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &layoutInfo, vulkan_common::allocation_callback, &descriptor_set_layout), "Failed to create descriptor set layout");
 
     /** Allocate descriptor set */
     const uint32_t                     swapchain_image_count = Graphics::get()->get_swapchain_config()->get_image_count();
-    std::vector<VkDescriptorSetLayout> layouts(swapchain_image_count, descriptor_set_layout);
+    std::vector layouts(swapchain_image_count, descriptor_set_layout);
     descriptor_sets.resize(swapchain_image_count);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

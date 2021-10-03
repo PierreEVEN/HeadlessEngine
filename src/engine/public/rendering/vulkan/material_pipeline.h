@@ -6,13 +6,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-struct MaterialPipelineBindings
-{
-    std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings  = {};
-    std::unordered_map<std::string, uint32_t> vertex_binding_map   = {};
-    std::unordered_map<std::string, uint32_t> fragment_binding_map = {};
-};
-
 struct VertexInputConfig
 {
     std::vector<VkVertexInputAttributeDescription> attributes            = {};
@@ -21,15 +14,15 @@ struct VertexInputConfig
 
 struct MaterialPipelineConfiguration
 {
-    std::vector<TAssetPtr<AShader>> shader_stages         = {};
-    std::string                     renderer_stages       = {};
-    MaterialPipelineBindings        descriptor_bindings   = {};
-    VertexInputConfig               vertex_input          = {};
-    VkBool32                        depth_test            = VK_TRUE;
-    VkBool32                        wireframe             = VK_FALSE;
-    float                           wireframe_lines_width = 1;
-    VkPrimitiveTopology             topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode                   polygon_mode          = VK_POLYGON_MODE_FILL;
+    std::vector<TAssetPtr<AShader>>           shader_stages         = {};
+    std::string                               renderer_stages       = {};
+    std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings   = {};
+    VertexInputConfig                         vertex_input          = {};
+    VkBool32                                  depth_test            = VK_TRUE;
+    VkBool32                                  wireframe             = VK_FALSE;
+    float                                     wireframe_lines_width = 1;
+    VkPrimitiveTopology                       topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode                             polygon_mode          = VK_POLYGON_MODE_FILL;
 
     [[nodiscard]] bool is_valid() const
     {
