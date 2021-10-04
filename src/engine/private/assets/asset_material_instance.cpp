@@ -59,6 +59,7 @@ void AMaterialInstance::update_descriptor_sets(const std::string& render_pass, N
 {
     std::vector<VkWriteDescriptorSet> write_descriptor_sets = {};
 
+    LOG_WARNING("@TODO : Find a way to retrieve buffers");
     for (auto& property : shader_properties)
     {
         property.write_descriptor_set.dstSet      = base_material->get_descriptor_sets(render_pass)[imageIndex];

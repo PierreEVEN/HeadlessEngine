@@ -157,10 +157,6 @@ TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scen
         // fragment_stage.textures["diffuse_color"] = texture;
     }
 
-    const auto asset_id    = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
-    const auto instance_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));
-
-    const auto& base_material = AssetManager::get()->create<AMaterial>(asset_id, TAssetPtr<AShader>("gltf_fragment_shader"), std::vector<std::string>{"render_scene"});
-
-    return AssetManager::get()->create<AMaterialInstance>(instance_id, base_material);
+    const auto instance_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));    
+    return AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterial>("gltf_base_material"));
 }

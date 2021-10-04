@@ -2,12 +2,12 @@
 #include "main_game_interface.h"
 
 #include "assets/asset_material.h"
+#include "assets/asset_material_instance.h"
 #include "assets/asset_shader.h"
 #include "assets/asset_texture.h"
 #include "camera_basic_controller.h"
 #include "custom_graphic_interface.h"
 #include "imgui.h"
-#include "assets/asset_material_instance.h"
 #include "ios/mesh_importer.h"
 #include "ios/scene_importer.h"
 #include "misc/primitives.h"
@@ -167,15 +167,16 @@ static void create_default_objects()
         const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_config);
 
         const ShaderConfiguration fragment_config{
-            .shader_stage            = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage = vertex_shader,
+            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .input_stage  = vertex_shader,
             .properties{
                 ShaderUserProperty::create<ShaderPropertyTextureSampler>("diffuse_color", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("default_texture").get())),
             },
         };
         const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_config);
+        AssetManager::get()->create<AMaterial>("gltf_base_material", fragment_shader, std::vector<std::string>{"render_scene"});
     }
-    
+
     // Default shader
     {
         const ShaderConfiguration vertex_config{
@@ -196,7 +197,8 @@ static void create_default_objects()
         };
         const auto fragment_shader = AssetManager::get()->create<AShader>("default_fragment_shader", "data/shaders/default.fs.glsl", fragment_config);
 
-        auto material = AssetManager::get()->create<AMaterial>("test_my_mat", fragment_shader, std::vector<std::string>{"render_scene"});
+        auto material = AssetManager::get()->create<AMaterial>("default_material_base", fragment_shader, std::vector<std::string>{"render_scene"});
+        AssetManager::get()->create<AMaterialInstance>("default_material", material);
     }
 
     // Create meshes
@@ -213,8 +215,8 @@ static void create_deferred_objects()
         const auto vertex_shader = AssetManager::get()->create<AShader>("deferred_resolve_vertex_shader", "data/shaders/deferred_resolve.vert.glsl", vertex_config);
 
         const ShaderConfiguration fragment_config{
-            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage  = vertex_shader,
+            .shader_stage         = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .input_stage          = vertex_shader,
             .use_view_data_buffer = true,
             .properties{
                 ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerAlbedo", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("framebuffer_image-render_scene_0").get())),
@@ -224,7 +226,8 @@ static void create_deferred_objects()
         };
         auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config);
 
-        AssetManager::get()->create<AMaterial>("deferred_resolve_material", fragment_shader, std::vector<std::string>{"combine_deferred"});
+        const auto material = AssetManager::get()->create<AMaterial>("deferred_resolve_material_base", fragment_shader, std::vector<std::string>{"combine_deferred"});
+        AssetManager::get()->create<AMaterialInstance>("deferred_resolve_material", material);
     }
 
     // Post process resolve
@@ -243,7 +246,8 @@ static void create_deferred_objects()
         };
         auto fragment_shader = AssetManager::get()->create<AShader>("post_process_resolve_fragment_shader", "data/shaders/post_process_resolve.frag.glsl", fragment_config);
 
-        AssetManager::get()->create<AMaterial>("post_process_resolve_material", fragment_shader, std::vector<std::string>{"post_processing_0"});
+        const auto material = AssetManager::get()->create<AMaterial>("post_process_resolve_material_base", fragment_shader, std::vector<std::string>{"post_processing_0"});
+        AssetManager::get()->create<AMaterialInstance>("post_process_resolve_material", material);
     }
 }
 
