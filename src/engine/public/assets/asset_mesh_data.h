@@ -2,28 +2,13 @@
 
 #include "asset_base.h"
 
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "misc/Frustum.h"
+#include "rendering/mesh/vertex.h"
 
-#include <glm/glm.hpp>
+#include <optional>
 #include <vk_mem_alloc.h>
 
 #include <vulkan/vulkan_core.h>
-
-struct Vertex
-{
-    glm::vec3 pos    = glm::vec3(0);
-    glm::vec2 uv     = glm::vec2(0);
-    glm::vec4 col    = glm::vec4(1);
-    glm::vec3 norm   = glm::vec3(0);
-    glm::vec3 tang   = glm::vec3(0);
-    glm::vec3 bitang = glm::vec3(0);
-
-    static size_t get_vertex_structure_size();
-
-    static std::vector<VkVertexInputAttributeDescription> get_attribute_descriptions();
-};
 
 class AMeshData : public AssetBase
 {

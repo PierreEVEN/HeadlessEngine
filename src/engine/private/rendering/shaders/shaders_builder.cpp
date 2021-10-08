@@ -4,6 +4,7 @@
 
 #include "assets/asset_shader.h"
 #include "rendering/shaders/shader_library.h"
+#include "rendering/vulkan/material_pipeline.h"
 
 #include <cpputils/logger.hpp>
 #include <cpputils/stringutils.hpp>
@@ -27,13 +28,14 @@ static std::vector<std::string> split_code_lines(const std::string& code)
     return lines;
 }
 
-ShaderPreprocessor::ShaderPreprocessor(const std::string& in_shader_code, const ShaderConfiguration& in_configuration) : shader_code(in_shader_code), configuration(in_configuration)
+ShaderPreprocessor::ShaderPreprocessor(const std::string& in_shader_code, const ShaderInfos& in_configuration, const TAssetPtr<AShader>& input_stage, const VertexInputInfo in_vertex_input_config)
+    : shader_code(in_shader_code), configuration(in_configuration), vertex_input_config(in_vertex_input_config), input_shader_stage(input_stage)
 {
 }
 
 std::string ShaderPreprocessor::try_get_shader_code() const
 {
-    return generate_output_code(shader_code, configuration);
+    return generate_output_code(shader_code, configuration, vertex_input_config, input_shader_stage);
 }
 
 std::string ShaderPreprocessor::get_debug_code(uint32_t error_line, uint32_t error_column) const
@@ -52,7 +54,6 @@ std::string ShaderPreprocessor::get_debug_code(uint32_t error_line, uint32_t err
             }
             debug_string += "^================\n";
         }
-
     }
     return debug_string;
 }
@@ -129,7 +130,26 @@ static std::string add_scene_object_buffer(uint32_t& current_binding)
                                current_binding++, G_MODEL_MATRIX_BUFFER_NAME);
 }
 
-std::string ShaderPreprocessor::generate_output_code(const std::string& shader_code, const ShaderConfiguration& configuration)
+static std::string vk_format_to_glsl_type(VkFormat in_format)
+{
+    switch (in_format)
+    {
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+        return "vec4";
+
+    case VK_FORMAT_R32G32B32_SFLOAT:
+        return "vec3";
+
+    case VK_FORMAT_R32G32_SFLOAT:
+        return "vec2";
+
+    default:
+        break;
+    }
+    return "unhandled vk format";
+}
+
+std::string ShaderPreprocessor::generate_output_code(const std::string& shader_code, const ShaderInfos& configuration, const VertexInputInfo& vertex_input, const TAssetPtr<AShader>& input_shader_stage)
 {
     uint32_t out_binding  = 0;
     uint32_t out_location = 0;
@@ -139,16 +159,20 @@ std::string ShaderPreprocessor::generate_output_code(const std::string& shader_c
                                  "#version 460\n"
                                  "#extension GL_ARB_separate_shader_objects : enable \n\n";
 
+    if (configuration.shader_stage == VK_SHADER_STAGE_VERTEX_BIT)
+        for (const auto& input : vertex_input.attributes)
+            generated_code += stringutils::format("layout (location = %d) in %s %s;\n", out_location++, vk_format_to_glsl_type(input.description.format).c_str(), input.attribute_name.c_str());
+
     // Add input properties
     generated_code += "\n// input properties\n";
-    if (configuration.input_stage)
+    if (input_shader_stage)
     {
-        for (const auto& input : configuration.input_stage->get_stage_outputs())
+        for (const auto& input : input_shader_stage->get_stage_outputs())
         {
             generated_code += stringutils::format("layout (location = %d) in %s %s;\n", input.location, input.get_property_glsl_typename().c_str(), input.property_name.c_str());
         }
 
-        out_binding = configuration.input_stage->get_last_binding_index() + 1;
+        out_binding = input_shader_stage->get_last_binding_index() + 1;
     }
 
     if (configuration.use_scene_object_buffer)

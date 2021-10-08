@@ -440,7 +440,6 @@ bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
     TAssetPtr<AShader> vertex_shader = nullptr;//AssetManager::get()->create<AShader>("imgui_vertex_shader", std::vector<uint32_t>(__glsl_shader_vert_spv, __glsl_shader_vert_spv + sizeof(__glsl_shader_vert_spv)), EShaderStage::VERTEX_SHADER);
     TAssetPtr<AShader> fragment_shader = nullptr;//        AssetManager::get()->create<AShader>("imgui_fragment_shader", std::vector<uint32_t>(__glsl_shader_frag_spv, __glsl_shader_frag_spv + sizeof(__glsl_shader_frag_spv)), EShaderStage::FRAGMENT_SHADER);
     LOG_FATAL("@TODO update shader creation");
-    MaterialPipeline test_pipeline;
 
     if (!g_FontSampler)
     {

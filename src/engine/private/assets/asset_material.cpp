@@ -11,80 +11,66 @@
 #include "rendering/graphics.h"
 #include "scene/node_camera.h"
 
-AMaterial::AMaterial(const TAssetPtr<AShader>& final_shader_stage, const std::vector<std::string>& use_with_render_passes, MaterialPipelineConfiguration pipeline_configuration,
-                     std::optional<VertexInputConfig> vertex_input_override)
-    : final_stage(final_shader_stage)
+bool MaterialInfos::is_valid() const
 {
-    if (use_with_render_passes.empty())
+    return vertex_stage && fragment_stage && !renderer_passes.empty();
+}
+
+std::vector<TAssetPtr<AShader>> MaterialInfos::get_shader_stages() const
+{
+    std::vector<TAssetPtr<AShader>> stage_list;
+    if (vertex_stage)
+        stage_list.emplace_back(vertex_stage);
+    if (tessellation_stage)
+        stage_list.emplace_back(tessellation_stage);
+    if (geometry_stage)
+        stage_list.emplace_back(geometry_stage);
+    if (fragment_stage)
+        stage_list.emplace_back(fragment_stage);
+
+    return stage_list;
+}
+
+AMaterial::AMaterial(const MaterialInfos& in_material_infos) : material_infos(in_material_infos)
+{
+    if (material_infos.renderer_passes.empty())
         LOG_FATAL("you need to specify at least one render pass to be used with");
 
     // @TODO reimplement push constant support
 
-    for (const auto& stage : use_with_render_passes)
+    auto layout_bindings = make_layout_bindings();
+
+    for (const auto& pass : material_infos.renderer_passes)
     {
-        if (!Graphics::get()->get_renderer()->get_render_pass_configuration(stage))
+        if (!Graphics::get()->get_renderer()->get_render_pass_configuration(pass))
         {
-            LOG_WARNING("material %s is designed to be used with render pass %s, but renderer doesn't have any render pass with this name", to_string().c_str(), stage.c_str());
+            LOG_WARNING("material %s is designed to be used with render pass %s, but renderer doesn't have any render pass with this name", to_string().c_str(), pass.c_str());
             continue;
         }
 
-        per_stage_pipeline[stage] = {};
-        auto& pipeline            = per_stage_pipeline.find(stage)->second;
-
-        pipeline_configuration.shader_stages = get_shader_stages();
-        pipeline_configuration.vertex_input =
-            vertex_input_override ? vertex_input_override.value() :
-            VertexInputConfig{ //@TODO handle vertex input
-            },
-        pipeline_configuration.renderer_stages     = stage;
-        pipeline_configuration.descriptor_bindings = make_layout_bindings();
-        pipeline.update_configuration(pipeline_configuration);
-        pipeline.init_or_rebuild_pipeline();
+        per_stage_pipeline[pass] = std::make_unique<MaterialPipeline>(material_infos.pipeline_infos, pass, layout_bindings, material_infos.get_shader_stages());
     }
 }
 
-VkPipelineLayout AMaterial::get_pipeline_layout(const std::string& render_pass) const
+MaterialPipeline* AMaterial::get_pipeline(const std::string& render_pass) const
 {
-    const auto layout = get_pipeline_class(render_pass).get_pipeline_layout();
-    VK_CHECK(layout, stringutils::format("pipeline layout for pass %s is null", render_pass.c_str()).c_str());
-    return layout;
+    if (const auto found_pipeline = per_stage_pipeline.find(render_pass); found_pipeline != per_stage_pipeline.end())
+    {
+        return found_pipeline->second.get();
+    }
+    LOG_ERROR("material %s is not configured to be used with render pass %s", to_string().c_str(), render_pass.c_str());
+    return nullptr;
 }
 
-VkPipeline AMaterial::get_pipeline(const std::string& render_pass) const
-{
-    const auto pipeline = get_pipeline_class(render_pass).get_pipeline();
-    VK_CHECK(pipeline, stringutils::format("pipeline for pass %s is null", render_pass.c_str()).c_str());
-    return pipeline;
-}
-
-const std::vector<VkDescriptorSet>& AMaterial::get_descriptor_sets(const std::string& render_pass) const
-{
-    const auto& desc_sets = get_pipeline_class(render_pass).get_descriptor_sets();
-    if (desc_sets.empty())
-        LOG_FATAL("pipeline for pass %s is null", render_pass.c_str());
-    return desc_sets;
-}
 
 std::vector<TAssetPtr<AShader>> AMaterial::get_shader_stages() const
 {
-    std::vector<TAssetPtr<AShader>> shader_stages       = {};
-    TAssetPtr<AShader>              current_final_stage = final_stage;
-    while (current_final_stage)
-    {
-        shader_stages.emplace_back(current_final_stage);
-        current_final_stage = current_final_stage->get_previous_shader_stage();
-    }
-    std::ranges::reverse(shader_stages);
-    return shader_stages;
+    return material_infos.get_shader_stages();
 }
 
-const MaterialPipeline& AMaterial::get_pipeline_class(const std::string& render_pass) const
+const MaterialInfos& AMaterial::get_material_infos() const
 {
-    const auto found_pipeline = per_stage_pipeline.find(render_pass);
-    if (found_pipeline == per_stage_pipeline.end())
-        LOG_FATAL("trying to get pipeline class on render pass %s", render_pass.c_str());
-
-    return found_pipeline->second;
+    return material_infos;
 }
 
 static std::optional<ShaderReflectProperty> find_shader_property(const TAssetPtr<AShader>& shader, const std::string& property_name, const VkDescriptorType& descriptor_type)
@@ -122,11 +108,11 @@ std::vector<VkDescriptorSetLayoutBinding> AMaterial::make_layout_bindings() cons
         std::string      property_name;
         VkDescriptorType descriptor_type;
     };
-    
+
     for (const auto& shader_stage : get_shader_stages())
     {
         std::vector<PropertySearchInfos> wanted_properties = {};
-         
+
         for (const auto& property : shader_stage->get_shader_config().properties)
         {
             if (property.should_keep_in_buffer_structure())
@@ -136,7 +122,7 @@ std::vector<VkDescriptorSetLayoutBinding> AMaterial::make_layout_bindings() cons
                 .descriptor_type = property.get_descriptor_type(),
             });
         }
-        
+
         if (shader_stage->get_shader_config().use_scene_object_buffer)
             wanted_properties.emplace_back(PropertySearchInfos{
                 .property_name   = G_MODEL_MATRIX_BUFFER_NAME,

@@ -1,7 +1,8 @@
 #pragma once
 #include "assets/asset_ptr.h"
+#include "rendering/mesh/vertex.h"
 
-#include <any>
+
 #include <glm/glm.hpp>
 #include <memory>
 #include <optional>
@@ -22,11 +23,11 @@ class ShaderPropertyTypeBase
     {
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     }
-    [[nodiscard]] virtual VkDescriptorBufferInfo* get_descriptor_buffer_info(const std::any& value, uint32_t image_index) const
+    [[nodiscard]] virtual VkDescriptorBufferInfo* get_descriptor_buffer_info(uint32_t image_index) const
     {
         return nullptr;
     }
-    [[nodiscard]] virtual VkDescriptorImageInfo* get_descriptor_image_info(const std::any& value, uint32_t image_index) const
+    [[nodiscard]] virtual VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index) const
     {
         return nullptr;
     }
@@ -38,21 +39,16 @@ class ShaderUserProperty final
     template <typename Property_T, typename PropertyData_T> [[nodiscard]] static ShaderUserProperty create(const std::string& property_name, const PropertyData_T& default_value)
     {
         ShaderUserProperty property{};
-        property.property_type  = std::make_shared<Property_T>();
-        property.property_name  = property_name;
-        property.property_value = default_value;
+        property.property_type = std::make_shared<Property_T>(default_value);
+        property.property_name = property_name;
         return property;
     }
 
-    template <typename PropertyData_T> PropertyData_T get_value()
+    template <typename Property_T> [[nodiscard]] Property_T* get_property_type() const
     {
-        return std::any_cast<PropertyData_T>(property_value);
+        return dynamic_cast<Property_T*>(property_type.get());
     }
 
-    template <typename PropertyValue_T> void set_property_value(const PropertyValue_T& value)
-    {
-        return property_value = value;
-    }
     [[nodiscard]] std::string get_property_name() const
     {
         return property_name;
@@ -71,11 +67,11 @@ class ShaderUserProperty final
     }
     [[nodiscard]] VkDescriptorBufferInfo* get_descriptor_buffer_info(uint32_t image_index) const
     {
-        return property_type->get_descriptor_buffer_info(property_value, image_index);
+        return property_type->get_descriptor_buffer_info(image_index);
     }
     [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index) const
     {
-        return property_type->get_descriptor_image_info(property_value, image_index);
+        return property_type->get_descriptor_image_info(image_index);
     }
 
   protected:
@@ -84,13 +80,12 @@ class ShaderUserProperty final
   private:
     std::shared_ptr<ShaderPropertyTypeBase> property_type;
     std::string                             property_name;
-    std::any                                property_value;
 };
 
-struct ShaderConfiguration
+struct ShaderInfos
 {
     VkShaderStageFlagBits           shader_stage            = VK_SHADER_STAGE_VERTEX_BIT;
-    TAssetPtr<AShader>              input_stage             = {};
+    std::optional<VertexInputInfo>  vertex_inputs           = {};
     bool                            use_view_data_buffer    = false;
     bool                            use_scene_object_buffer = false;
     std::vector<ShaderUserProperty> properties              = {};
@@ -101,7 +96,6 @@ struct ShaderConfiguration
 
 class ShaderPropertyFloat final : public ShaderPropertyTypeBase
 {
-  public:
     [[nodiscard]] std::string get_glsl_type_name() const override
     {
         return "float";
@@ -114,7 +108,6 @@ class ShaderPropertyFloat final : public ShaderPropertyTypeBase
 
 class ShaderPropertyVec3 final : public ShaderPropertyTypeBase
 {
-  public:
     [[nodiscard]] std::string get_glsl_type_name() const override
     {
         return "vec3";
@@ -123,11 +116,13 @@ class ShaderPropertyVec3 final : public ShaderPropertyTypeBase
     {
         return true;
     }
+
 };
 
 class ShaderPropertyVec2 final : public ShaderPropertyTypeBase
 {
   public:
+
     [[nodiscard]] std::string get_glsl_type_name() const override
     {
         return "vec2";

@@ -148,15 +148,24 @@ TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scen
         }
     }
 
-    LOG_INFO("using diffuse %d", diffuse_index);
+    LOG_DEBUG("using diffuse %d", diffuse_index);
+    
+    const auto instance_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));
+    auto material_instance = AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterial>("gltf_base_material"));
 
-    if (diffuse_index >= 0)
+    auto* texture_property = material_instance->get_property<ShaderPropertyTextureSampler>("diffuse_color");
+
+    if (texture_property)
     {
-        LOG_WARNING(":: @TODO set fragment shader texture");
-        TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
-        // fragment_stage.textures["diffuse_color"] = texture;
-    }
 
-    const auto instance_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));    
-    return AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterial>("gltf_base_material"));
+        if (diffuse_index >= 0)
+        {
+            TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
+            texture_property->set_texture(texture);
+        }
+    }
+    else
+        LOG_ERROR("failed to find material property diffuse_color");
+
+    return material_instance;
 }

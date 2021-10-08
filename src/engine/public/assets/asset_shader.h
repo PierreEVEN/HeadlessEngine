@@ -1,5 +1,6 @@
 #pragma once
 #include "asset_base.h"
+#include "rendering/mesh/vertex.h"
 #include "rendering/shaders/shader_property.h"
 #include "rendering/vulkan/shader_module.h"
 
@@ -27,8 +28,8 @@ struct ShaderReflectProperty
 class AShader : public AssetBase
 {
   public:
-    AShader(const std::filesystem::path& source_mesh_path, const ShaderConfiguration& in_shader_configuration);
-    AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderConfiguration& in_shader_configuration);
+    AShader(const std::filesystem::path& source_mesh_path, const ShaderInfos& in_shader_configuration, const TAssetPtr<AShader>& input_stage = {});
+    AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderInfos& in_shader_configuration);
     virtual ~AShader() override = default;
 
     [[nodiscard]] VkShaderModule get_shader_module() const;
@@ -46,16 +47,15 @@ class AShader : public AssetBase
     [[nodiscard]] const ShaderReflectProperty* get_model_matrix_buffer() const;
     [[nodiscard]] const ShaderReflectProperty* get_scene_data_buffer() const;
 
-    [[nodiscard]] const TAssetPtr<AShader>&    get_previous_shader_stage() const;
     [[nodiscard]] const VkShaderStageFlagBits& get_shader_stage() const;
-    [[nodiscard]] const ShaderConfiguration&   get_shader_config() const;
+    [[nodiscard]] const ShaderInfos&   get_shader_config() const;
     [[nodiscard]] uint32_t                     get_last_binding_index() const;
 
   private:
     void                       build_reflection_data(const std::vector<uint32_t>& bytecode);
     std::optional<std::string> read_shader_file(const std::filesystem::path& source_path);
 
-    const ShaderConfiguration     shader_configuration;
+    const ShaderInfos     shader_configuration;
     std::unique_ptr<ShaderModule> shader_module;
 
     // Reflection data

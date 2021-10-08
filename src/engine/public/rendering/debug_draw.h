@@ -35,7 +35,5 @@ class DebugDraw final
 
     FastMutex write_lock;
 
-    MaterialPipeline        material_pipeline;
-
     NCamera* context_camera = nullptr;
 };

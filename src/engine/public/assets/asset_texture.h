@@ -25,7 +25,6 @@ class ATexture : public AssetBase
 
 class ShaderPropertyTextureSampler final : public ShaderPropertyTypeBase
 {
-  public:
     [[nodiscard]] std::string get_glsl_type_name() const override
     {
         return "sampler2D";
@@ -37,10 +36,6 @@ class ShaderPropertyTextureSampler final : public ShaderPropertyTypeBase
     [[nodiscard]] VkDescriptorType get_descriptor_type() const override
     {
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    }
-    [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(const std::any& value, uint32_t image_index) const override
-    {
-        return value.has_value() ? nullptr : TAssetPtr<ATexture>("default_texture")->get_descriptor_image_info(image_index);
     }
 };
 

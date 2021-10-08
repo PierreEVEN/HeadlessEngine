@@ -1,57 +1,35 @@
 #pragma once
 
-#include "rendering/renderer/render_pass_description.h"
-#include "shader_module.h"
+#include "assets/asset_ptr.h"
+#include "rendering/mesh/vertex.h"
 
-#include <vector>
+#include <optional>
 #include <vulkan/vulkan.h>
 
-struct VertexInputConfig
-{
-    std::vector<VkVertexInputAttributeDescription> attributes            = {};
-    size_t                                         vertex_structure_size = 0;
-};
+class AShader;
 
-struct MaterialPipelineConfiguration
+struct PipelineInfos
 {
-    std::vector<TAssetPtr<AShader>>           shader_stages         = {};
-    std::string                               renderer_stages       = {};
-    std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings   = {};
-    VertexInputConfig                         vertex_input          = {};
-    VkBool32                                  depth_test            = VK_TRUE;
-    VkBool32                                  wireframe             = VK_FALSE;
-    float                                     wireframe_lines_width = 1;
-    VkPrimitiveTopology                       topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode                             polygon_mode          = VK_POLYGON_MODE_FILL;
-
-    [[nodiscard]] bool is_valid() const
-    {
-        return !shader_stages.empty() && !renderer_stages.empty();
-    }
+    // Pipeline config
+    VkBool32            depth_test            = VK_TRUE;
+    VkBool32            wireframe             = VK_FALSE;
+    float               wireframe_lines_width = 1;
+    VkPrimitiveTopology topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode       polygon_mode          = VK_POLYGON_MODE_FILL;
 };
 
 class MaterialPipeline final
 {
   public:
-    MaterialPipeline() = default;
+    MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages);
     ~MaterialPipeline();
 
-    void update_configuration(const MaterialPipelineConfiguration& in_configuration);
-    void init_or_rebuild_pipeline();
-
-    [[nodiscard]] VkPipelineLayout                     get_pipeline_layout() const;
-    [[nodiscard]] VkPipeline                           get_pipeline() const;
-    [[nodiscard]] const std::vector<VkDescriptorSet>&  get_descriptor_sets() const;
-    [[nodiscard]] const MaterialPipelineConfiguration& get_pipeline_configuration() const;
+    [[nodiscard]] VkPipelineLayout*      get_pipeline_layout();
+    [[nodiscard]] VkPipeline             get_pipeline() const;
+    [[nodiscard]] VkDescriptorSetLayout* get_descriptor_sets_layouts();
 
   private:
-    void destroy();
-    void create_pipeline();
-
-    MaterialPipelineConfiguration pipeline_configuration = {};
-    std::vector<VkDescriptorSet>  descriptor_sets        = {};
-    VkDescriptorSetLayout         descriptor_set_layout  = VK_NULL_HANDLE;
-    VkPipelineLayout              pipeline_layout        = VK_NULL_HANDLE;
-    VkPipeline                    pipeline               = VK_NULL_HANDLE;
-    bool                          is_dirty               = true;
+    std::vector<VkDescriptorSetLayout> descriptor_set_layout = {};
+    VkPipelineLayout                   pipeline_layout       = VK_NULL_HANDLE;
+    VkPipeline                         pipeline              = VK_NULL_HANDLE;
 };

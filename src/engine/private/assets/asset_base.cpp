@@ -90,7 +90,7 @@ std::shared_ptr<AssetManager> AssetManager::get_internal()
     return asset_manager_instance;
 }
 
-std::string AssetBase::to_string()
+std::string AssetBase::to_string() const
 {
     return asset_id->to_string();
 }

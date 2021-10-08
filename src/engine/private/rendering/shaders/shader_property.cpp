@@ -4,7 +4,7 @@
 
 #include <cpputils/stringutils.hpp>
 
-bool ShaderConfiguration::has_buffered_properties() const
+bool ShaderInfos::has_buffered_properties() const
 {
     for (const auto& property : properties)
         if (property.should_keep_in_buffer_structure())
@@ -12,7 +12,7 @@ bool ShaderConfiguration::has_buffered_properties() const
     return false;
 }
 
-std::string ShaderConfiguration::create_glsl_structure() const
+std::string ShaderInfos::create_glsl_structure() const
 {
     std::string output_string = stringutils::format("%s_TYPE {\n", SHADER_STATIC_DATA_OBJECT_NAME);
 

@@ -94,13 +94,18 @@ std::string ShaderReflectProperty::get_property_glsl_typename() const
     }
 }
 
-AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderConfiguration& in_shader_configuration) : shader_configuration(in_shader_configuration)
+AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderInfos& in_shader_configuration, const TAssetPtr<AShader>& input_stage) : shader_configuration(in_shader_configuration)
 {
+    if (in_shader_configuration.shader_stage != VK_SHADER_STAGE_VERTEX_BIT && !input_stage)
+        LOG_FATAL("You should alway specify a valid input stage for shader stages that are not vertex stages");
+
+
     shader_module = std::make_unique<ShaderModule>();
     shader_module->set_shader_stage(shader_configuration.shader_stage);
     if (auto shader_data = read_shader_file(source_mesh_path); shader_data)
     {
-        const ShaderPreprocessor preprocessor(shader_data.value(), in_shader_configuration);
+        const ShaderPreprocessor preprocessor(shader_data.value(), in_shader_configuration, input_stage,
+                                              in_shader_configuration.vertex_inputs ? in_shader_configuration.vertex_inputs.value() : Vertex::get_attribute_descriptions());
         const auto&              shader_code = preprocessor.try_get_shader_code();
         shader_module->set_plain_text(shader_code);
         const auto& bytecode = shader_module->get_bytecode();
@@ -120,7 +125,7 @@ AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderConf
     LOG_INFO("successfully compiled shader %s", to_string().c_str());
 }
 
-AShader::AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderConfiguration& in_shader_configuration) : shader_configuration(in_shader_configuration)
+AShader::AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderInfos& in_shader_configuration) : shader_configuration(in_shader_configuration)
 {
     shader_module = std::make_unique<ShaderModule>();
     shader_module->set_shader_stage(shader_configuration.shader_stage);
@@ -191,17 +196,12 @@ std::optional<ShaderReflectProperty> AShader::find_property_by_name(const std::s
     return {};
 }
 
-const TAssetPtr<AShader>& AShader::get_previous_shader_stage() const
-{
-    return shader_configuration.input_stage;
-}
-
 const VkShaderStageFlagBits& AShader::get_shader_stage() const
 {
     return shader_configuration.shader_stage;
 }
 
-const ShaderConfiguration& AShader::get_shader_config() const
+const ShaderInfos& AShader::get_shader_config() const
 {
     return shader_configuration;
 }

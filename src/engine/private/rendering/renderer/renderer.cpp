@@ -147,7 +147,7 @@ void Renderer::set_render_pass_description(RendererConfiguration in_renderer_con
         if (pass.pass_name.empty())
             LOG_FATAL("you need to specify a name for each render pass");
 
-    LOG_INFO("set render pass configuration : \n%s", in_renderer_configuration.to_string().c_str());
+    LOG_INFO("[ GFX] Set render pass configuration : \n%s", in_renderer_configuration.to_string().c_str());
     
     auto& last_render_pass                 = in_renderer_configuration.get_pass_descriptions()[in_renderer_configuration.get_pass_descriptions().size() - 1];
     last_render_pass.b_use_swapchain_image = true;

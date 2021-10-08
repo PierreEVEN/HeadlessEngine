@@ -2,6 +2,7 @@
 
 #include "scene/node_mesh.h"
 
+#include "assets/asset_material.h"
 #include "assets/asset_material_instance.h"
 #include "assets/asset_mesh_data.h"
 #include "assets/asset_texture.h"
@@ -11,6 +12,7 @@
 struct MeshProxyData
 {
     NMesh*             owner          = nullptr;
+    AMaterial*         material_base  = nullptr;
     AMaterialInstance* material       = nullptr;
     VkBuffer           vertex_buffer  = VK_NULL_HANDLE;
     VkBuffer           index_buffer   = VK_NULL_HANDLE;
@@ -28,6 +30,11 @@ struct MeshProxyData
     // sort function
     bool operator()(const MeshProxyData& a, const MeshProxyData& b) const
     {
+        if (a.material_base < b.material_base)
+            return true;
+        if (b.material_base < a.material_base)
+            return false;
+
         if (a.material < b.material)
             return true;
         if (b.material < a.material)
@@ -58,6 +65,7 @@ NMesh::NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterialInstance> in_mater
 
     proxy_entity_handle = get_render_scene()->get_scene_proxy().add_entity(MeshProxyData{
         .owner          = this,
+        .material_base  = dynamic_cast<AMaterial*>((material->get_material_base()).get_const()),
         .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),
@@ -83,11 +91,19 @@ void NMesh::register_component(Scene* target_scene)
                     LOG_FATAL("material is not valid");
 
                 entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
+            }
+            if (render_context.last_used_material_base != entity.material_base)
+            {
+                if (!entity.material_base)
+                    LOG_FATAL("material_base is not valid");
+                render_context.last_used_material_base = entity.material_base;
 
-                vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline_layout(render_context.render_pass), 0, 1,
-                                        &entity.material->get_descriptor_sets(render_context.render_pass)[render_context.image_index], 0, nullptr);
+                auto* pipeline = entity.material->get_material_base()->get_pipeline(render_context.render_pass);
 
-                vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity.material->get_pipeline(render_context.render_pass));
+                vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
+                                        &(*entity.material->get_descriptor_sets(render_context.render_pass))[render_context.image_index].descriptor_set, 0, nullptr);
+
+                vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
             }
 
             VkDeviceSize offsets[] = {0};
@@ -106,6 +122,7 @@ void NMesh::update_data()
     proxy_data_lock.lock();
     *get_render_scene()->get_scene_proxy().find_entity_group<MeshProxyData>()->get_entity(proxy_entity_handle) = MeshProxyData{
         .owner          = this,
+        .material_base  = dynamic_cast<AMaterial*>((material->get_material_base()).get_const()),
         .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),

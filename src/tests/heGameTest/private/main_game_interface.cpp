@@ -63,10 +63,13 @@ static RendererConfiguration make_deferred_renderer_config(std::shared_ptr<NCame
             return;
         }
         material->update_descriptor_sets(render_context->render_pass, render_context->view, render_context->image_index);
-        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material->get_pipeline_layout(render_context->render_pass), 0, 1,
-                                &material->get_descriptor_sets(render_context->render_pass)[render_context->image_index], 0, nullptr);
 
-        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material->get_pipeline(render_context->render_pass));
+        auto* pipeline = material->get_material_base()->get_pipeline(render_context->render_pass);
+
+        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
+                                &(*material->get_descriptor_sets(render_context->render_pass))[render_context->image_index].descriptor_set, 0, nullptr);
+
+        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
         vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
     });
     deferred_post_process_rendering.add_lambda([&](SwapchainFrame* render_context) {
@@ -77,10 +80,13 @@ static RendererConfiguration make_deferred_renderer_config(std::shared_ptr<NCame
             return;
         }
         material->update_descriptor_sets(render_context->render_pass, render_context->view, render_context->image_index);
-        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material->get_pipeline_layout(render_context->render_pass), 0, 1,
-                                &material->get_descriptor_sets(render_context->render_pass)[render_context->image_index], 0, nullptr);
 
-        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material->get_pipeline(render_context->render_pass));
+        auto* pipeline = material->get_material_base()->get_pipeline(render_context->render_pass);
+
+        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
+                                &(*material->get_descriptor_sets(render_context->render_pass))[render_context->image_index].descriptor_set, 0, nullptr);
+
+        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
         vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
     });
 
@@ -159,45 +165,57 @@ static void create_default_objects()
 
     // Gltf Shader
     {
-        const ShaderConfiguration vertex_config{
+        const ShaderInfos vertex_infos{
             .shader_stage            = VK_SHADER_STAGE_VERTEX_BIT,
             .use_view_data_buffer    = true,
             .use_scene_object_buffer = true,
         };
-        const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_config);
+        const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_infos);
 
-        const ShaderConfiguration fragment_config{
+        const ShaderInfos fragment_infos{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage  = vertex_shader,
             .properties{
                 ShaderUserProperty::create<ShaderPropertyTextureSampler>("diffuse_color", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("default_texture").get())),
             },
         };
-        const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_config);
-        AssetManager::get()->create<AMaterial>("gltf_base_material", fragment_shader, std::vector<std::string>{"render_scene"});
+
+        const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_infos, vertex_shader);
+
+        MaterialInfos material_infos
+        {
+            .vertex_stage = vertex_shader,
+            .fragment_stage = fragment_shader,
+            .renderer_passes = {"render_scene"},
+        };
+
+        AssetManager::get()->create<AMaterial>("gltf_base_material", material_infos);
     }
 
     // Default shader
     {
-        const ShaderConfiguration vertex_config{
+        const ShaderInfos vertex_config{
             .shader_stage            = VK_SHADER_STAGE_VERTEX_BIT,
             .use_view_data_buffer    = true,
             .use_scene_object_buffer = true,
         };
         const auto vertex_shader = AssetManager::get()->create<AShader>("default_vertex_shader", "data/shaders/default.vs.glsl", vertex_config);
 
-        const ShaderConfiguration fragment_config{
+        const ShaderInfos fragment_config{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage  = vertex_shader,
             .properties{
                 // ShaderUserProperty::create<ShaderPropertyFloat>("p_test_2", 0.5f),
                 // ShaderUserProperty::create<ShaderPropertyVec3>("p_position_3", glm::vec3(1, 2, 3)), // @TODO
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("p_diffuse", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("default_texture").get())),
+                ShaderUserProperty::create<ShaderPropertyTextureSampler>("p_diffuse", TAssetPtr<ATexture>("default_texture")),
             },
         };
-        const auto fragment_shader = AssetManager::get()->create<AShader>("default_fragment_shader", "data/shaders/default.fs.glsl", fragment_config);
+        const auto fragment_shader = AssetManager::get()->create<AShader>("default_fragment_shader", "data/shaders/default.fs.glsl", fragment_config, vertex_shader);
 
-        auto material = AssetManager::get()->create<AMaterial>("default_material_base", fragment_shader, std::vector<std::string>{"render_scene"});
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
+            .renderer_passes = {"render_scene"},
+        };
+        const auto material = AssetManager::get()->create<AMaterial>("default_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("default_material", material);
     }
 
@@ -209,44 +227,52 @@ static void create_deferred_objects()
 {
     // Deferred combine
     {
-        const ShaderConfiguration vertex_config{
+        const ShaderInfos vertex_config{
             .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
         };
         const auto vertex_shader = AssetManager::get()->create<AShader>("deferred_resolve_vertex_shader", "data/shaders/deferred_resolve.vert.glsl", vertex_config);
 
-        const ShaderConfiguration fragment_config{
+        const ShaderInfos fragment_config{
             .shader_stage         = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage          = vertex_shader,
             .use_view_data_buffer = true,
             .properties{
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerAlbedo", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("framebuffer_image-render_scene_0").get())),
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerNormal", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("framebuffer_image-render_scene_1").get())),
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerPosition", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("framebuffer_image-render_scene_depth").get())),
+                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerAlbedo", TAssetPtr<ATexture>("framebuffer_image-render_scene_0")),
+                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerNormal", TAssetPtr<ATexture>("framebuffer_image-render_scene_1")),
+                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerPosition", TAssetPtr<ATexture>("framebuffer_image-render_scene_depth")),
             },
         };
-        auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config);
+        auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config, vertex_shader);
 
-        const auto material = AssetManager::get()->create<AMaterial>("deferred_resolve_material_base", fragment_shader, std::vector<std::string>{"combine_deferred"});
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
+            .renderer_passes = {"combine_deferred"},
+        };
+        const auto material = AssetManager::get()->create<AMaterial>("deferred_resolve_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("deferred_resolve_material", material);
     }
 
     // Post process resolve
     {
-        const ShaderConfiguration vertex_config{
+        const ShaderInfos vertex_config{
             .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
         };
         const auto vertex_shader = AssetManager::get()->create<AShader>("post_process_resolve_vertex_shader", "data/shaders/post_process_resolve.vert.glsl", vertex_config);
 
-        const ShaderConfiguration fragment_config{
+        const ShaderInfos fragment_config{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .input_stage  = vertex_shader,
             .properties{
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("colorSampler", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0").get())),
+                ShaderUserProperty::create<ShaderPropertyTextureSampler>("colorSampler", TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")),
             },
         };
-        auto fragment_shader = AssetManager::get()->create<AShader>("post_process_resolve_fragment_shader", "data/shaders/post_process_resolve.frag.glsl", fragment_config);
+        auto fragment_shader = AssetManager::get()->create<AShader>("post_process_resolve_fragment_shader", "data/shaders/post_process_resolve.frag.glsl", fragment_config, vertex_shader);
 
-        const auto material = AssetManager::get()->create<AMaterial>("post_process_resolve_material_base", fragment_shader, std::vector<std::string>{"post_processing_0"});
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
+            .renderer_passes = {"post_processing_0"},
+        };
+        const auto material = AssetManager::get()->create<AMaterial>("post_process_resolve_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("post_process_resolve_material", material);
     }
 }

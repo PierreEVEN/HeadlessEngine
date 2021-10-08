@@ -147,7 +147,7 @@ void DebugDraw::render_wireframe(const SwapchainFrame& in_render_context)
         write_descriptor_sets.emplace_back(VkWriteDescriptorSet{
             .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext            = nullptr,
-            .dstSet           = material_pipeline.get_descriptor_sets()[in_render_context.image_index],
+            //.dstSet           = material_pipeline.get_descriptor_sets()[in_render_context.image_index],
             .dstBinding       = 9,
             .dstArrayElement  = 0,
             .descriptorCount  = 1,
@@ -158,9 +158,8 @@ void DebugDraw::render_wireframe(const SwapchainFrame& in_render_context)
         });
 
         vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
-        vkCmdBindDescriptorSets(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline_layout(), 0, 1, &material_pipeline.get_descriptor_sets()[in_render_context.image_index],
-                                0, nullptr);
-        vkCmdBindPipeline(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline());
+        //vkCmdBindDescriptorSets(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline_layout(), 0, 1, &material_pipeline.get_descriptor_sets()[in_render_context.image_index], 0, nullptr);
+        //vkCmdBindPipeline(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline());
 
         // draw vertices
         VkDeviceSize offsets[] = {0};

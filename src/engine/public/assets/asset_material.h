@@ -10,22 +10,36 @@ class ATexture2D;
 class AShader;
 class NCamera;
 
+struct MaterialInfos
+{
+    // Shader stages
+    TAssetPtr<AShader> vertex_stage       = {};
+    TAssetPtr<AShader> tessellation_stage = {};
+    TAssetPtr<AShader> geometry_stage     = {};
+    TAssetPtr<AShader> fragment_stage     = {};
+
+    std::vector<std::string>       renderer_passes = {};
+    std::optional<VertexInputInfo> vertex_input    = {};
+    PipelineInfos                  pipeline_infos  = {};
+
+    [[nodiscard]] bool                            is_valid() const;
+    [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
+};
+
 class AMaterial : public AssetBase
 {
   public:
-    AMaterial(const TAssetPtr<AShader>& final_shader_stage, const std::vector<std::string>& use_with_render_passes, MaterialPipelineConfiguration pipeline_configuration = {},
-              std::optional<VertexInputConfig> vertex_input_override = {});
+    AMaterial(const MaterialInfos& in_material_infos);
     virtual ~AMaterial() override = default;
 
-    [[nodiscard]] VkPipelineLayout                    get_pipeline_layout(const std::string& render_pass) const;
-    [[nodiscard]] VkPipeline                          get_pipeline(const std::string& render_pass) const;
-    [[nodiscard]] const std::vector<VkDescriptorSet>& get_descriptor_sets(const std::string& render_pass) const;
-    [[nodiscard]] std::vector<TAssetPtr<AShader>>     get_shader_stages() const;
+    [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
+    [[nodiscard]] const std::vector<std::string>& get_used_render_passes() const;
+    [[nodiscard]] const MaterialInfos&            get_material_infos() const;
+    [[nodiscard]] MaterialPipeline*               get_pipeline(const std::string& render_pass) const;
 
   private:
-    TAssetPtr<AShader>                                final_stage        = {};
-    std::unordered_map<std::string, MaterialPipeline> per_stage_pipeline = {};
+    MaterialInfos                                                      material_infos;
+    std::unordered_map<std::string, std::unique_ptr<MaterialPipeline>> per_stage_pipeline = {};
 
-    [[nodiscard]] const MaterialPipeline&     get_pipeline_class(const std::string& render_pass) const;
     std::vector<VkDescriptorSetLayoutBinding> make_layout_bindings() const;
 };

@@ -6,61 +6,9 @@
 #include "engine_interface.h"
 #include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
+#include "rendering/vulkan/material_pipeline.h"
 #include "rendering/vulkan/utils.h"
 #include "statsRecorder.h"
-
-size_t Vertex::get_vertex_structure_size()
-{
-    return sizeof(Vertex);
-}
-
-std::vector<VkVertexInputAttributeDescription> Vertex::get_attribute_descriptions()
-{
-    uint8_t                                        currentLocation = 0;
-    std::vector<VkVertexInputAttributeDescription> attribute_description{
-        {
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset   = offsetof(Vertex, pos),
-        },
-        {
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32_SFLOAT,
-            .offset   = offsetof(Vertex, uv),
-        },
-
-        {
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset   = offsetof(Vertex, col),
-        },
-
-        {
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset   = offsetof(Vertex, norm),
-        },
-
-        {
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset   = offsetof(Vertex, tang),
-        },
-        {
-
-            .location = currentLocation++,
-            .binding  = 0,
-            .format   = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset   = offsetof(Vertex, bitang),
-        },
-    };
-    return attribute_description;
-}
 
 AMeshData::AMeshData(std::vector<Vertex> in_vertices, std::vector<uint32_t> in_indices) : vertices(std::move(in_vertices)), indices(std::move(in_indices))
 {

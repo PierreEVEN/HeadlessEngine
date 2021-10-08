@@ -89,7 +89,7 @@ class AssetBase : public NonCopiable
   public:
     friend class AssetManager;
 
-    virtual std::string to_string();
+    virtual std::string to_string() const;
 
     [[nodiscard]] AssetId get_id() const;
 

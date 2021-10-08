@@ -38,7 +38,7 @@ void GfxInterface::init(const WindowParameters& window_parameters)
     VK_CHECK(physical_device, "Cannot find any suitable GPU");
     VkPhysicalDeviceProperties selected_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &selected_device_properties);
-    LOG_INFO("Picking physical device %d (%s)", selected_device_properties.deviceID, selected_device_properties.deviceName);
+    LOG_INFO("[ GFX] Picking physical device %d (%s)", selected_device_properties.deviceID, selected_device_properties.deviceName);
 
     LOG_INFO("[ GFX] : pick swapchain settings");
     // retrieve swapchain settings
@@ -181,7 +181,7 @@ VkPhysicalDevice GfxInterface::select_physical_device(VkSurfaceKHR surface)
         vkGetPhysicalDeviceProperties(device, &pProperties);
         PhysLog += "\t-" + std::string(pProperties.deviceName) + " (driver version : " + std::to_string(pProperties.driverVersion) + ")\n";
     }
-    LOG_INFO("%s", PhysLog.c_str());
+    LOG_INFO("[ Core] %s", PhysLog.c_str());
 
     // Pick desired device
     for (const auto& device : devices)
