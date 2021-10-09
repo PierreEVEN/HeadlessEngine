@@ -83,7 +83,7 @@ void SceneImporter::create_default_resources()
             .renderer_passes = {"render_scene"},
         };
 
-        AssetManager::get()->create<AMaterial>("gltf_base_material", material_infos);
+        AssetManager::get()->create<AMaterialBase>("gltf_base_material", material_infos);
     }
 }
 
@@ -181,7 +181,7 @@ TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scen
     LOG_DEBUG("using diffuse %d", diffuse_index);
 
     const auto instance_id       = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));
-    auto       material_instance = AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterial>("gltf_base_material"));
+    auto       material_instance = AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterialBase>("gltf_base_material"));
 
     if (diffuse_index >= 0)
         material_instance->set_texture("diffuse_color", static_cast<ATexture*>(texture_refs[diffuse_index].get()));

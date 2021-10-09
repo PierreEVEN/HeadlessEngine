@@ -9,7 +9,7 @@
 #include "rendering/swapchain_config.h"
 #include "scene/node_camera.h"
 
-AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterial>& in_base_material) : base_material(in_base_material)
+AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterialBase>& in_base_material) : base_material(in_base_material)
 {
     textures = {};
     for (const auto& stage : base_material->get_shader_stages())
@@ -183,10 +183,17 @@ void AMaterialInstance::update_descriptor_sets(const std::string& render_pass, N
 
     for (auto& property : textures)
     {
+        TAssetPtr<ATexture> texture = property.base_property.texture;
+        if (!texture)
+        {
+            LOG_WARNING("texture used in material %s is NULL", to_string().c_str());
+            texture = TAssetPtr<ATexture>("default_texture");
+            if (!texture)
+                LOG_FATAL("cannot find default texture");
+        }
         VkWriteDescriptorSet descriptor = property.write_descriptor_set;
         descriptor.dstSet               = descriptor_sets;
-        descriptor.pBufferInfo          = nullptr,
-        descriptor.pImageInfo           = property.base_property.texture->get_descriptor_image_info(imageIndex);
+        descriptor.pBufferInfo = nullptr, descriptor.pImageInfo = texture->get_descriptor_image_info(imageIndex);
         write_descriptor_sets.emplace_back(descriptor);
     }
 

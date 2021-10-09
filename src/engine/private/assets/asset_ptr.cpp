@@ -6,28 +6,26 @@
 IAssetPtr::IAssetPtr()
 {
     clear();
-    if (AssetManager::is_valid())
-        AssetManager::get()->on_delete_asset.add_object(this, &IAssetPtr::on_delete_asset);
 }
 
 IAssetPtr::IAssetPtr(const AssetId& in_asset_id)
 {
     set(in_asset_id);
-    if (AssetManager::is_valid())
-        AssetManager::get()->on_delete_asset.add_object(this, &IAssetPtr::on_delete_asset);
 }
 
 IAssetPtr::IAssetPtr(AssetBase* in_asset)
 {
     set(in_asset);
-    if (AssetManager::is_valid())
-        AssetManager::get()->on_delete_asset.add_object(this, &IAssetPtr::on_delete_asset);
 }
 
 IAssetPtr::IAssetPtr(const IAssetPtr& other) : asset_id(other.asset_id), asset(other.asset)
 {
-    if (AssetManager::is_valid())
-        AssetManager::get()->on_delete_asset.add_object(this, &IAssetPtr::on_delete_asset);
+    set(other.asset);
+}
+
+IAssetPtr::IAssetPtr(IAssetPtr&& other) noexcept
+{
+    set(other.asset);
 }
 
 void IAssetPtr::set(AssetBase* in_asset)
@@ -39,6 +37,7 @@ void IAssetPtr::set(AssetBase* in_asset)
         return;
     asset_id = std::make_shared<AssetId>(in_asset->get_id());
     asset    = in_asset;
+    bind();
 }
 
 void IAssetPtr::set(const AssetId& in_asset_id)
@@ -49,10 +48,18 @@ void IAssetPtr::set(const AssetId& in_asset_id)
     asset_id = std::make_shared<AssetId>(in_asset_id);
     if (AssetManager::is_valid())
         asset = AssetManager::get()->find(*asset_id);
+    bind();
+}
+
+void IAssetPtr::operator=(const IAssetPtr& other)
+{
+    set(other.asset);
 }
 
 void IAssetPtr::clear()
 {
+    unbind();
+
     asset    = nullptr;
     asset_id = nullptr;
 }
@@ -91,8 +98,23 @@ std::string IAssetPtr::to_string() const
 
 IAssetPtr::~IAssetPtr()
 {
-    if (AssetManager::is_valid())
-        AssetManager::get()->on_delete_asset.clear_object(this);
+    clear();
+}
+
+void IAssetPtr::unbind()
+{
+    if (asset)
+    {
+        asset->on_delete_asset.clear_object(this);
+    }
+}
+
+void IAssetPtr::bind()
+{
+    if (asset)
+    {
+        asset->on_delete_asset.add_object(this, &IAssetPtr::on_delete_asset);
+    }
 }
 
 void IAssetPtr::on_delete_asset(AssetBase* deleted_asset)

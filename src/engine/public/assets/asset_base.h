@@ -104,6 +104,8 @@ class AssetBase : public NonCopiable
 
     virtual ~AssetBase();
 
+    EventOnDeleteAsset on_delete_asset;
+
   protected:
     AssetBase() = default;
 

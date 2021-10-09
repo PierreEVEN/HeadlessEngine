@@ -3,7 +3,7 @@
 #include "rendering/shaders/shader_property.h"
 
 class NCamera;
-class AMaterial;
+class AMaterialBase;
 
 struct DescriptorSetsState
 {
@@ -13,12 +13,12 @@ struct DescriptorSetsState
 class AMaterialInstance : public AssetBase
 {
   public:
-    AMaterialInstance(const TAssetPtr<AMaterial>& in_base_material);
+    AMaterialInstance(const TAssetPtr<AMaterialBase>& in_base_material);
 
     void update_descriptor_sets(const std::string& render_pass, NCamera* in_camera, uint32_t imageIndex);
 
     [[nodiscard]] std::vector<DescriptorSetsState>* get_descriptor_sets(const std::string& render_pass);
-    [[nodiscard]] const TAssetPtr<AMaterial>&       get_material_base() const
+    [[nodiscard]] const TAssetPtr<AMaterialBase>&       get_material_base() const
     {
         return base_material;
     }
@@ -50,5 +50,5 @@ class AMaterialInstance : public AssetBase
     uint32_t fragment_transform_buffer_location = 0;
 
     std::vector<TextureRuntimeProperty> textures;
-    TAssetPtr<AMaterial>                base_material;
+    TAssetPtr<AMaterialBase>                base_material;
 };

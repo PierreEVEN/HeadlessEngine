@@ -30,6 +30,8 @@ GfxInterface* MainGameInterface::create_graphic_interface()
     return new CustomGraphicInterface();
 }
 
+
+
 static void create_default_objects()
 {
     // Create textures
@@ -59,7 +61,7 @@ static void create_default_objects()
             .fragment_stage  = fragment_shader,
             .renderer_passes = {"render_scene"},
         };
-        const auto material = AssetManager::get()->create<AMaterial>("default_material_base", material_infos);
+        const auto material = AssetManager::get()->create<AMaterialBase>("default_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("default_material", material);
     }
 
@@ -67,12 +69,14 @@ static void create_default_objects()
     primitive::create_primitive<primitive::CubePrimitive>("default_cube");
 }
 
+
+
 void MainGameInterface::engine_load_resources()
 {
+
     create_default_objects();
     DeferredRenderer::create_deferred_assets();
     SceneImporter::create_default_resources();
-
     // Create scene
     root_scene = std::make_unique<Scene>();
     NMesh::register_component(root_scene.get());
@@ -91,7 +95,7 @@ void MainGameInterface::engine_load_resources()
     // scene_importer.import_file("data/models/bistro.glb", "cafe_ext", root_scene.get());
     // scene_importer.import_file("data/models/bistro_interior.glb", "cafe_int", root_scene.get());
     // scene_importer.import_file("data/models/sibenik.glb", "sponza_elem", root_scene.get());
-    // root_scene->add_node<NMesh>("cube", TAssetPtr<AMeshData>("default_cube"), TAssetPtr<AMaterial>("default_material"));
+    // root_scene->add_node<NMesh>("cube", TAssetPtr<AMeshData>("default_cube"), TAssetPtr<AMaterialBase>("default_material"));
 
     const auto sponza_root = scene_importer.import_file("data/models/sponza.glb", "sponza_elem", root_scene.get());
 

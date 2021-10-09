@@ -31,7 +31,7 @@ std::vector<TAssetPtr<AShader>> MaterialInfos::get_shader_stages() const
     return stage_list;
 }
 
-AMaterial::AMaterial(const MaterialInfos& in_material_infos) : material_infos(in_material_infos)
+AMaterialBase::AMaterialBase(const MaterialInfos& in_material_infos) : material_infos(in_material_infos)
 {
     if (material_infos.renderer_passes.empty())
         LOG_FATAL("you need to specify at least one render pass to be used with");
@@ -52,7 +52,7 @@ AMaterial::AMaterial(const MaterialInfos& in_material_infos) : material_infos(in
     }
 }
 
-MaterialPipeline* AMaterial::get_pipeline(const std::string& render_pass) const
+MaterialPipeline* AMaterialBase::get_pipeline(const std::string& render_pass) const
 {
     if (const auto found_pipeline = per_stage_pipeline.find(render_pass); found_pipeline != per_stage_pipeline.end())
     {
@@ -63,12 +63,12 @@ MaterialPipeline* AMaterial::get_pipeline(const std::string& render_pass) const
 }
 
 
-std::vector<TAssetPtr<AShader>> AMaterial::get_shader_stages() const
+std::vector<TAssetPtr<AShader>> AMaterialBase::get_shader_stages() const
 {
     return material_infos.get_shader_stages();
 }
 
-const MaterialInfos& AMaterial::get_material_infos() const
+const MaterialInfos& AMaterialBase::get_material_infos() const
 {
     return material_infos;
 }
@@ -99,7 +99,7 @@ static std::optional<ShaderReflectProperty> find_shader_property(const TAssetPtr
     return {};
 }
 
-std::vector<VkDescriptorSetLayoutBinding> AMaterial::make_layout_bindings() const
+std::vector<VkDescriptorSetLayoutBinding> AMaterialBase::make_layout_bindings() const
 {
     std::vector<VkDescriptorSetLayoutBinding> pipeline_bindings = {};
 

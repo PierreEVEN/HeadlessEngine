@@ -37,11 +37,12 @@ class RendererConfiguration final
 
 class Renderer
 {
+    friend GfxInterface;
   public:
     Renderer(Swapchain* in_swapchain);
     ~Renderer();
 
-    void init(VkExtent2D in_render_resolution);
+    void init_or_resize(VkExtent2D in_render_resolution);
     void render_frame(SwapchainFrame& swapchain_frame);
 
     RenderPass*                       get_render_pass(const std::string& pass_name);
@@ -50,9 +51,9 @@ class Renderer
         return renderer_configuration.get_render_pass(pass_name);
     }
 
-    void set_render_pass_description(RendererConfiguration in_renderer_configuration);
+private:
+    void set_render_pass_description(const RendererConfiguration& in_renderer_configuration);
 
-  private:
     Swapchain*                                swapchain = nullptr;
     RendererConfiguration                     renderer_configuration;
     std::vector<std::unique_ptr<RenderPass>>  render_passes;

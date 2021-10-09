@@ -70,6 +70,7 @@ void AssetManager::try_delete_dirty_items()
     for (const auto& asset : deleted_assets)
     {
         on_delete_asset.execute(asset);
+        asset->on_delete_asset.execute(asset);
         delete asset;
         assets_to_delete.erase(std::find(assets_to_delete.begin(), assets_to_delete.end(), asset));
     }

@@ -26,11 +26,11 @@ struct MaterialInfos
     [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
 };
 
-class AMaterial : public AssetBase
+class AMaterialBase : public AssetBase
 {
   public:
-    AMaterial(const MaterialInfos& in_material_infos);
-    virtual ~AMaterial() override = default;
+    AMaterialBase(const MaterialInfos& in_material_infos);
+    virtual ~AMaterialBase() override = default;
 
     [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
     [[nodiscard]] const std::vector<std::string>& get_used_render_passes() const;

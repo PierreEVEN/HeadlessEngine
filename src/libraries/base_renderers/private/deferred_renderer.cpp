@@ -130,7 +130,7 @@ void DeferredRenderer::create_deferred_assets()
             .fragment_stage  = fragment_shader,
             .renderer_passes = {"combine_deferred"},
         };
-        const auto material = AssetManager::get()->create<AMaterial>("deferred_resolve_material_base", material_infos);
+        const auto material = AssetManager::get()->create<AMaterialBase>("deferred_resolve_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("deferred_resolve_material", material);
     }
 
@@ -154,7 +154,7 @@ void DeferredRenderer::create_deferred_assets()
             .fragment_stage  = fragment_shader,
             .renderer_passes = {"post_processing_0"},
         };
-        const auto material = AssetManager::get()->create<AMaterial>("post_process_resolve_material_base", material_infos);
+        const auto material = AssetManager::get()->create<AMaterialBase>("post_process_resolve_material_base", material_infos);
         AssetManager::get()->create<AMaterialInstance>("post_process_resolve_material", material);
     }
 }

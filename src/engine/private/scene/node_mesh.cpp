@@ -11,7 +11,7 @@
 struct MeshProxyData
 {
     NMesh*             owner          = nullptr;
-    AMaterial*         material_base  = nullptr;
+    AMaterialBase*         material_base  = nullptr;
     AMaterialInstance* material       = nullptr;
     VkBuffer           vertex_buffer  = VK_NULL_HANDLE;
     VkBuffer           index_buffer   = VK_NULL_HANDLE;
@@ -64,7 +64,7 @@ NMesh::NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterialInstance> in_mater
 
     proxy_entity_handle = get_render_scene()->get_scene_proxy().add_entity(MeshProxyData{
         .owner          = this,
-        .material_base  = dynamic_cast<AMaterial*>((material->get_material_base()).get_const()),
+        .material_base  = dynamic_cast<AMaterialBase*>((material->get_material_base()).get_const()),
         .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),
@@ -124,7 +124,7 @@ void NMesh::update_data()
     proxy_data_lock.lock();
     *get_render_scene()->get_scene_proxy().find_entity_group<MeshProxyData>()->get_entity(proxy_entity_handle) = MeshProxyData{
         .owner          = this,
-        .material_base  = dynamic_cast<AMaterial*>((material->get_material_base()).get_const()),
+        .material_base  = dynamic_cast<AMaterialBase*>((material->get_material_base()).get_const()),
         .material       = dynamic_cast<AMaterialInstance*>(material.get()),
         .vertex_buffer  = mesh->get_vertex_buffer(),
         .index_buffer   = mesh->get_index_buffer(),
