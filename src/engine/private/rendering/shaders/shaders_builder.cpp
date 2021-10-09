@@ -181,21 +181,11 @@ std::string ShaderPreprocessor::generate_output_code(const std::string& shader_c
     if (configuration.use_view_data_buffer)
         generated_code += add_view_data_buffer(out_binding);
 
-    if (!configuration.properties.empty())
+    for (const auto& property : configuration.textures)
     {
-        // Static data structure declaration
-        generated_code += "\n// static data structure declaration\n";
-        if (configuration.has_buffered_properties())
-            generated_code += stringutils::format("layout(binding = %d) uniform %s\n", out_binding++, configuration.create_glsl_structure().c_str());
-        for (const auto& property : configuration.properties)
-        {
-            if (property.should_keep_in_buffer_structure())
-                generated_code += stringutils::format("#define %s %s.%s\n", property.get_property_name().c_str(), SHADER_STATIC_DATA_OBJECT_NAME, property.get_property_name().c_str());
-            else
-                generated_code += stringutils::format("layout (binding = %d) uniform %s %s;\n", out_binding++, property.get_glsl_type_name().c_str(), property.get_property_name().c_str());
-        }
-        generated_code += "\n";
+            generated_code += stringutils::format("layout (binding = %d) uniform sampler2D %s;\n", out_binding++, property.binding_name.c_str());
     }
+    generated_code += "\n";
 
     // Handle includes
     generated_code += "\n// Include libraries\n";

@@ -174,17 +174,16 @@ static void create_default_objects()
 
         const ShaderInfos fragment_infos{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .properties{
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("diffuse_color", dynamic_cast<ATexture*>(TAssetPtr<ATexture>("default_texture").get())),
+            .textures{
+                TextureProperty{.binding_name = "diffuse_color", .texture = TAssetPtr<ATexture>("default_texture")},
             },
         };
 
         const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_infos, vertex_shader);
 
-        MaterialInfos material_infos
-        {
-            .vertex_stage = vertex_shader,
-            .fragment_stage = fragment_shader,
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
             .renderer_passes = {"render_scene"},
         };
 
@@ -202,10 +201,8 @@ static void create_default_objects()
 
         const ShaderInfos fragment_config{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .properties{
-                // ShaderUserProperty::create<ShaderPropertyFloat>("p_test_2", 0.5f),
-                // ShaderUserProperty::create<ShaderPropertyVec3>("p_position_3", glm::vec3(1, 2, 3)), // @TODO
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("p_diffuse", TAssetPtr<ATexture>("default_texture")),
+            .textures{
+                TextureProperty{.binding_name = "p_diffuse", .texture = TAssetPtr<ATexture>("default_texture")},
             },
         };
         const auto fragment_shader = AssetManager::get()->create<AShader>("default_fragment_shader", "data/shaders/default.fs.glsl", fragment_config, vertex_shader);
@@ -235,10 +232,10 @@ static void create_deferred_objects()
         const ShaderInfos fragment_config{
             .shader_stage         = VK_SHADER_STAGE_FRAGMENT_BIT,
             .use_view_data_buffer = true,
-            .properties{
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerAlbedo", TAssetPtr<ATexture>("framebuffer_image-render_scene_0")),
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerNormal", TAssetPtr<ATexture>("framebuffer_image-render_scene_1")),
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("samplerPosition", TAssetPtr<ATexture>("framebuffer_image-render_scene_depth")),
+            .textures{
+                TextureProperty{.binding_name = "samplerAlbedo", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_0")},
+                TextureProperty{.binding_name = "samplerNormal", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_1")},
+                TextureProperty{.binding_name = "samplerPosition", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_depth")},
             },
         };
         auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config, vertex_shader);
@@ -261,8 +258,8 @@ static void create_deferred_objects()
 
         const ShaderInfos fragment_config{
             .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .properties{
-                ShaderUserProperty::create<ShaderPropertyTextureSampler>("colorSampler", TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")),
+            .textures{
+                TextureProperty{.binding_name = "colorSampler", .texture = TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")},
             },
         };
         auto fragment_shader = AssetManager::get()->create<AShader>("post_process_resolve_fragment_shader", "data/shaders/post_process_resolve.frag.glsl", fragment_config, vertex_shader);

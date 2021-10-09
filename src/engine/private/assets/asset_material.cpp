@@ -113,13 +113,11 @@ std::vector<VkDescriptorSetLayoutBinding> AMaterial::make_layout_bindings() cons
     {
         std::vector<PropertySearchInfos> wanted_properties = {};
 
-        for (const auto& property : shader_stage->get_shader_config().properties)
+        for (const auto& property : shader_stage->get_shader_config().textures)
         {
-            if (property.should_keep_in_buffer_structure())
-                continue;
             wanted_properties.emplace_back(PropertySearchInfos{
-                .property_name   = property.get_property_name(),
-                .descriptor_type = property.get_descriptor_type(),
+                .property_name   = property.binding_name,
+                .descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             });
         }
 

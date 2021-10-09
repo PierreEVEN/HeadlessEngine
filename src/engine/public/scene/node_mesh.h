@@ -31,8 +31,8 @@ class NMesh : public NPrimitive
     virtual Box3D get_local_bounds() override;
 
   private:
-    TAssetPtr<AMeshData> mesh;
+    TAssetPtr<AMeshData>         mesh;
     TAssetPtr<AMaterialInstance> material;
-    FastMutex            proxy_data_lock;
-    EntityHandle         proxy_entity_handle;
+    FastMutex                    proxy_data_lock;
+    EntityHandle                 proxy_entity_handle;
 };

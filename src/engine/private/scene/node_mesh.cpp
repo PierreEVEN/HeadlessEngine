@@ -5,7 +5,6 @@
 #include "assets/asset_material.h"
 #include "assets/asset_material_instance.h"
 #include "assets/asset_mesh_data.h"
-#include "assets/asset_texture.h"
 #include "misc/Frustum.h"
 #include "scene/scene.h"
 
@@ -91,19 +90,22 @@ void NMesh::register_component(Scene* target_scene)
                     LOG_FATAL("material is not valid");
 
                 entity.material->update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
-            }
-            if (render_context.last_used_material_base != entity.material_base)
-            {
-                if (!entity.material_base)
-                    LOG_FATAL("material_base is not valid");
-                render_context.last_used_material_base = entity.material_base;
 
                 auto* pipeline = entity.material->get_material_base()->get_pipeline(render_context.render_pass);
 
                 vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
                                         &(*entity.material->get_descriptor_sets(render_context.render_pass))[render_context.image_index].descriptor_set, 0, nullptr);
 
-                vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+                if (render_context.last_used_material_base != entity.material_base)
+                {
+                    if (!entity.material_base)
+                        LOG_FATAL("material_base is not valid");
+                    render_context.last_used_material_base = entity.material_base;
+
+                    auto* pipeline = entity.material->get_material_base()->get_pipeline(render_context.render_pass);
+
+                    vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+                }
             }
 
             VkDeviceSize offsets[] = {0};

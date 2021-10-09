@@ -4,20 +4,21 @@
 
 #include "assets/asset_material.h"
 #include "assets/asset_shader_buffer.h"
+#include "assets/asset_texture.h"
 #include "rendering/graphics.h"
 #include "rendering/swapchain_config.h"
 #include "scene/node_camera.h"
 
 AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterial>& in_base_material) : base_material(in_base_material)
 {
-    shader_properties = {};
+    textures = {};
     for (const auto& stage : base_material->get_shader_stages())
     {
-        for (const auto& property : stage->get_shader_config().properties)
+        for (const auto& property : stage->get_shader_config().textures)
         {
-            if (const auto found_property = stage->find_property_by_name(property.get_property_name()))
+            if (const auto found_property = stage->find_property_by_name(property.binding_name))
             {
-                shader_properties.emplace_back(ShaderInstanceProperty{
+                textures.emplace_back(TextureRuntimeProperty{
                     .base_property = property,
                     .write_descriptor_set =
                         {
@@ -27,7 +28,7 @@ AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterial>& in_base_materia
                             .dstBinding       = found_property->location,
                             .dstArrayElement  = 0,
                             .descriptorCount  = 1,
-                            .descriptorType   = property.get_descriptor_type(),
+                            .descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             .pImageInfo       = nullptr, // set on runtime
                             .pBufferInfo      = nullptr, // set on runtime
                             .pTexelBufferView = nullptr,
@@ -35,7 +36,7 @@ AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterial>& in_base_materia
                 });
             }
             else
-                LOG_ERROR("cannot find property %s in stage %s", property.get_property_name().c_str(), stage.to_string().c_str());
+                LOG_ERROR("cannot find texture %s in stage %s", property.binding_name.c_str(), stage.to_string().c_str());
         }
 
         if (stage->get_shader_config().use_view_data_buffer)
@@ -113,11 +114,8 @@ void AMaterialInstance::update_descriptor_sets(const std::string& render_pass, N
 
     auto* descriptor_set_group = get_descriptor_sets(render_pass);
 
-    if (!(*descriptor_set_group)[imageIndex].is_dirty)
-        return;
 
     const auto descriptor_sets                   = (*descriptor_set_group)[imageIndex].descriptor_set;
-    (*descriptor_set_group)[imageIndex].is_dirty = false;
 
     if (b_has_vertex_view_buffer)
     {
@@ -183,12 +181,12 @@ void AMaterialInstance::update_descriptor_sets(const std::string& render_pass, N
         });
     }
 
-    for (auto& property : shader_properties)
+    for (auto& property : textures)
     {
         VkWriteDescriptorSet descriptor = property.write_descriptor_set;
         descriptor.dstSet               = descriptor_sets;
-        descriptor.pBufferInfo          = property.base_property.get_descriptor_buffer_info(imageIndex);
-        descriptor.pImageInfo           = property.base_property.get_descriptor_image_info(imageIndex);
+        descriptor.pBufferInfo          = nullptr,
+        descriptor.pImageInfo           = property.base_property.texture->get_descriptor_image_info(imageIndex);
         write_descriptor_sets.emplace_back(descriptor);
     }
 
@@ -211,15 +209,4 @@ std::vector<DescriptorSetsState>* AMaterialInstance::get_descriptor_sets(const s
     }
 
     return &descriptor_set_group->second;
-}
-
-void AMaterialInstance::mark_descriptor_dirty()
-{
-    for (auto& desc : descriptor_sets)
-    {
-        for (auto& state : desc.second)
-        {
-            state.is_dirty = true;
-        }
-    }
 }
