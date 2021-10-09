@@ -2,8 +2,6 @@
 #include "assets/asset_ptr.h"
 #include "rendering/mesh/vertex.h"
 
-#include <glm/glm.hpp>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>

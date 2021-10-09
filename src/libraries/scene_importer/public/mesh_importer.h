@@ -1,7 +1,7 @@
 #pragma once
 
-#include "assets/asset_ptr.h"
-#include "assimp/mesh.h"
+#include <assets/asset_ptr.h>
+#include <assimp/mesh.h>
 
 #include <assimp/Importer.hpp>
 #include <filesystem>

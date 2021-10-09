@@ -2,8 +2,8 @@
 
 #include <filesystem>
 
-#include "assets/asset_ptr.h"
-#include "assimp/Importer.hpp"
+#include <assets/asset_ptr.h>
+#include <assimp/Importer.hpp>
 
 class AMaterialInstance;
 class Scene;
@@ -23,6 +23,8 @@ class SceneImporter final
     ~SceneImporter()
     {
     }
+
+    static void create_default_resources();
 
     std::shared_ptr<NodeBase> import_file(const std::filesystem::path& source_file, const std::string& asset_name, Scene* context_scene);
 

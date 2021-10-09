@@ -1,21 +1,21 @@
 
-#include "ios/scene_importer.h"
+#include "scene_importer.h"
+#include "mesh_importer.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
 #include <cpputils/logger.hpp>
 
-#include "assets/asset_material.h"
-#include "assets/asset_material_instance.h"
-#include "assets/asset_texture.h"
-#include "ios/mesh_importer.h"
-#include "scene/node_base.h"
-#include "scene/node_mesh.h"
-#include "scene/scene.h"
+#include <assets/asset_material.h>
+#include <assets/asset_material_instance.h>
+#include <assets/asset_texture.h>
+#include <scene/node_base.h>
+#include <scene/node_mesh.h>
+#include <scene/scene.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "ui/window/windows/profiler.h"
 
 std::shared_ptr<NodeBase> SceneImporter::process_node(const aiScene* scene, aiNode* ai_node, const std::shared_ptr<NodeBase>& parent, Scene* context_scene)
 {
@@ -55,6 +55,36 @@ std::shared_ptr<NodeBase> SceneImporter::create_node(const aiScene* scene, aiNod
     }
 
     return node;
+}
+
+void SceneImporter::create_default_resources()
+{
+    // Gltf Shader
+    {
+        const ShaderInfos vertex_infos{
+            .shader_stage            = VK_SHADER_STAGE_VERTEX_BIT,
+            .use_view_data_buffer    = true,
+            .use_scene_object_buffer = true,
+        };
+        const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_infos);
+
+        const ShaderInfos fragment_infos{
+            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .textures{
+                TextureProperty{.binding_name = "diffuse_color", .texture = TAssetPtr<ATexture>("default_texture")},
+            },
+        };
+
+        const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_infos, vertex_shader);
+
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
+            .renderer_passes = {"render_scene"},
+        };
+
+        AssetManager::get()->create<AMaterial>("gltf_base_material", material_infos);
+    }
 }
 
 std::shared_ptr<NodeBase> SceneImporter::import_file(const std::filesystem::path& source_file, const std::string& asset_name, Scene* context_scene)

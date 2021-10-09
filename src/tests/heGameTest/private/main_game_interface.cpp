@@ -2,152 +2,26 @@
 #include "main_game_interface.h"
 
 #include "assets/asset_material.h"
-#include "assets/asset_material_instance.h"
-#include "assets/asset_shader.h"
 #include "assets/asset_texture.h"
-#include "camera_basic_controller.h"
+#include "assets/asset_material_instance.h"
 #include "custom_graphic_interface.h"
-#include "imgui.h"
-#include "ios/mesh_importer.h"
-#include "ios/scene_importer.h"
+#include "deferred_renderer.h"
 #include "misc/primitives.h"
-#include "rendering/shaders/shader_library.h"
 #include "rendering/shaders/shader_property.h"
-#include "rendering/swapchain_config.h"
-#include "rendering/vulkan/common.h"
 #include "scene/node_camera.h"
 #include "scene/node_mesh.h"
-
-static RendererConfiguration make_forward_renderer_config(std::shared_ptr<NCamera>& camera)
-{
-    EventRenderRenderPass forward_prepass_render;
-    forward_prepass_render.add_lambda([&](SwapchainFrame* render_context) {
-        camera->update_view(*render_context);
-    });
-
-    return RendererConfiguration({
-        RenderPassSettings{
-            .pass_name         = "render_scene",
-            .sample_count      = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count()),
-            .on_pass_rendering = forward_prepass_render,
-            .color_attachments =
-                std::vector<RenderPassAttachment>{
-                    {
-                        .image_format = Graphics::get()->get_swapchain_config()->get_surface_format().format,
-                        .clear_value  = std::optional<VkClearValue>({.color = {.float32{0.4f, 0.5f, 0.6f, 1.0f}}}),
-                    },
-                },
-            .depth_attachment =
-                RenderPassAttachment{
-                    .image_format = vulkan_utils::get_depth_format(),
-                    .clear_value  = std::optional<VkClearValue>(VkClearValue{.depthStencil = {.depth = 1, .stencil = 0}}),
-                },
-        },
-    });
-}
-
-static RendererConfiguration make_deferred_renderer_config(std::shared_ptr<NCamera>& camera)
-{
-    EventRenderRenderPass deferred_prepass_render;
-    EventRenderRenderPass deferred_combine_render;
-    EventRenderRenderPass deferred_post_process_rendering;
-    deferred_prepass_render.add_lambda([&](SwapchainFrame* render_context) {
-        camera->update_view(*render_context);
-    });
-    deferred_combine_render.add_lambda([&](SwapchainFrame* render_context) {
-        //@TODO fix crash when no vertex buffer is bound
-        TAssetPtr<AMaterialInstance> material("deferred_resolve_material");
-        if (!material)
-        {
-            LOG_WARNING("deferred_resolve_material is not valid");
-            return;
-        }
-        material->update_descriptor_sets(render_context->render_pass, render_context->view, render_context->image_index);
-
-        auto* pipeline = material->get_material_base()->get_pipeline(render_context->render_pass);
-
-        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
-                                &(*material->get_descriptor_sets(render_context->render_pass))[render_context->image_index].descriptor_set, 0, nullptr);
-
-        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
-        vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
-    });
-    deferred_post_process_rendering.add_lambda([&](SwapchainFrame* render_context) {
-        TAssetPtr<AMaterialInstance> material("post_process_resolve_material");
-        if (!material)
-        {
-            LOG_WARNING("post_process_resolve_material is not valid");
-            return;
-        }
-        material->update_descriptor_sets(render_context->render_pass, render_context->view, render_context->image_index);
-
-        auto* pipeline = material->get_material_base()->get_pipeline(render_context->render_pass);
-
-        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
-                                &(*material->get_descriptor_sets(render_context->render_pass))[render_context->image_index].descriptor_set, 0, nullptr);
-
-        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
-        vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
-    });
-
-    return RendererConfiguration(
-        {
-            RenderPassSettings{
-                .pass_name         = "render_scene",
-                .on_pass_rendering = deferred_prepass_render,
-                .color_attachments =
-                    std::vector<RenderPassAttachment>{
-                        // Albedo
-                        {
-                            .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0.75f, 1.f, 1.2f, 1.0f}}}),
-                        },
-                        // World Normals
-                        {
-                            .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 0}}}),
-                        },
-                        // World Position
-                        {
-                            .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 0}}}),
-                        },
-                    },
-                .depth_attachment =
-                    RenderPassAttachment{
-                        .image_format = vulkan_utils::get_depth_format(),
-                        .clear_value  = std::optional<VkClearValue>(VkClearValue{.depthStencil = {.depth = 1, .stencil = 0}}),
-                    },
-            },
-
-            RenderPassSettings{
-                .pass_name         = "combine_deferred",
-                .on_pass_rendering = deferred_combine_render,
-                .color_attachments =
-                    std::vector<RenderPassAttachment>{
-                        {
-                            .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                        },
-                    },
-            },
-
-            RenderPassSettings{
-                .pass_name         = "post_processing_0",
-                .on_pass_rendering = deferred_post_process_rendering,
-                .color_attachments =
-                    std::vector<RenderPassAttachment>{
-                        {
-                            .image_format = Graphics::get()->get_swapchain_config()->get_surface_format().format,
-                        },
-                    },
-            },
-        });
-}
+#include "scene_importer.h"
 
 RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
 {
-    // return make_forward_renderer_config(main_camera);
-    return make_deferred_renderer_config(main_camera);
+    // We use a preconfigured deferred renderer configuration
+    auto deferred_config = DeferredRenderer::create_configuration();
+
+    deferred_config.get_render_pass("render_scene")->on_pass_rendering.add_lambda([&](SwapchainFrame* render_context) {
+        main_camera->update_view(*render_context);
+    });
+
+    return deferred_config;
 }
 
 GfxInterface* MainGameInterface::create_graphic_interface()
@@ -159,36 +33,9 @@ GfxInterface* MainGameInterface::create_graphic_interface()
 static void create_default_objects()
 {
     // Create textures
-    AssetManager::get()->create<ATexture2D>("default_texture", std::vector<uint8_t>{0, 255, 0, 255, 255, 0, 255, 255, 0, 0, 0, 255, 0, 0, 255, 255}, 2, 2, 4);
+    AssetManager::get()->create<ATexture2D>("default_texture", std::vector<uint8_t>{255, 255, 255, 255}, 1, 1, 1);
 
     // Create shaders
-
-    // Gltf Shader
-    {
-        const ShaderInfos vertex_infos{
-            .shader_stage            = VK_SHADER_STAGE_VERTEX_BIT,
-            .use_view_data_buffer    = true,
-            .use_scene_object_buffer = true,
-        };
-        const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_infos);
-
-        const ShaderInfos fragment_infos{
-            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .textures{
-                TextureProperty{.binding_name = "diffuse_color", .texture = TAssetPtr<ATexture>("default_texture")},
-            },
-        };
-
-        const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_infos, vertex_shader);
-
-        MaterialInfos material_infos{
-            .vertex_stage    = vertex_shader,
-            .fragment_stage  = fragment_shader,
-            .renderer_passes = {"render_scene"},
-        };
-
-        AssetManager::get()->create<AMaterial>("gltf_base_material", material_infos);
-    }
 
     // Default shader
     {
@@ -220,64 +67,11 @@ static void create_default_objects()
     primitive::create_primitive<primitive::CubePrimitive>("default_cube");
 }
 
-static void create_deferred_objects()
-{
-    // Deferred combine
-    {
-        const ShaderInfos vertex_config{
-            .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
-        };
-        const auto vertex_shader = AssetManager::get()->create<AShader>("deferred_resolve_vertex_shader", "data/shaders/deferred_resolve.vert.glsl", vertex_config);
-
-        const ShaderInfos fragment_config{
-            .shader_stage         = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .use_view_data_buffer = true,
-            .textures{
-                TextureProperty{.binding_name = "samplerAlbedo", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_0")},
-                TextureProperty{.binding_name = "samplerNormal", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_1")},
-                TextureProperty{.binding_name = "samplerPosition", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_depth")},
-            },
-        };
-        auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config, vertex_shader);
-
-        MaterialInfos material_infos{
-            .vertex_stage    = vertex_shader,
-            .fragment_stage  = fragment_shader,
-            .renderer_passes = {"combine_deferred"},
-        };
-        const auto material = AssetManager::get()->create<AMaterial>("deferred_resolve_material_base", material_infos);
-        AssetManager::get()->create<AMaterialInstance>("deferred_resolve_material", material);
-    }
-
-    // Post process resolve
-    {
-        const ShaderInfos vertex_config{
-            .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
-        };
-        const auto vertex_shader = AssetManager::get()->create<AShader>("post_process_resolve_vertex_shader", "data/shaders/post_process_resolve.vert.glsl", vertex_config);
-
-        const ShaderInfos fragment_config{
-            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .textures{
-                TextureProperty{.binding_name = "colorSampler", .texture = TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")},
-            },
-        };
-        auto fragment_shader = AssetManager::get()->create<AShader>("post_process_resolve_fragment_shader", "data/shaders/post_process_resolve.frag.glsl", fragment_config, vertex_shader);
-
-        MaterialInfos material_infos{
-            .vertex_stage    = vertex_shader,
-            .fragment_stage  = fragment_shader,
-            .renderer_passes = {"post_processing_0"},
-        };
-        const auto material = AssetManager::get()->create<AMaterial>("post_process_resolve_material_base", material_infos);
-        AssetManager::get()->create<AMaterialInstance>("post_process_resolve_material", material);
-    }
-}
-
 void MainGameInterface::engine_load_resources()
 {
     create_default_objects();
-    create_deferred_objects();
+    DeferredRenderer::create_deferred_assets();
+    SceneImporter::create_default_resources();
 
     // Create scene
     root_scene = std::make_unique<Scene>();
