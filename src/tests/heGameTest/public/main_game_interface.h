@@ -3,7 +3,7 @@
 #include "engine_interface.h"
 #include "scene/scene.h"
 
-class ImGuiInstance;
+class ImGuiImplementation;
 
 class MainGameInterface final : public IEngineInterface
 {
@@ -22,5 +22,5 @@ class MainGameInterface final : public IEngineInterface
     std::unique_ptr<CameraBasicController> controller;
     std::unique_ptr<Scene>                 root_scene;
     std::shared_ptr<NCamera>               main_camera;
-    std::shared_ptr<ImGuiInstance>         imgui_instance;
+    std::shared_ptr<ImGuiImplementation>   imgui_instance;
 };

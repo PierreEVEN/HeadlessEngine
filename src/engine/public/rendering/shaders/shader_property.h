@@ -16,7 +16,7 @@ class AShader;
 struct TextureProperty
 {
     std::string         binding_name = "";
-    TAssetPtr<ATexture> texture = {};
+    TAssetPtr<ATexture> texture      = {};
 };
 
 class BufferProperty final
@@ -43,6 +43,31 @@ class BufferProperty final
     TAssetPtr<AShaderBuffer> property_data = {};
 };
 
+class PushConstant final
+{
+  public:
+    template <typename Structure_T> PushConstant()
+    {
+        data_size = sizeof(Structure_T);
+        data      = malloc(data_size);
+    }
+
+    template <typename Structure_T>
+    [[nodiscard]] Structure_T& get()
+    {
+        return *dynamic_cast<Structure_T*>(data);
+    }
+
+    [[nodiscard]] size_t get_range() const
+    {
+        return data_size;
+    }
+
+  private:
+    size_t data_size = 0;
+    void*  data      = nullptr;
+};
+
 struct ShaderInfos
 {
     VkShaderStageFlagBits          shader_stage            = VK_SHADER_STAGE_VERTEX_BIT;
@@ -51,4 +76,5 @@ struct ShaderInfos
     bool                           use_scene_object_buffer = false;
     std::vector<TextureProperty>   textures                = {};
     std::vector<BufferProperty>    buffers                 = {};
+    std::optional<PushConstant>    push_constants          = {};
 };

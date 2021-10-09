@@ -21,7 +21,7 @@ struct PipelineInfos
 class MaterialPipeline final
 {
   public:
-    MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages);
+    MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages, const std::optional<PushConstant>& push_constants);
     ~MaterialPipeline();
 
     [[nodiscard]] VkPipelineLayout*      get_pipeline_layout();

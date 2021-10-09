@@ -2,8 +2,8 @@
 #include "main_game_interface.h"
 
 #include "assets/asset_material.h"
-#include "assets/asset_texture.h"
 #include "assets/asset_material_instance.h"
+#include "assets/asset_texture.h"
 #include "custom_graphic_interface.h"
 #include "deferred_renderer.h"
 #include "misc/primitives.h"
@@ -11,6 +11,8 @@
 #include "scene/node_camera.h"
 #include "scene/node_mesh.h"
 #include "scene_importer.h"
+#include "backends/imgui_impl_glfw.h"
+#include "ui/imgui/imgui_impl_vulkan.h"
 
 RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
 {
@@ -21,6 +23,17 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
         main_camera->update_view(*render_context);
     });
 
+    deferred_config.get_render_pass("post_processing_0")->on_pass_rendering.add_lambda([&](SwapchainFrame* render_context) {
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+
+        ImGui::EndFrame();
+        ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();        
+        imgui_instance->ImGui_ImplVulkan_RenderDrawData(draw_data, *render_context);
+    });
+
     return deferred_config;
 }
 
@@ -29,8 +42,6 @@ GfxInterface* MainGameInterface::create_graphic_interface()
     // We want to use our custom graphic interface class
     return new CustomGraphicInterface();
 }
-
-
 
 static void create_default_objects()
 {
@@ -69,11 +80,8 @@ static void create_default_objects()
     primitive::create_primitive<primitive::CubePrimitive>("default_cube");
 }
 
-
-
 void MainGameInterface::engine_load_resources()
 {
-
     create_default_objects();
     DeferredRenderer::create_deferred_assets();
     SceneImporter::create_default_resources();
@@ -82,6 +90,10 @@ void MainGameInterface::engine_load_resources()
     NMesh::register_component(root_scene.get());
     main_camera = root_scene->add_node<NCamera>("camera");
     controller  = std::make_unique<CameraBasicController>(main_camera, get_input_manager());
+
+    ImGui::SetCurrentContext(ImGui::CreateContext());
+    imgui_instance = std::make_shared<ImGuiImplementation>();
+
 
     SceneImporter scene_importer;
     // auto san_miguel = scene_importer.import_file("data/models/sanMiguel.glb", "sanMiguel", root_scene.get());
