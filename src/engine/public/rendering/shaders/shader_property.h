@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.hpp>
+#include <boost/pfr.hpp>
 
 class AShaderBuffer;
 class ATexture;

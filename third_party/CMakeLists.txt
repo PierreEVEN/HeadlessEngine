@@ -17,6 +17,7 @@ message("-- vulkan sdk : " ${VULKAN_PATH})
 set(VMA_DYNAMIC_VULKAN_FUNCTIONS OFF)
 
 # Create an interface for IMGUI (should alway be linked as static library)
+fetch_target(imgui https://github.com/ocornut/imgui docking)
 file(GLOB IMGUI_SOURCES 
 	${imgui_SOURCE_DIR}/*.cpp
 	${imgui_SOURCE_DIR}/*.h
@@ -28,6 +29,7 @@ target_link_libraries(imgui_interface glfw)
 
 
 # Create an interface for IMGUIZMO (should alway be linked as static library)
+fetch_target(imguizmo https://github.com/CedricGuillemet/ImGuizmo master)
 file(GLOB IMGUIZMO_SOURCES 
 	${imguizmo_SOURCE_DIR}/*.cpp
 	${imguizmo_SOURCE_DIR}/*.h)
@@ -90,5 +92,3 @@ fetch_target(stb https://github.com/nothings/stb master)
 fetch_target(glm https://github.com/g-truc/glm master)
 fetch_target(VulkanMemoryAllocator https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator  master)
 fetch_target(cpputils https://github.com/PierreEVEN/CppUtils main)
-fetch_target(imgui https://github.com/ocornut/imgui docking)
-fetch_target(imguizmo https://github.com/CedricGuillemet/ImGuizmo master)
