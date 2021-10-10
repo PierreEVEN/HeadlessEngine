@@ -4,23 +4,32 @@
 #include <cmath>
 
 #include "rendering/graphics.h"
+#include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/texture.h"
 #include "rendering/vulkan/utils.h"
 
 VkDescriptorImageInfo* ATexture::get_descriptor_image_info(uint32_t image_index)
 {
-    if (image_index >= descriptor_image_infos.size())
+    if (descriptor_image_infos.empty() || dirty_descriptors[image_index])
     {
-        for (int64_t i = descriptor_image_infos.size(); i <= image_index; ++i)
+        const auto image_count = Graphics::get()->get_swapchain_config()->get_image_count();
+        descriptor_image_infos.resize(image_count);
+        if (dirty_descriptors.empty())
+            dirty_descriptors.resize(image_count, false);
+
+        dirty_descriptors[image_index] = false;
+
+        for (auto& descriptor : descriptor_image_infos)
         {
-            descriptor_image_infos.emplace_back(VkDescriptorImageInfo{
+            descriptor = VkDescriptorImageInfo{
                 .sampler     = get_sampler(image_index),
                 .imageView   = get_view(image_index),
                 .imageLayout = get_image_layout(image_index),
-            });
+            };
         }
     }
+
     return &descriptor_image_infos[image_index];
 }
 

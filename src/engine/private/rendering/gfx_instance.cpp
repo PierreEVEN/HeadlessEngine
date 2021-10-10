@@ -73,14 +73,14 @@ void GfxInterface::init(const WindowParameters& window_parameters)
     swapchain = std::shared_ptr<Swapchain>(create_swapchain());
     swapchain->on_swapchain_recreate.add_lambda([]() {
         const auto swapchain_extend = Graphics::get()->get_swapchain()->get_swapchain_extend();
-        Graphics::get()->get_renderer()->init(swapchain_extend);
+        Graphics::get()->get_renderer()->init_or_resize(swapchain_extend);
         LOG_INFO("recreate swapchain : (%d x %d)", swapchain_extend.width, swapchain_extend.height);
     });
 
     LOG_INFO("[ GFX] : create renderer");
     renderer = std::shared_ptr<Renderer>(create_renderer());
     renderer->set_render_pass_description(get_default_render_pass_configuration());
-    renderer->init(swapchain->get_swapchain_extend());
+    renderer->init_or_resize(swapchain->get_swapchain_extend());
 
     LOG_VALIDATE("[ GFX] : successfully initialized graphics");
 }

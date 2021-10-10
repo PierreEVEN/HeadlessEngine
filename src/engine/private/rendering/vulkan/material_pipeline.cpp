@@ -13,7 +13,8 @@
 
 #include <vulkan/vulkan.h>
 
-MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages)
+MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages,
+                                   const std::optional<PushConstant>& push_constants)
 {
     /**
      * Create descriptor sets
@@ -34,19 +35,25 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
      * Create pipeline layout
      */
 
+    const VkPushConstantRange push_constant_range = {
+        .stageFlags = 0,
+        .offset     = 0,
+        .size = push_constants ? push_constants->get_range() : 0,
+    };
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount         = static_cast<uint32_t>(descriptor_set_layout.size()),
         .pSetLayouts            = descriptor_set_layout.data(),
-        .pushConstantRangeCount = 0,
-        .pPushConstantRanges    = nullptr,
+        .pushConstantRangeCount = push_constants ? 1 : 0,
+        .pPushConstantRanges    = &push_constant_range,
     };
     VK_ENSURE(vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &pipelineLayoutInfo, nullptr, &pipeline_layout), "Failed to create pipeline layout");
 
     /**
      * Create pipeline
      */
-    VertexInputInfo                              vertex_inputs = Vertex::get_attribute_descriptions();
+    VertexInputInfo vertex_inputs = Vertex::get_attribute_descriptions();
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {};
     for (const auto& stage : stages)
@@ -61,7 +68,7 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
         if (stage->get_shader_config().vertex_inputs)
             vertex_inputs = stage->get_shader_config().vertex_inputs.value();
     }
-    
+
     auto* pass_configuration = Graphics::get()->get_renderer()->get_render_pass_configuration(render_pass);
 
     if (!pass_configuration)

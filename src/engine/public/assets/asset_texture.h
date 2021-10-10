@@ -19,7 +19,14 @@ class ATexture : public AssetBase
         return VK_NULL_HANDLE;
     }
 
-  private:
+  protected:
+    void mark_descriptor_dirty()
+    {
+        for (int i = 0; i < dirty_descriptors.size(); ++i)
+            dirty_descriptors[i] = true;
+    }
+
+    std::vector<bool>                  dirty_descriptors      = {};
     std::vector<VkDescriptorImageInfo> descriptor_image_infos = {};
 };
 
