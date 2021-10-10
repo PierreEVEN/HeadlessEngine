@@ -17,6 +17,8 @@ struct PipelineInfos
     float               wireframe_lines_width = 1;
     VkPrimitiveTopology topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     VkPolygonMode       polygon_mode          = VK_POLYGON_MODE_FILL;
+    bool                is_translucent        = false;
+    bool                backface_culling      = true;
 };
 
 struct MaterialInfos

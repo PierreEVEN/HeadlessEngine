@@ -107,7 +107,7 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
         .depthClampEnable        = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode             = material_infos.pipeline_infos.polygon_mode,
-        .cullMode                = VK_CULL_MODE_BACK_BIT,
+        .cullMode                = static_cast<VkCullModeFlags>(material_infos.pipeline_infos.backface_culling ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE),
         .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable         = VK_FALSE,
         .depthBiasConstantFactor = 0.0f,
@@ -141,11 +141,11 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
     for (const auto& attachment : pass_configuration->color_attachments)
     {
         color_blend_attachment.emplace_back(VkPipelineColorBlendAttachmentState{
-            .blendEnable         = VK_FALSE,
-            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-            .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .blendEnable         = material_infos.pipeline_infos.is_translucent ? VK_TRUE : VK_FALSE,
+            .srcColorBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+            .dstColorBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,
             .colorBlendOp        = VK_BLEND_OP_ADD,
-            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .srcAlphaBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
             .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
             .alphaBlendOp        = VK_BLEND_OP_ADD,
             .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
@@ -154,11 +154,8 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
 
     VkPipelineColorBlendStateCreateInfo color_blending{
         .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .logicOpEnable   = VK_FALSE,
-        .logicOp         = VK_LOGIC_OP_COPY,
         .attachmentCount = static_cast<uint32_t>(color_blend_attachment.size()),
         .pAttachments    = color_blend_attachment.data(),
-        .blendConstants  = {0.0f, 0.f, 0.f, 0.f},
     };
 
     std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};

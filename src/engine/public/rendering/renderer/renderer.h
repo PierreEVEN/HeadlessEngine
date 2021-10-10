@@ -15,7 +15,11 @@ class RendererConfiguration final
     RendererConfiguration(const std::vector<RenderPassSettings>& render_pass_descriptions) : pass_descriptions(render_pass_descriptions)
     {
     }
-
+    void add_render_pass(const RenderPassSettings& render_pass)
+    {
+        pass_descriptions.emplace_back(render_pass);
+    }
+    
     [[nodiscard]] RenderPassSettings* get_render_pass(const std::string& pass_name)
     {
         for (auto& pass : pass_descriptions)

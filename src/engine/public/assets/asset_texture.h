@@ -8,8 +8,7 @@
 class ATexture : public AssetBase
 {
   public:
-
-      virtual ~ATexture();
+    virtual ~ATexture();
 
     [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index);
     [[nodiscard]] virtual VkImage        get_image(uint32_t image_index) const = 0;
@@ -30,11 +29,14 @@ class ATexture : public AssetBase
     {
         for (int i = 0; i < dirty_descriptors.size(); ++i)
             dirty_descriptors[i] = true;
+        for (int i = 0; i < dirty_imgui_descriptors.size(); ++i)
+            dirty_imgui_descriptors[i] = true;
     }
 
-    std::vector<bool>                  dirty_descriptors      = {};
-    std::vector<VkDescriptorImageInfo> descriptor_image_infos = {};
-    VkDescriptorSet       imgui_desc_set    = VK_NULL_HANDLE;
+    std::vector<bool>                  dirty_descriptors       = {};
+    std::vector<VkDescriptorImageInfo> descriptor_image_infos  = {};
+    std::vector<bool>                  dirty_imgui_descriptors = {};
+    VkDescriptorSet                    imgui_desc_set          = VK_NULL_HANDLE;
 };
 
 class ATexture2D : public ATexture

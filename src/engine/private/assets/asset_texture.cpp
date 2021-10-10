@@ -42,6 +42,15 @@ ImTextureID ATexture::get_imgui_handle(uint32_t image_index, VkDescriptorSetLayo
 {
     VkResult err;
 
+    const auto image_count = Graphics::get()->get_swapchain_config()->get_image_count();
+    if (dirty_imgui_descriptors.empty())
+        dirty_imgui_descriptors.resize(image_count, false);
+
+    if (dirty_imgui_descriptors[image_index])
+    {
+        dirty_imgui_descriptors[image_index] = false;
+    }
+    //TODO PAS FINI BORDEL
     if (imgui_desc_set == VK_NULL_HANDLE)
     {
         if (!get_sampler(image_index))
@@ -78,7 +87,7 @@ ImTextureID ATexture::get_imgui_handle(uint32_t image_index, VkDescriptorSetLayo
         }
     }
 
-    return static_cast<ImTextureID>(imgui_desc_set);
+    return imgui_desc_set;
 }
 
 ATexture2D::ATexture2D(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)

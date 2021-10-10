@@ -2,6 +2,7 @@
 #include "rendering/gfx_instance.h"
 
 #include "engine_interface.h"
+#include "assets/asset_material_instance.h"
 #include "rendering/graphics.h"
 #include "rendering/renderer/renderer.h"
 #include "rendering/swapchain_config.h"
@@ -9,6 +10,8 @@
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/descriptor_pool.h"
 #include "rendering/vulkan/utils.h"
+#include "ui/imgui/imgui_impl_vulkan.h"
+
 #include <config.h>
 #include <cpputils/logger.hpp>
 #include <set>
@@ -79,6 +82,10 @@ void GfxInterface::init(const WindowParameters& window_parameters)
 
     LOG_INFO("[ GFX] : create renderer");
     renderer = std::shared_ptr<Renderer>(create_renderer());
+
+    /**
+     * RENDER PASS
+     */
     renderer->set_render_pass_description(get_default_render_pass_configuration());
     renderer->init_or_resize(swapchain->get_swapchain_extend());
 

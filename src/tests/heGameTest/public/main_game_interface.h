@@ -2,8 +2,7 @@
 #include "camera_basic_controller.h"
 #include "engine_interface.h"
 #include "scene/scene.h"
-
-class ImGuiImplementation;
+#include <ui/imgui/imgui_impl_vulkan.h>
 
 class MainGameInterface final : public IEngineInterface
 {
@@ -22,5 +21,5 @@ class MainGameInterface final : public IEngineInterface
     std::unique_ptr<CameraBasicController> controller;
     std::unique_ptr<Scene>                 root_scene;
     std::shared_ptr<NCamera>               main_camera;
-    std::shared_ptr<ImGuiImplementation>   imgui_instance;
+    std::unique_ptr<ImGuiImplementation>   imgui_instance;
 };

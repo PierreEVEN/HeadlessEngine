@@ -1,8 +1,8 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include "renderer/renderer.h"
 #include "renderer/render_pass_description.h"
+#include "renderer/renderer.h"
 
 #include <GLFW/glfw3.h>
 #include <memory>
@@ -11,12 +11,13 @@
 #include <string>
 #include <vk_mem_alloc.h>
 
+class ImGuiImplementation;
 class DescriptorPool;
 class SwapchainConfig;
 
 struct WindowParameters
 {
-    int         size_x           = 800 ;
+    int         size_x           = 800;
     int         size_y           = 600;
     bool        b_is_fullscreen  = false;
     std::string application_name = "Headless Engine - experimental build";

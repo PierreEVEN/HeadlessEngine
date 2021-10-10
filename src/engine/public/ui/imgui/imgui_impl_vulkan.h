@@ -2,6 +2,11 @@
 
 #include "assets/asset_ptr.h"
 #include "imgui.h"
+#include "imgui_internal.h"
+#include "assets/asset_material.h"
+#include "assets/asset_texture.h"
+#include "backends/imgui_impl_glfw.h"
+#include "rendering/graphics.h"
 #include "rendering/renderer/render_pass_description.h"
 
 class AMaterialInstance;
@@ -43,14 +48,33 @@ class DynamicBuffer final
 class ImGuiImplementation
 {
   public:
-    ImGuiImplementation();
+    ImGuiImplementation()
+    {
+        init_context();
+        init_internal();
+    }
     ~ImGuiImplementation();
 
     void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, SwapchainFrame& render_context);
 
-    TAssetPtr<ATexture2D> font_image = {};
-  private:
+    TAssetPtr<ATexture2D>        font_image        = {};
     TAssetPtr<AMaterialInstance> material_instance = {};
-    std::vector<DynamicBuffer>   vertex_buffer{};
-    std::vector<DynamicBuffer>   index_buffer{};
+
+    void init_context()
+    {
+        if (!context)
+        {
+            LOG_WARNING("CREATE");
+            context = ImGui::CreateContext();
+        }
+        ImGui::SetCurrentContext(context);
+     }
+
+    [[nodiscard]] static RenderPassSettings get_ui_render_pass(const TAssetPtr<ATexture>& background_texture_buffer, std::unique_ptr<ImGuiImplementation>& imgui_implementation);
+
+  private:
+    void                         init_internal();
+    ImGuiContext*                context           = nullptr;
+    std::vector<DynamicBuffer>   vertex_buffer     = {};
+    std::vector<DynamicBuffer>   index_buffer      = {};
 };

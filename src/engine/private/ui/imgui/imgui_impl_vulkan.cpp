@@ -87,9 +87,9 @@ static std::vector<uint32_t> __glsl_shader_frag_spv = {
 
 struct ImGuiVertex
 {
-    glm::vec2 aPos;
-    glm::vec2 aUV;
-    glm::vec4 aColor;
+    ImVec2 aPos;
+    ImVec2 aUV;
+    ImU32  aColor;
 
     static VertexInputInfo get_attribute_descriptions()
     {
@@ -113,7 +113,7 @@ struct ImGuiVertex
                     },
                     VertexInputInfo::VertexAttribute{
                         .description{
-                            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                            .format = VK_FORMAT_R8G8B8A8_UNORM,
                             .offset = offsetof(ImGuiVertex, aColor),
                         },
                         .attribute_name = "aColor",
@@ -176,15 +176,29 @@ void DynamicBuffer::create_or_resize(size_t data_size)
     size = data_size;
 }
 
-ImGuiImplementation::ImGuiImplementation()
+RenderPassSettings ImGuiImplementation::get_ui_render_pass(const TAssetPtr<ATexture>& background_texture_buffer, std::unique_ptr<ImGuiImplementation>& imgui_implementation)
+{
+    return RenderPassSettings{
+        .pass_name         = "ui_render_pass",
+        .color_attachments =
+            std::vector<RenderPassAttachment>{
+                {
+                    .image_format = Graphics::get()->get_swapchain_config()->get_surface_format().format,
+                },
+            },
+    };
+}
+
+void ImGuiImplementation::init_internal()
 {
     // Init imgui
     LOG_INFO("[ Imgui] Initialize imgui ressources");
 
+    init_context();
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    ImGui::SetCurrentContext(ImGui::CreateContext());
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = context->IO;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -254,12 +268,16 @@ ImGuiImplementation::ImGuiImplementation()
     const TAssetPtr<AMaterialBase> material_base = AssetManager::get()->create<AMaterialBase>("imgui_base_material", MaterialInfos{
                                                                                                                          .vertex_stage    = vertex_shader,
                                                                                                                          .fragment_stage  = fragment_shader,
-                                                                                                                         .renderer_passes = {"post_processing_0"},
+                                                                                                                         .renderer_passes = {"ui_render_pass"},
+                                                                                                                         .pipeline_infos{
+                                                                                                                             .depth_test       = false,
+                                                                                                                             .is_translucent   = true,
+                                                                                                                             .backface_culling = false,
+                                                                                                                         },
                                                                                                                      });
 
     material_instance = AssetManager::get()->create<AMaterialInstance>("imgui_material", material_base);
 
-    
     // Create font texture
     uint8_t* pixels;
     int      width, height;
@@ -267,7 +285,7 @@ ImGuiImplementation::ImGuiImplementation()
 
     font_image = AssetManager::get()->create<ATexture2D>("imgui_default_font_texture", std::vector<uint8_t>(pixels, pixels + width * height * 4), width, height, 4);
 
-    io.Fonts->TexID = font_image->get_imgui_handle(0, *material_base->get_pipeline("post_processing_0")->get_descriptor_sets_layouts());
+    io.Fonts->TexID = font_image->get_imgui_handle(0, *material_base->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts());
 }
 
 ImGuiImplementation::~ImGuiImplementation()
@@ -321,11 +339,11 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
 
     float scale[2] = {
         2.0f / draw_data->DisplaySize.x,
-        2.0f / draw_data->DisplaySize.y,
+        -2.0f / draw_data->DisplaySize.y,
     };
     float translate[2] = {
         -1.0f - draw_data->DisplayPos.x * scale[0],
-        -1.0f - draw_data->DisplayPos.y * scale[1],
+        1.0f - draw_data->DisplayPos.y * scale[1],
     };
 
     vkCmdPushConstants(render_context.command_buffer, *pipeline->get_pipeline_layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 2, scale);
@@ -378,6 +396,9 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
 
                     // Bind descriptorset with font or user texture
                     VkDescriptorSet desc_set[1] = {static_cast<VkDescriptorSet>(pcmd->TextureId)};
+                    if (!pcmd->TextureId)
+                        desc_set[1] = static_cast<VkDescriptorSet>(
+                            TAssetPtr<ATexture>("default_texture")->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts()));
                     vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1, desc_set, 0, NULL);
 
                     // Draw
@@ -389,168 +410,3 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
 }
-
-/*
-bool ImGuiInstance::ImGui_ImplVulkan_CreateDeviceObjects()
-{
-    VkResult err;
-
-    TAssetPtr<AShader> vertex_shader =
-        nullptr; // AssetManager::get()->create<AShader>("imgui_vertex_shader", std::vector<uint32_t>(__glsl_shader_vert_spv, __glsl_shader_vert_spv + sizeof(__glsl_shader_vert_spv)), EShaderStage::VERTEX_SHADER);
-    TAssetPtr<AShader> fragment_shader = nullptr; //        AssetManager::get()->create<AShader>("imgui_fragment_shader", std::vector<uint32_t>(__glsl_shader_frag_spv, __glsl_shader_frag_spv +
-                                                  //        sizeof(__glsl_shader_frag_spv)), EShaderStage::FRAGMENT_SHADER);
-    LOG_FATAL("@TODO update shader creation");
-
-    if (!g_FontSampler)
-    {
-        VkSamplerCreateInfo info = {};
-        info.sType               = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        info.magFilter           = VK_FILTER_LINEAR;
-        info.minFilter           = VK_FILTER_LINEAR;
-        info.mipmapMode          = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        info.addressModeU        = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeV        = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeW        = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.minLod              = -1000;
-        info.maxLod              = 1000;
-        info.maxAnisotropy       = 1.0f;
-        err                      = vkCreateSampler(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_FontSampler);
-        VK_ENSURE(err);
-    }
-
-    if (!g_DescriptorSetLayout)
-    {
-        VkSampler                    sampler[1] = {g_FontSampler};
-        VkDescriptorSetLayoutBinding binding[1] = {};
-        binding[0].descriptorType               = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        binding[0].descriptorCount              = 1;
-        binding[0].stageFlags                   = VK_SHADER_STAGE_FRAGMENT_BIT;
-        VkDescriptorSetLayoutCreateInfo info    = {};
-        info.sType                              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount                       = 1;
-        info.pBindings                          = binding;
-        err                                     = vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &info, vulkan_common::allocation_callback, &g_DescriptorSetLayout);
-        VK_ENSURE(err);
-    }
-
-    if (!g_PipelineLayout)
-    {
-        // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        VkPushConstantRange push_constants[1]    = {};
-        push_constants[0].stageFlags             = VK_SHADER_STAGE_VERTEX_BIT;
-        push_constants[0].offset                 = sizeof(float) * 0;
-        push_constants[0].size                   = sizeof(float) * 4;
-        VkDescriptorSetLayout      set_layout[1] = {g_DescriptorSetLayout};
-        VkPipelineLayoutCreateInfo layout_info   = {};
-        layout_info.sType                        = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.setLayoutCount               = 1;
-        layout_info.pSetLayouts                  = set_layout;
-        layout_info.pushConstantRangeCount       = 1;
-        layout_info.pPushConstantRanges          = push_constants;
-        err                                      = vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &layout_info, vulkan_common::allocation_callback, &g_PipelineLayout);
-        VK_ENSURE(err);
-    }
-
-    VkPipelineShaderStageCreateInfo stage[2] = {};
-    stage[0].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stage[0].stage                           = VK_SHADER_STAGE_VERTEX_BIT;
-    stage[0].module                          = vertex_shader->get_shader_module();
-    stage[0].pName                           = "main";
-    stage[1].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stage[1].stage                           = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stage[1].module                          = fragment_shader->get_shader_module();
-    stage[1].pName                           = "main";
-
-    VkVertexInputBindingDescription binding_desc[1] = {};
-    binding_desc[0].stride                          = sizeof(ImDrawVert);
-    binding_desc[0].inputRate                       = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputAttributeDescription attribute_desc[3] = {};
-    attribute_desc[0].location                          = 0;
-    attribute_desc[0].binding                           = binding_desc[0].binding;
-    attribute_desc[0].format                            = VK_FORMAT_R32G32_SFLOAT;
-    attribute_desc[0].offset                            = IM_OFFSETOF(ImDrawVert, pos);
-    attribute_desc[1].location                          = 1;
-    attribute_desc[1].binding                           = binding_desc[0].binding;
-    attribute_desc[1].format                            = VK_FORMAT_R32G32_SFLOAT;
-    attribute_desc[1].offset                            = IM_OFFSETOF(ImDrawVert, uv);
-    attribute_desc[2].location                          = 2;
-    attribute_desc[2].binding                           = binding_desc[0].binding;
-    attribute_desc[2].format                            = VK_FORMAT_R8G8B8A8_UNORM;
-    attribute_desc[2].offset                            = IM_OFFSETOF(ImDrawVert, col);
-
-    VkPipelineVertexInputStateCreateInfo vertex_info = {};
-    vertex_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_info.vertexBindingDescriptionCount        = 1;
-    vertex_info.pVertexBindingDescriptions           = binding_desc;
-    vertex_info.vertexAttributeDescriptionCount      = 3;
-    vertex_info.pVertexAttributeDescriptions         = attribute_desc;
-
-    VkPipelineInputAssemblyStateCreateInfo ia_info = {};
-    ia_info.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia_info.topology                               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    VkPipelineViewportStateCreateInfo viewport_info = {};
-    viewport_info.sType                             = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewport_info.viewportCount                     = 1;
-    viewport_info.scissorCount                      = 1;
-
-    VkPipelineRasterizationStateCreateInfo raster_info = {};
-    raster_info.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    raster_info.polygonMode                            = VK_POLYGON_MODE_FILL;
-    raster_info.cullMode                               = VK_CULL_MODE_NONE;
-    raster_info.frontFace                              = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    raster_info.lineWidth                              = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo ms_info = {};
-    ms_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    if (vulkan_common::get_msaa_sample_count() != 0)
-        ms_info.rasterizationSamples = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count());
-    else
-        ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineColorBlendAttachmentState color_attachment[1] = {};
-    color_attachment[0].blendEnable                         = VK_TRUE;
-    color_attachment[0].srcColorBlendFactor                 = VK_BLEND_FACTOR_SRC_ALPHA;
-    color_attachment[0].dstColorBlendFactor                 = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    color_attachment[0].colorBlendOp                        = VK_BLEND_OP_ADD;
-    color_attachment[0].srcAlphaBlendFactor                 = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    color_attachment[0].dstAlphaBlendFactor                 = VK_BLEND_FACTOR_ZERO;
-    color_attachment[0].alphaBlendOp                        = VK_BLEND_OP_ADD;
-    color_attachment[0].colorWriteMask                      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-    VkPipelineDepthStencilStateCreateInfo depth_info = {};
-    depth_info.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-
-    VkPipelineColorBlendStateCreateInfo blend_info = {};
-    blend_info.sType                               = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    blend_info.attachmentCount                     = 1;
-    blend_info.pAttachments                        = color_attachment;
-
-    VkDynamicState                   dynamic_states[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dynamic_state     = {};
-    dynamic_state.sType                                = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount                    = (uint32_t)IM_ARRAYSIZE(dynamic_states);
-    dynamic_state.pDynamicStates                       = dynamic_states;
-
-    VkGraphicsPipelineCreateInfo info = {};
-    info.sType                        = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.flags                        = g_PipelineCreateFlags;
-    info.stageCount                   = 2;
-    info.pStages                      = stage;
-    info.pVertexInputState            = &vertex_info;
-    info.pInputAssemblyState          = &ia_info;
-    info.pViewportState               = &viewport_info;
-    info.pRasterizationState          = &raster_info;
-    info.pMultisampleState            = &ms_info;
-    info.pDepthStencilState           = &depth_info;
-    info.pColorBlendState             = &blend_info;
-    info.pDynamicState                = &dynamic_state;
-    info.layout                       = g_PipelineLayout;
-    info.renderPass                   = Graphics::get()->get_renderer()->get_render_pass("stage_ui")->get_render_pass();
-    err                               = vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), g_pipeline_cache, 1, &info, vulkan_common::allocation_callback, &g_Pipeline);
-    VK_ENSURE(err);
-
-    return true;
-}
-*/
