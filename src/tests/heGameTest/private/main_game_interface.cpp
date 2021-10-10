@@ -4,6 +4,7 @@
 #include "assets/asset_material.h"
 #include "assets/asset_material_instance.h"
 #include "assets/asset_texture.h"
+#include "backends/imgui_impl_glfw.h"
 #include "custom_graphic_interface.h"
 #include "deferred_renderer.h"
 #include "misc/primitives.h"
@@ -11,7 +12,6 @@
 #include "scene/node_camera.h"
 #include "scene/node_mesh.h"
 #include "scene_importer.h"
-#include "backends/imgui_impl_glfw.h"
 #include "ui/imgui/imgui_impl_vulkan.h"
 
 RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
@@ -27,10 +27,12 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::Begin("test");
+        ImGui::End();
 
         ImGui::EndFrame();
         ImGui::Render();
-        ImDrawData* draw_data = ImGui::GetDrawData();        
+        ImDrawData* draw_data = ImGui::GetDrawData();
         imgui_instance->ImGui_ImplVulkan_RenderDrawData(draw_data, *render_context);
     });
 
@@ -91,9 +93,17 @@ void MainGameInterface::engine_load_resources()
     main_camera = root_scene->add_node<NCamera>("camera");
     controller  = std::make_unique<CameraBasicController>(main_camera, get_input_manager());
 
+
+
+
     ImGui::SetCurrentContext(ImGui::CreateContext());
     imgui_instance = std::make_shared<ImGuiImplementation>();
+    ImGui_ImplGlfw_InitForVulkan(Graphics::get()->get_glfw_handle(), true);
+    uint8_t* pixels;
+    int      width, height;
+    ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
+    ImGui::GetIO().Fonts->TexID = imgui_instance->font_image->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("post_processing_0")->get_descriptor_sets_layouts());
 
     SceneImporter scene_importer;
     // auto san_miguel = scene_importer.import_file("data/models/sanMiguel.glb", "sanMiguel", root_scene.get());

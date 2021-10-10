@@ -19,15 +19,15 @@ class DynamicBuffer final
         destroy();
     }
 
-    void* acquire(size_t data_size);
-    void  release();
+    void*                   acquire(size_t data_size);
+    void                    release();
     [[nodiscard]] VkBuffer& get_buffer()
     {
         return buffer;
     }
-  private:
 
-      void destroy();
+  private:
+    void destroy();
 
     VkBufferUsageFlags usage;
 
@@ -48,8 +48,8 @@ class ImGuiImplementation
 
     void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, SwapchainFrame& render_context);
 
+    TAssetPtr<ATexture2D> font_image = {};
   private:
-    TAssetPtr<ATexture2D>          font_image        = {};
     TAssetPtr<AMaterialInstance> material_instance = {};
     std::vector<DynamicBuffer>   vertex_buffer{};
     std::vector<DynamicBuffer>   index_buffer{};

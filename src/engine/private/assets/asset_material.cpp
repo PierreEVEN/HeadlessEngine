@@ -48,7 +48,7 @@ AMaterialBase::AMaterialBase(const MaterialInfos& in_material_infos) : material_
             continue;
         }
 
-        per_stage_pipeline[pass] = std::make_unique<MaterialPipeline>(material_infos.pipeline_infos, pass, layout_bindings, material_infos.get_shader_stages());
+        per_stage_pipeline[pass] = std::make_unique<MaterialPipeline>(material_infos, pass, layout_bindings);
     }
 }
 

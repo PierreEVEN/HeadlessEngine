@@ -13,8 +13,7 @@
 
 #include <vulkan/vulkan.h>
 
-MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages,
-                                   const std::optional<PushConstant>& push_constants)
+MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings)
 {
     /**
      * Create descriptor sets
@@ -32,31 +31,14 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
         VK_ENSURE(vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &layout_infos, vulkan_common::allocation_callback, &descriptor_set_layout[i]), "Failed to create descriptor set layout");
     }
     /**
-     * Create pipeline layout
-     */
-
-    const VkPushConstantRange push_constant_range = {
-        .stageFlags = 0,
-        .offset     = 0,
-        .size = push_constants ? push_constants->get_range() : 0,
-    };
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{
-        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount         = static_cast<uint32_t>(descriptor_set_layout.size()),
-        .pSetLayouts            = descriptor_set_layout.data(),
-        .pushConstantRangeCount = push_constants ? 1 : 0,
-        .pPushConstantRanges    = &push_constant_range,
-    };
-    VK_ENSURE(vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &pipelineLayoutInfo, nullptr, &pipeline_layout), "Failed to create pipeline layout");
-
-    /**
      * Create pipeline
      */
     VertexInputInfo vertex_inputs = Vertex::get_attribute_descriptions();
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {};
-    for (const auto& stage : stages)
+
+    std::vector<VkPushConstantRange> push_constant_range = {};
+    for (const auto& stage : material_infos.get_shader_stages())
     {
         shaderStages.emplace_back(VkPipelineShaderStageCreateInfo{
             .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -65,9 +47,27 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
             .pName  = "main",
         });
 
-        if (stage->get_shader_config().vertex_inputs)
-            vertex_inputs = stage->get_shader_config().vertex_inputs.value();
+        if (stage->get_shader_config().vertex_inputs_override && stage->get_shader_stage() == VK_SHADER_STAGE_VERTEX_BIT)
+            vertex_inputs = stage->get_shader_config().vertex_inputs_override.value();
+
+        if (stage->get_shader_config().push_constants)
+        {
+            push_constant_range.emplace_back(VkPushConstantRange {
+                .stageFlags = static_cast<VkShaderStageFlags>(stage->get_shader_stage()),
+                .offset     = 0,
+                .size       = static_cast<uint32_t>(stage->get_shader_config().push_constants ? stage->get_shader_config().push_constants->get_range() : 0),
+            });
+        }
     }
+
+    VkPipelineLayoutCreateInfo pipeline_layout_infos{
+        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount         = static_cast<uint32_t>(descriptor_set_layout.size()),
+        .pSetLayouts            = descriptor_set_layout.data(),
+        .pushConstantRangeCount = static_cast<uint32_t>(push_constant_range.size()),
+        .pPushConstantRanges    = push_constant_range.data(),
+    };
+    VK_ENSURE(vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &pipeline_layout_infos, nullptr, &pipeline_layout), "Failed to create pipeline layout");
 
     auto* pass_configuration = Graphics::get()->get_renderer()->get_render_pass_configuration(render_pass);
 
@@ -92,7 +92,7 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology               = pipeline_infos.topology,
+        .topology               = material_infos.pipeline_infos.topology,
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -106,14 +106,14 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable        = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode             = pipeline_infos.polygon_mode,
+        .polygonMode             = material_infos.pipeline_infos.polygon_mode,
         .cullMode                = VK_CULL_MODE_BACK_BIT,
         .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable         = VK_FALSE,
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp          = 0.0f,
         .depthBiasSlopeFactor    = 0.0f,
-        .lineWidth               = pipeline_infos.wireframe_lines_width,
+        .lineWidth               = material_infos.pipeline_infos.wireframe_lines_width,
     };
 
     VkPipelineMultisampleStateCreateInfo multisampling{
@@ -128,8 +128,8 @@ MaterialPipeline::MaterialPipeline(const PipelineInfos& pipeline_infos, const st
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil{
         .sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable       = pipeline_infos.depth_test,
-        .depthWriteEnable      = pipeline_infos.depth_test,
+        .depthTestEnable       = material_infos.pipeline_infos.depth_test,
+        .depthWriteEnable      = material_infos.pipeline_infos.depth_test,
         .depthCompareOp        = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable     = VK_FALSE,

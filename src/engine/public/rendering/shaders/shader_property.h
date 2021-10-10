@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.hpp>
-#include <boost/pfr.hpp>
 
 class AShaderBuffer;
 class ATexture;
@@ -47,14 +46,36 @@ class BufferProperty final
 class PushConstant final
 {
   public:
-    template <typename Structure_T> PushConstant()
+    template <typename Type_T> [[nodiscard]] static PushConstant create()
     {
-        data_size = sizeof(Structure_T);
-        data      = malloc(data_size);
+        Type_T type_inst;
+
+        PushConstant pc{};
+        pc.members   = type_inst.get_members();
+        pc.data_size = 0;
+        for (const auto& member : pc.members)
+            pc.data_size += member.property_size;
+        pc.data      = malloc(pc.data_size);
+        return pc;
     }
 
-    template <typename Structure_T>
-    [[nodiscard]] Structure_T& get()
+    PushConstant(PushConstant&& other)
+    {
+        copy_from(other);
+    }
+
+    PushConstant(const PushConstant& other)
+    {
+        copy_from(other);
+    }
+
+    ~PushConstant()
+    {
+        if (data)
+            free(data);
+    }
+
+    template <typename Structure_T> [[nodiscard]] Structure_T& get()
     {
         return *dynamic_cast<Structure_T*>(data);
     }
@@ -64,15 +85,52 @@ class PushConstant final
         return data_size;
     }
 
+    struct Property final
+    {
+        template <typename Type_T> [[nodiscard]] static Property create(const std::string& glsl_type, const std::string& name)
+        {
+            Property pcp{};
+            pcp.property_size = sizeof(Type_T);
+            pcp.type_name     = glsl_type;
+            pcp.property_name = name;
+            return pcp;
+        }
+
+        size_t      property_size;
+        std::string type_name;
+        std::string property_name;
+    };
+
+    [[nodiscard]] const std::vector<Property>& get_members() const
+    {
+        return members;
+    }
+
+    class Type
+    {
+      public:
+        [[nodiscard]] virtual std::vector<Property> get_members() = 0;
+    };
+
   private:
-    size_t data_size = 0;
-    void*  data      = nullptr;
+    void copy_from(const PushConstant& other)
+    {
+        members = other.members;
+        data_size = other.data_size;
+        data = malloc(other.data_size);
+        memcpy(data, other.data, other.data_size);
+    }
+
+    PushConstant()                  = default;
+    std::vector<Property> members   = {};
+    size_t                data_size = 0;
+    void*                 data      = nullptr;
 };
 
 struct ShaderInfos
 {
     VkShaderStageFlagBits          shader_stage            = VK_SHADER_STAGE_VERTEX_BIT;
-    std::optional<VertexInputInfo> vertex_inputs           = {};
+    std::optional<VertexInputInfo> vertex_inputs_override           = {};
     bool                           use_view_data_buffer    = false;
     bool                           use_scene_object_buffer = false;
     std::vector<TextureProperty>   textures                = {};

@@ -105,7 +105,7 @@ AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderInfo
     if (auto shader_data = read_shader_file(source_mesh_path); shader_data)
     {
         const ShaderPreprocessor preprocessor(shader_data.value(), in_shader_configuration, input_stage,
-                                              in_shader_configuration.vertex_inputs ? in_shader_configuration.vertex_inputs.value() : Vertex::get_attribute_descriptions());
+                                              in_shader_configuration.vertex_inputs_override ? in_shader_configuration.vertex_inputs_override.value() : Vertex::get_attribute_descriptions());
         const auto&              shader_code = preprocessor.try_get_shader_code();
         shader_module->set_plain_text(shader_code);
         const auto& bytecode = shader_module->get_bytecode();

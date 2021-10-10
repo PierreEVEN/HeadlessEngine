@@ -26,8 +26,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32B32_SFLOAT,
                         .offset   = offsetof(Vertex, pos),
                     },
@@ -36,8 +34,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32_SFLOAT,
                         .offset   = offsetof(Vertex, uv),
                     },
@@ -46,8 +42,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32B32A32_SFLOAT,
                         .offset   = offsetof(Vertex, col),
                     },
@@ -56,8 +50,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32B32_SFLOAT,
                         .offset   = offsetof(Vertex, norm),
                     },
@@ -66,8 +58,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32B32_SFLOAT,
                         .offset   = offsetof(Vertex, tang),
                     },
@@ -76,8 +66,6 @@ VertexInputInfo Vertex::get_attribute_descriptions()
             VertexInputInfo::VertexAttribute{
                 .description =
                     {
-                        .location = 0,
-                        .binding  = 0,
                         .format   = VK_FORMAT_R32G32B32_SFLOAT,
                         .offset   = offsetof(Vertex, bitang),
                     },

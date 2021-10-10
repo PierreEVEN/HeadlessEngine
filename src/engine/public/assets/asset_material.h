@@ -10,21 +10,6 @@ class ATexture2D;
 class AShader;
 class NCamera;
 
-struct MaterialInfos
-{
-    // Shader stages
-    TAssetPtr<AShader> vertex_stage       = {};
-    TAssetPtr<AShader> tessellation_stage = {};
-    TAssetPtr<AShader> geometry_stage     = {};
-    TAssetPtr<AShader> fragment_stage     = {};
-
-    std::vector<std::string>       renderer_passes = {};
-    std::optional<VertexInputInfo> vertex_input    = {};
-    PipelineInfos                  pipeline_infos  = {};
-
-    [[nodiscard]] bool                            is_valid() const;
-    [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
-};
 
 class AMaterialBase : public AssetBase
 {

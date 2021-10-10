@@ -1,5 +1,6 @@
 #pragma once
 #include "asset_base.h"
+#include "imgui.h"
 #include "rendering/shaders/shader_property.h"
 
 #include <vulkan/vulkan.hpp>
@@ -7,10 +8,13 @@
 class ATexture : public AssetBase
 {
   public:
+
+      virtual ~ATexture();
+
     [[nodiscard]] VkDescriptorImageInfo* get_descriptor_image_info(uint32_t image_index);
-    [[nodiscard]] virtual VkImage        get_image(uint32_t image_index = 0) const = 0;
-    [[nodiscard]] virtual VkImageView    get_view(uint32_t image_index = 0) const  = 0;
-    [[nodiscard]] virtual VkImageLayout  get_image_layout(uint32_t image_index = 0) const
+    [[nodiscard]] virtual VkImage        get_image(uint32_t image_index) const = 0;
+    [[nodiscard]] virtual VkImageView    get_view(uint32_t image_index) const  = 0;
+    [[nodiscard]] virtual VkImageLayout  get_image_layout(uint32_t image_index) const
     {
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
@@ -18,6 +22,8 @@ class ATexture : public AssetBase
     {
         return VK_NULL_HANDLE;
     }
+
+    ImTextureID get_imgui_handle(uint32_t image_index, VkDescriptorSetLayout descriptor_set_layout);
 
   protected:
     void mark_descriptor_dirty()
@@ -28,6 +34,7 @@ class ATexture : public AssetBase
 
     std::vector<bool>                  dirty_descriptors      = {};
     std::vector<VkDescriptorImageInfo> descriptor_image_infos = {};
+    VkDescriptorSet       imgui_desc_set    = VK_NULL_HANDLE;
 };
 
 class ATexture2D : public ATexture

@@ -85,6 +85,44 @@ static std::vector<uint32_t> __glsl_shader_frag_spv = {
     0x00000007, 0x00000012, 0x00000011, 0x0004003d, 0x00000014, 0x00000017, 0x00000016, 0x00050041, 0x00000019, 0x0000001a, 0x0000000d, 0x00000018, 0x0004003d, 0x0000000a, 0x0000001b, 0x0000001a, 0x00050057, 0x00000007,
     0x0000001c, 0x00000017, 0x0000001b, 0x00050085, 0x00000007, 0x0000001d, 0x00000012, 0x0000001c, 0x0003003e, 0x00000009, 0x0000001d, 0x000100fd, 0x00010038};
 
+struct ImGuiVertex
+{
+    glm::vec2 aPos;
+    glm::vec2 aUV;
+    glm::vec4 aColor;
+
+    static VertexInputInfo get_attribute_descriptions()
+    {
+        return VertexInputInfo{
+            .vertex_structure_size = sizeof(ImGuiVertex),
+            .attributes =
+                {
+                    VertexInputInfo::VertexAttribute{
+                        .description{
+                            .format = VK_FORMAT_R32G32_SFLOAT,
+                            .offset = offsetof(ImGuiVertex, aPos),
+                        },
+                        .attribute_name = "aPos",
+                    },
+                    VertexInputInfo::VertexAttribute{
+                        .description{
+                            .format = VK_FORMAT_R32G32_SFLOAT,
+                            .offset = offsetof(ImGuiVertex, aUV),
+                        },
+                        .attribute_name = "aUV",
+                    },
+                    VertexInputInfo::VertexAttribute{
+                        .description{
+                            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                            .offset = offsetof(ImGuiVertex, aColor),
+                        },
+                        .attribute_name = "aColor",
+                    },
+                },
+        };
+    }
+};
+
 void* DynamicBuffer::acquire(size_t data_size)
 {
     if (data_size > size || data_size < size * 0.5)
@@ -183,17 +221,26 @@ ImGuiImplementation::ImGuiImplementation()
         index_buffer.emplace_back(VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
-    // Create font texture
-    uint8_t* pixels;
-    int      width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    struct VertexImGuiPushConstant : public PushConstant::Type
+    {
+        [[nodiscard]] std::vector<PushConstant::Property> get_members() override
+        {
+            return {
+                PushConstant::Property::create<glm::vec2>("vec2", "uScale"),
+                PushConstant::Property::create<glm::vec2>("vec2", "uTranslate"),
+            };
+        }
 
-    font_image = AssetManager::get()->create<ATexture2D>("imgui_default_font_texture", std::vector<uint8_t>(pixels, pixels + width * height), width, height, 1);
+        glm::vec2 scale;
+        glm::vec2 translate;
+    };
 
     // Create material
     const TAssetPtr<AShader> vertex_shader = AssetManager::get()->create<AShader>("imgui_vertex_shader", __glsl_shader_vert_spv,
                                                                                   ShaderInfos{
-                                                                                      .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
+                                                                                      .shader_stage           = VK_SHADER_STAGE_VERTEX_BIT,
+                                                                                      .vertex_inputs_override = ImGuiVertex::get_attribute_descriptions(),
+                                                                                      .push_constants         = PushConstant::create<VertexImGuiPushConstant>(),
                                                                                   });
 
     const TAssetPtr<AShader> fragment_shader = AssetManager::get()->create<AShader>("imgui_fragment_shader", __glsl_shader_frag_spv,
@@ -211,6 +258,16 @@ ImGuiImplementation::ImGuiImplementation()
                                                                                                                      });
 
     material_instance = AssetManager::get()->create<AMaterialInstance>("imgui_material", material_base);
+
+    
+    // Create font texture
+    uint8_t* pixels;
+    int      width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+    font_image = AssetManager::get()->create<ATexture2D>("imgui_default_font_texture", std::vector<uint8_t>(pixels, pixels + width * height * 4), width, height, 4);
+
+    io.Fonts->TexID = font_image->get_imgui_handle(0, *material_base->get_pipeline("post_processing_0")->get_descriptor_sets_layouts());
 }
 
 ImGuiImplementation::~ImGuiImplementation()
@@ -256,9 +313,10 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
      * PREPARE MATERIALS
      */
 
-    auto pipeline = material_instance->get_material_base()->get_pipeline(render_pass);
+    auto         pipeline  = material_instance->get_material_base()->get_pipeline(render_pass);
+    VkDeviceSize offsets[] = {0};
     vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
-    vkCmdBindVertexBuffers(render_context.command_buffer, 0, 1, &vertex_buffer[image_index].get_buffer(), 0);
+    vkCmdBindVertexBuffers(render_context.command_buffer, 0, 1, &vertex_buffer[image_index].get_buffer(), offsets);
     vkCmdBindIndexBuffer(render_context.command_buffer, index_buffer[image_index].get_buffer(), 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 
     float scale[2] = {

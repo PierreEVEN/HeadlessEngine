@@ -2,6 +2,7 @@
 
 #include "assets/asset_ptr.h"
 #include "rendering/mesh/vertex.h"
+#include "rendering/shaders/shader_property.h"
 
 #include <optional>
 #include <vulkan/vulkan.h>
@@ -18,10 +19,25 @@ struct PipelineInfos
     VkPolygonMode       polygon_mode          = VK_POLYGON_MODE_FILL;
 };
 
+struct MaterialInfos
+{
+    // Shader stages
+    TAssetPtr<AShader> vertex_stage       = {};
+    TAssetPtr<AShader> tessellation_stage = {};
+    TAssetPtr<AShader> geometry_stage     = {};
+    TAssetPtr<AShader> fragment_stage     = {};
+
+    std::vector<std::string> renderer_passes = {};
+    PipelineInfos            pipeline_infos  = {};
+
+    [[nodiscard]] bool                            is_valid() const;
+    [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
+};
+
 class MaterialPipeline final
 {
   public:
-    MaterialPipeline(const PipelineInfos& pipeline_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings, const std::vector<TAssetPtr<AShader>>& stages, const std::optional<PushConstant>& push_constants);
+    MaterialPipeline(const MaterialInfos& material_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings);
     ~MaterialPipeline();
 
     [[nodiscard]] VkPipelineLayout*      get_pipeline_layout();
