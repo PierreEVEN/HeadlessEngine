@@ -2,11 +2,12 @@
 
 #include "assets/asset_shader.h"
 
-#include "StandAlone/ResourceLimits.h"
-#include "spirv_cross.hpp"
-#include <magic_enum/magic_enum.h>
+#include "rendering/shaders/shaders_builder.h"
 
-#define ENABLE_SHADER_LOGGING true
+#include <magic_enum/magic_enum.h>
+#include <spirv_cross/spirv_cross.hpp>
+
+#define ENABLE_SHADER_LOGGING false
 
 std::optional<std::string> AShader::read_shader_file(const std::filesystem::path& source_path)
 {
@@ -30,20 +31,102 @@ std::optional<std::string> AShader::read_shader_file(const std::filesystem::path
     return code;
 }
 
-AShader::AShader(const std::filesystem::path& source_mesh_path, EShaderStage in_shader_kind) : shader_stage(in_shader_kind)
+std::string ShaderReflectProperty::get_property_glsl_typename() const
 {
-    shader_module = std::make_shared<ShaderModule>();
-    shader_module->set_shader_stage(shader_stage);
+    switch (property_type)
+    {
+    case spirv_cross::SPIRType::Unknown:
+        return "unknown";
+    case spirv_cross::SPIRType::Void:
+        return "void";
+    case spirv_cross::SPIRType::Boolean:
+        return "bool";
+    case spirv_cross::SPIRType::SByte:
+        return "int8";
+    case spirv_cross::SPIRType::UByte:
+        return "uint8";
+    case spirv_cross::SPIRType::Short:
+        return "int16";
+    case spirv_cross::SPIRType::UShort:
+        return "uint16";
+    case spirv_cross::SPIRType::Int:
+        return "int";
+    case spirv_cross::SPIRType::UInt:
+        return "uint";
+    case spirv_cross::SPIRType::Int64:
+        return "int64";
+    case spirv_cross::SPIRType::UInt64:
+        return "uint64";
+    case spirv_cross::SPIRType::AtomicCounter:
+        return "unknown_atomic_counter";
+    case spirv_cross::SPIRType::Half:
+        return "unknown_half";
+    case spirv_cross::SPIRType::Float:
+        switch (vec_size)
+        {
+        case 1:
+            return "float";
+        case 2:
+            return "vec2";
+        case 3:
+            return "vec3";
+        case 4:
+            return "vec4";
+        case 5:
+            return "unhandled_float_type";
+        }
+    case spirv_cross::SPIRType::Double:
+        return "double";
+    case spirv_cross::SPIRType::Struct:
+        return "unknown_struct";
+    case spirv_cross::SPIRType::Image:
+        return "unknown_image";
+    case spirv_cross::SPIRType::SampledImage:
+        return "unknown_sampled_image";
+    case spirv_cross::SPIRType::Sampler:
+        return "sampler2D";
+    case spirv_cross::SPIRType::AccelerationStructure:
+        return "unknown_acceleration_structure";
+    case spirv_cross::SPIRType::RayQuery:
+        return "unknown_ray_query";
+    default:
+        return "unhandled_case";
+    }
+}
+
+AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderInfos& in_shader_configuration, const TAssetPtr<AShader>& input_stage) : shader_configuration(in_shader_configuration)
+{
     if (auto shader_data = read_shader_file(source_mesh_path); shader_data)
     {
-        shader_module->set_plain_text(*shader_data);
+        if (in_shader_configuration.shader_stage != VK_SHADER_STAGE_VERTEX_BIT && !input_stage)
+            LOG_FATAL("You should alway specify a valid input stage for shader stages that are not vertex stages");
 
-        build_reflection_data(shader_module->get_bytecode());
+        shader_module = std::make_unique<ShaderModule>();
+        shader_module->set_shader_stage(shader_configuration.shader_stage);
+        const ShaderPreprocessor preprocessor(shader_data.value(), in_shader_configuration, input_stage,
+                                              in_shader_configuration.vertex_inputs_override ? in_shader_configuration.vertex_inputs_override.value() : Vertex::get_attribute_descriptions());
+        shader_module->set_plain_text(preprocessor.try_get_shader_code());
+        const auto& bytecode = shader_module->get_bytecode();
+        if (auto error = shader_module->get_error())
+        {
+            LOG_ERROR("Failed to compile shader %s : %s", to_string().c_str(), error->error_string.c_str());
+            LOG_INFO("\n\n%s\n\n", preprocessor.get_debug_code(error->error_line, error->error_column).c_str());
+            LOG_FATAL("failed to compile shader module %s", to_string().c_str());
+        }
+        else
+            build_reflection_data(bytecode);
+        LOG_INFO("successfully compiled shader %s", to_string().c_str());
     }
-    else
-    {
-        LOG_ERROR("failed to read shader file %s", source_mesh_path.string().c_str());
-    }
+    else LOG_ERROR("failed to read shader file %s", source_mesh_path.string().c_str());
+}
+
+AShader::AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderInfos& in_shader_configuration) : shader_configuration(in_shader_configuration)
+{
+    shader_module = std::make_unique<ShaderModule>();
+    shader_module->set_shader_stage(shader_configuration.shader_stage);
+    shader_module->set_bytecode(shader_bytecode);
+    build_reflection_data(shader_module->get_bytecode());
+    LOG_INFO("successfully compiled shader %s", to_string().c_str());
 }
 
 VkShaderModule AShader::get_shader_module() const
@@ -51,27 +134,79 @@ VkShaderModule AShader::get_shader_module() const
     return shader_module->get_shader_module();
 }
 
-const std::optional<ShaderProperty>& AShader::get_push_constants() const
+const std::optional<ShaderReflectProperty>& AShader::get_push_constants() const
 {
     return push_constants;
 }
 
-const std::vector<ShaderProperty>& AShader::get_uniform_buffers() const
+const std::vector<ShaderReflectProperty>& AShader::get_uniform_buffers() const
 {
     return uniform_buffer;
 }
 
-const std::vector<ShaderProperty>& AShader::get_image_samplers() const
+const std::vector<ShaderReflectProperty>& AShader::get_image_samplers() const
 {
     return image_samplers;
 }
 
-const std::vector<ShaderProperty>& AShader::get_storage_buffers() const
+const std::vector<ShaderReflectProperty>& AShader::get_storage_buffers() const
 {
     return storage_buffer;
 }
 
-const ShaderProperty* AShader::get_model_matrix_buffer() const
+const std::vector<ShaderReflectProperty>& AShader::get_stage_inputs() const
+{
+    return shader_inputs;
+}
+
+const std::vector<ShaderReflectProperty>& AShader::get_stage_outputs() const
+{
+    return shader_outputs;
+}
+
+std::vector<ShaderReflectProperty> AShader::get_all_properties() const
+{
+    std::vector<ShaderReflectProperty> properties{};
+    for (const auto& property : uniform_buffer)
+        properties.emplace_back(property);
+    for (const auto& property : storage_buffer)
+        properties.emplace_back(property);
+    for (const auto& property : image_samplers)
+        properties.emplace_back(property);
+    for (const auto& property : shader_inputs)
+        properties.emplace_back(property);
+    for (const auto& property : shader_outputs)
+        properties.emplace_back(property);
+
+    return properties;
+}
+
+std::optional<ShaderReflectProperty> AShader::find_property_by_name(const std::string& property_name) const
+{
+    for (const auto& property : get_all_properties())
+    {
+        if (property_name == property.property_name)
+            return property;
+    }
+    return {};
+}
+
+const VkShaderStageFlagBits& AShader::get_shader_stage() const
+{
+    return shader_configuration.shader_stage;
+}
+
+const ShaderInfos& AShader::get_shader_config() const
+{
+    return shader_configuration;
+}
+
+uint32_t AShader::get_last_binding_index() const
+{
+    return last_binding_index;
+}
+
+const ShaderReflectProperty* AShader::get_model_matrix_buffer() const
 {
     for (auto& buffer : storage_buffer)
     {
@@ -81,7 +216,7 @@ const ShaderProperty* AShader::get_model_matrix_buffer() const
     return nullptr;
 }
 
-const ShaderProperty* AShader::get_scene_data_buffer() const
+const ShaderReflectProperty* AShader::get_scene_data_buffer() const
 {
     for (auto& buffer : uniform_buffer)
     {
@@ -91,14 +226,16 @@ const ShaderProperty* AShader::get_scene_data_buffer() const
     return nullptr;
 }
 
-std::shared_ptr<ShaderModule> AShader::get_shader_module_ptr() const
+ShaderModule* AShader::get_shader_module_ptr() const
 {
-    return shader_module;
+    return shader_module.get();
 }
 
 void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
 {
     const spirv_cross::Compiler compiler(bytecode);
+
+    last_binding_index = 0;
 
     /**
      * ENTRY POINTS
@@ -123,22 +260,22 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
             const auto push_constant_buffer = push_constant_buffers[0];
             auto       var_type             = compiler.get_type(push_constant_buffer.type_id);
 
-            push_constants = ShaderProperty{.property_name  = push_constant_buffer.name,
-                                            .property_type  = var_type.basetype,
-                                            .structure_size = compiler.get_declared_struct_size(var_type),
-                                            .location       = 0,
-                                            .vec_size       = var_type.vecsize,
-                                            .shader_stage   = shader_stage};
+            push_constants = ShaderReflectProperty{.property_name  = push_constant_buffer.name,
+                                                   .property_type  = var_type.basetype,
+                                                   .structure_size = compiler.get_declared_struct_size(var_type),
+                                                   .location       = 0,
+                                                   .vec_size       = var_type.vecsize,
+                                                   .shader_stage   = shader_configuration.shader_stage};
             for (int i = 0; i < var_type.member_types.size(); ++i)
             {
                 const auto member_type = compiler.get_type(var_type.member_types[i]);
-                push_constants->structure_properties.emplace_back(ShaderProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
-                                                                                 .property_type  = member_type.basetype,
-                                                                                 .structure_size = 0,
-                                                                                 // compiler.get_declared_struct_size(member_type),
-                                                                                 .location     = 0,
-                                                                                 .vec_size     = member_type.vecsize,
-                                                                                 .shader_stage = shader_stage});
+                push_constants->structure_properties.emplace_back(ShaderReflectProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
+                                                                                        .property_type  = member_type.basetype,
+                                                                                        .structure_size = 0,
+                                                                                        // compiler.get_declared_struct_size(member_type),
+                                                                                        .location     = 0,
+                                                                                        .vec_size     = member_type.vecsize,
+                                                                                        .shader_stage = shader_configuration.shader_stage});
             }
         }
     }
@@ -151,22 +288,26 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
     {
         auto var_type = compiler.get_type(buffer.type_id);
 
-        ShaderProperty new_buffer = ShaderProperty{.property_name  = buffer.name,
-                                                   .property_type  = var_type.basetype,
-                                                   .structure_size = compiler.get_declared_struct_size(var_type),
-                                                   .location       = compiler.get_decoration(buffer.id, spv::DecorationBinding),
-                                                   .vec_size       = var_type.vecsize,
-                                                   .shader_stage   = shader_stage};
+        ShaderReflectProperty new_buffer = ShaderReflectProperty{.property_name  = buffer.name,
+                                                                 .property_type  = var_type.basetype,
+                                                                 .structure_size = compiler.get_declared_struct_size(var_type),
+                                                                 .location       = compiler.get_decoration(buffer.id, spv::DecorationBinding),
+                                                                 .vec_size       = var_type.vecsize,
+                                                                 .shader_stage   = shader_configuration.shader_stage};
+
+        if (new_buffer.location > last_binding_index)
+            last_binding_index = new_buffer.location;
+
         for (int i = 0; i < var_type.member_types.size(); ++i)
         {
             const auto member_type = compiler.get_type(var_type.member_types[i]);
-            new_buffer.structure_properties.emplace_back(ShaderProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
-                                                                        .property_type  = member_type.basetype,
-                                                                        .structure_size = 0,
-                                                                        // compiler.get_declared_struct_size(member_type),
-                                                                        .location     = 0,
-                                                                        .vec_size     = member_type.vecsize,
-                                                                        .shader_stage = shader_stage});
+            new_buffer.structure_properties.emplace_back(ShaderReflectProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
+                                                                               .property_type  = member_type.basetype,
+                                                                               .structure_size = 0,
+                                                                               // compiler.get_declared_struct_size(member_type),
+                                                                               .location     = 0,
+                                                                               .vec_size     = member_type.vecsize,
+                                                                               .shader_stage = shader_configuration.shader_stage});
         }
         uniform_buffer.emplace_back(new_buffer);
     }
@@ -179,22 +320,26 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
     {
         auto var_type = compiler.get_type(buffer.type_id);
 
-        ShaderProperty new_buffer = ShaderProperty{.property_name  = buffer.name,
-                                                   .property_type  = var_type.basetype,
-                                                   .structure_size = compiler.get_declared_struct_size(var_type),
-                                                   .location       = compiler.get_decoration(buffer.id, spv::DecorationBinding),
-                                                   .vec_size       = var_type.vecsize,
-                                                   .shader_stage   = shader_stage};
+        ShaderReflectProperty new_buffer = ShaderReflectProperty{.property_name  = buffer.name,
+                                                                 .property_type  = var_type.basetype,
+                                                                 .structure_size = compiler.get_declared_struct_size(var_type),
+                                                                 .location       = compiler.get_decoration(buffer.id, spv::DecorationBinding),
+                                                                 .vec_size       = var_type.vecsize,
+                                                                 .shader_stage   = shader_configuration.shader_stage};
+
+        if (new_buffer.location > last_binding_index)
+            last_binding_index = new_buffer.location;
+
         for (int i = 0; i < var_type.member_types.size(); ++i)
         {
             const auto member_type = compiler.get_type(var_type.member_types[i]);
-            new_buffer.structure_properties.emplace_back(ShaderProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
-                                                                        .property_type  = member_type.basetype,
-                                                                        .structure_size = 0,
-                                                                        // compiler.get_declared_struct_size(member_type),
-                                                                        .location     = 0,
-                                                                        .vec_size     = member_type.vecsize,
-                                                                        .shader_stage = shader_stage});
+            new_buffer.structure_properties.emplace_back(ShaderReflectProperty{.property_name  = compiler.get_member_name(var_type.type_alias, i).c_str(),
+                                                                               .property_type  = member_type.basetype,
+                                                                               .structure_size = 0,
+                                                                               // compiler.get_declared_struct_size(member_type),
+                                                                               .location     = 0,
+                                                                               .vec_size     = member_type.vecsize,
+                                                                               .shader_stage = shader_configuration.shader_stage});
         }
         storage_buffer.emplace_back(new_buffer);
     }
@@ -205,13 +350,45 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
 
     for (const auto& image : compiler.get_shader_resources().sampled_images)
     {
-        auto var_type = compiler.get_type(image.type_id);
-        image_samplers.emplace_back(ShaderProperty{.property_name  = image.name,
-                                                   .property_type  = var_type.basetype,
-                                                   .structure_size = 0,
-                                                   .location       = compiler.get_decoration(image.id, spv::DecorationBinding),
-                                                   .vec_size       = var_type.vecsize,
-                                                   .shader_stage   = shader_stage});
+        auto       var_type = compiler.get_type(image.type_id);
+        const auto binding  = compiler.get_decoration(image.id, spv::DecorationBinding);
+        image_samplers.emplace_back(ShaderReflectProperty{
+            .property_name  = image.name,
+            .property_type  = var_type.basetype,
+            .structure_size = 0,
+            .location       = binding,
+            .vec_size       = var_type.vecsize,
+            .shader_stage   = shader_configuration.shader_stage,
+        });
+
+        if (binding > last_binding_index)
+            last_binding_index = binding;
+    }
+
+    /**
+     * SHADER INPUTS - OUTPUT
+     */
+
+    for (const auto& input : compiler.get_shader_resources().stage_inputs)
+    {
+        auto var_type = compiler.get_type(input.type_id);
+        shader_inputs.emplace_back(ShaderReflectProperty{.property_name  = input.name,
+                                                         .property_type  = var_type.basetype,
+                                                         .structure_size = 0,
+                                                         .location       = compiler.get_decoration(input.id, spv::DecorationLocation),
+                                                         .vec_size       = var_type.vecsize,
+                                                         .shader_stage   = shader_configuration.shader_stage});
+    }
+
+    for (const auto& output : compiler.get_shader_resources().stage_outputs)
+    {
+        auto var_type = compiler.get_type(output.type_id);
+        shader_outputs.emplace_back(ShaderReflectProperty{.property_name  = output.name,
+                                                          .property_type  = var_type.basetype,
+                                                          .structure_size = 0,
+                                                          .location       = compiler.get_decoration(output.id, spv::DecorationLocation),
+                                                          .vec_size       = var_type.vecsize,
+                                                          .shader_stage   = shader_configuration.shader_stage});
     }
 
 #if ENABLE_SHADER_LOGGING
@@ -222,6 +399,23 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
     {
         auto& type = compiler.get_type_from_variable(var);
         shader_log += stringutils::format("\t-- %s %s\n", magic_enum::enum_name(type.basetype).data(), compiler.get_remapped_declared_block_name(var).c_str());
+    }
+
+    if (!shader_inputs.empty())
+    {
+        shader_log += stringutils::format("shader input : %d\n", shader_inputs.size());
+        for (const auto& image : shader_inputs)
+        {
+            shader_log += stringutils::format("\t-- %s%d %s binding=%d\n", magic_enum::enum_name(image.property_type).data(), image.vec_size, image.property_name.c_str(), image.location);
+        }
+    }
+    if (!shader_outputs.empty())
+    {
+        shader_log += stringutils::format("shader outputs : %d\n", shader_outputs.size());
+        for (const auto& image : shader_outputs)
+        {
+            shader_log += stringutils::format("\t-- %s%d %s binding=%d\n", magic_enum::enum_name(image.property_type).data(), image.vec_size, image.property_name.c_str(), image.location);
+        }
     }
 
     if (push_constants)
@@ -271,6 +465,6 @@ void AShader::build_reflection_data(const std::vector<uint32_t>& bytecode)
         }
     }
 
-    LOG_DEBUG("\ncompiling shader module [%s] : entry point = '%s'\n%s", get_id().to_string().c_str(), entry_point.c_str(), shader_log.c_str());
+    LOG_DEBUG("\nsuccessfully shader module \n##################### [ %s ] #####################\nentry point = '%s'\n%s", get_id().to_string().c_str(), entry_point.c_str(), shader_log.c_str());
 #endif
 }

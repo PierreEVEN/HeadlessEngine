@@ -1,129 +1,146 @@
 #include "rendering/renderer/render_pass.h"
 
-#include "rendering/gfx_context.h"
-#include "rendering/renderer/swapchain.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/utils.h"
 #include <cpputils/logger.hpp>
 
-RenderPass::RenderPass(Swapchain* target_swapchain) : swapchain(target_swapchain)
+RenderPass::RenderPass(const RenderPassSettings& in_pass_description)
 {
-    create_or_recreate_render_pass();
+    pass_description = in_pass_description;
+    create_render_pass();
 }
 
 RenderPass::~RenderPass()
 {
-    if (render_pass != VK_NULL_HANDLE)
-    {
-        destroy_render_pass();
-    }
+    destroy_render_pass();
 }
 
-void RenderPass::create_or_recreate_render_pass()
+void RenderPass::create_render_pass()
 {
-    if (render_pass != VK_NULL_HANDLE)
+    std::vector<VkAttachmentDescription> attachment_descriptions;
+    std::vector<VkAttachmentReference>   color_attachment_references;
+    std::optional<VkAttachmentReference> depth_attachment_reference;
+    std::optional<VkAttachmentReference> color_attachment_resolve_reference;
+
+    // add color attachments
+    for (const auto& col_attachment : pass_description.color_attachments)
     {
-        destroy_render_pass();
+        if (col_attachment.image_format == VK_FORMAT_UNDEFINED)
+            LOG_FATAL("image buffer format is undefined");
+
+        const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
+
+        attachment_descriptions.emplace_back(VkAttachmentDescription{
+            .format         = col_attachment.image_format,
+            .samples        = pass_description.sample_count,
+            .loadOp         = col_attachment.clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout    = pass_description.b_use_swapchain_image && !pass_description.has_resolve_attachment() ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+
+        color_attachment_references.emplace_back(VkAttachmentReference{
+            .attachment = attachment_index,
+            .layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        });
     }
 
-    LOG_INFO("Create render pass");
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format         = swapchain->get_surface_format().format;
-    colorAttachment.samples        = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count());
-    colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout    = vulkan_common::get_msaa_sample_count() > 1 ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentDescription depthAttachment{};
-    depthAttachment.format         = vulkan_utils::get_depth_format(GfxContext::get()->physical_device);
-    depthAttachment.samples        = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count());
-    depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentDescription colorAttachmentResolve{};
-    colorAttachmentResolve.format         = swapchain->get_surface_format().format;
-    colorAttachmentResolve.samples        = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachmentResolve.loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachmentResolve.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachmentResolve.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference colorAttachmentResolveRef{};
-    colorAttachmentResolveRef.attachment = 2;
-    colorAttachmentResolveRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = 1;
-    subpass.pColorAttachments       = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-    subpass.pResolveAttachments     = vulkan_common::get_msaa_sample_count() > 1 ? &colorAttachmentResolveRef : nullptr;
-    subpass.inputAttachmentCount    = 0;       // Input attachments can be used to sample from contents of a previous subpass
-    subpass.pInputAttachments       = nullptr; // (Input attachments not used by this example)
-    subpass.preserveAttachmentCount = 0;       // Preserved attachments can be used to loop (and preserve) attachments through subpasses
-    subpass.pPreserveAttachments    = nullptr; // (Preserve attachments not used by this example)
-
-    std::array<VkSubpassDependency, 2> dependencies;
-    dependencies[0].srcSubpass      = VK_SUBPASS_EXTERNAL;                           // Producer of the dependency
-    dependencies[0].dstSubpass      = 0;                                             // Consumer is our single subpass that will wait for the execution depdendency
-    dependencies[0].srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // Match our pWaitDstStageMask when we vkQueueSubmit
-    dependencies[0].dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // is a loadOp stage for color attachments
-    dependencies[0].srcAccessMask   = 0;                                             // semaphore wait already does memory dependency for us
-    dependencies[0].dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;          // is a loadOp CLEAR access mask for color attachments
-    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    dependencies[1].srcSubpass      = 0;                                             // Producer of the dependency is our single subpass
-    dependencies[1].dstSubpass      = VK_SUBPASS_EXTERNAL;                           // Consumer are all commands outside of the renderpass
-    dependencies[1].srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // is a storeOp stage for color attachments
-    dependencies[1].dstStageMask    = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;          // Do not block any subsequent work
-    dependencies[1].srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;          // is a storeOp `STORE` access mask for color attachments
-    dependencies[1].dstAccessMask   = 0;
-    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    std::vector<VkAttachmentDescription> attachments;
-
-    if (vulkan_common::get_msaa_sample_count() > 1)
+    // add depth attachment
+    if (pass_description.depth_attachment)
     {
-        attachments.push_back(colorAttachment);
-        attachments.push_back(depthAttachment);
-        attachments.push_back(colorAttachmentResolve);
+        const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
+
+        attachment_descriptions.emplace_back(VkAttachmentDescription{
+            .format         = pass_description.depth_attachment->image_format,
+            .samples        = pass_description.sample_count,
+            .loadOp         = pass_description.depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        });
+
+        depth_attachment_reference = VkAttachmentReference{
+            .attachment = attachment_index,
+            .layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        };
     }
-    else
+
+    // add resolve attachment
+    if (pass_description.has_resolve_attachment())
     {
-        attachments.push_back(colorAttachment);
-        attachments.push_back(depthAttachment);
+        const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
+
+        if (pass_description.get_resolve_format() == VK_FORMAT_UNDEFINED)
+            LOG_FATAL("resolve format is undefined");
+
+        attachment_descriptions[attachment_index] = VkAttachmentDescription{
+            .format         = pass_description.get_resolve_format(),
+            .samples        = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE, // don't need to clear resolve attachment
+            .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        };
+        color_attachment_resolve_reference = VkAttachmentReference{
+            .attachment = attachment_index,
+            .layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        };
     }
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments    = attachments.data();
-    renderPassInfo.subpassCount    = 1;
-    renderPassInfo.pSubpasses      = &subpass;
-    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
-    renderPassInfo.pDependencies   = dependencies.data();
-    VK_ENSURE(vkCreateRenderPass(GfxContext::get()->logical_device, &renderPassInfo, vulkan_common::allocation_callback, &render_pass), "Failed to create render pass");
+
+    const VkSubpassDescription subpass{
+        .pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .inputAttachmentCount    = 0,       // Input attachments can be used to sample from contents of a previous subpass
+        .pInputAttachments       = nullptr, // (Input attachments not used here)
+        .colorAttachmentCount    = static_cast<uint32_t>(color_attachment_references.size()),
+        .pColorAttachments       = color_attachment_references.data(),
+        .pResolveAttachments     = color_attachment_resolve_reference ? &color_attachment_resolve_reference.value() : nullptr, // resolve mean the target attachment for msaa
+        .pDepthStencilAttachment = depth_attachment_reference ? &depth_attachment_reference.value() : nullptr,
+        .preserveAttachmentCount = 0,       // Preserved attachments can be used to loop (and preserve) attachments through subpasses
+        .pPreserveAttachments    = nullptr, // (Preserve attachments not used by this example)
+    };
+
+    const std::array dependencies{VkSubpassDependency{
+                                      .srcSubpass      = VK_SUBPASS_EXTERNAL,                                                        // Producer of the dependency
+                                      .dstSubpass      = 0,                                                                          // Consumer is our single subpass that will wait for the execution depdendency
+                                      .srcStageMask    = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,                                       // Match our pWaitDstStageMask when we vkQueueSubmit
+                                      .dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                              // is a loadOp stage for color attachments
+                                      .srcAccessMask   = VK_ACCESS_MEMORY_READ_BIT,                                                  // semaphore wait already does memory dependency for us
+                                      .dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // is a loadOp CLEAR access mask for color attachments
+                                      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+                                  },
+                                  VkSubpassDependency{
+                                      .srcSubpass      = 0,                                                                          // Producer of the dependency is our single subpass
+                                      .dstSubpass      = VK_SUBPASS_EXTERNAL,                                                        // Consumer are all commands outside of the renderpass
+                                      .srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                              // is a storeOp stage for color attachments
+                                      .dstStageMask    = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,                                       // Do not block any subsequent work
+                                      .srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // is a storeOp `STORE` access mask for color attachments
+                                      .dstAccessMask   = VK_ACCESS_MEMORY_READ_BIT,
+                                      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+                                  }};
+
+    VkRenderPassCreateInfo render_pass_infos{
+        .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = static_cast<uint32_t>(attachment_descriptions.size()),
+        .pAttachments    = attachment_descriptions.data(),
+        .subpassCount    = 1,
+        .pSubpasses      = &subpass,
+        .dependencyCount = static_cast<uint32_t>(dependencies.size()),
+        .pDependencies   = dependencies.data(),
+    };
+
+    VK_ENSURE(vkCreateRenderPass(Graphics::get()->get_logical_device(), &render_pass_infos, vulkan_common::allocation_callback, &render_pass), "Failed to create render pass");
 }
 
 void RenderPass::destroy_render_pass()
 {
-    LOG_INFO("Destroy Render pass");
-    vkDestroyRenderPass(GfxContext::get()->logical_device, render_pass, vulkan_common::allocation_callback);
+    if (render_pass != VK_NULL_HANDLE)
+        vkDestroyRenderPass(Graphics::get()->get_logical_device(), render_pass, vulkan_common::allocation_callback);
     render_pass = VK_NULL_HANDLE;
 }

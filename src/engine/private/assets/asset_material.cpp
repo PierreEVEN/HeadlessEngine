@@ -8,199 +8,154 @@
 #include "assets/asset_texture.h"
 #include "engine_interface.h"
 #include "magic_enum/magic_enum.h"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 #include "scene/node_camera.h"
 
-template <typename BufferType_T>
-static void add_layout_binding_t(std::vector<VkDescriptorSetLayoutBinding>& result_bindings, std::unordered_map<std::string, uint32_t>& binding_map, const std::vector<ShaderProperty>& shader_properties,
-                                 const std::unordered_map<std::string, BufferType_T>& user_properties, VkShaderStageFlags shader_stage, VkDescriptorType descriptor_type,
-                                 const ShaderProperty* optional_user_property = nullptr)
+bool MaterialInfos::is_valid() const
 {
-    std::unordered_map<std::string, ShaderProperty> shader_content;
-    // shader properties indexing
-    for (const auto& property : shader_properties)
-        shader_content[property.property_name] = property;
+    return vertex_stage && fragment_stage && !renderer_passes.empty();
+}
 
-    std::vector<std::string> buffer_names;
-    for (const auto& key : user_properties)
-        buffer_names.emplace_back(key.first);
-    if (optional_user_property) // register optional parameter
-        buffer_names.emplace_back(optional_user_property->property_name);
+std::vector<TAssetPtr<AShader>> MaterialInfos::get_shader_stages() const
+{
+    std::vector<TAssetPtr<AShader>> stage_list;
+    if (vertex_stage)
+        stage_list.emplace_back(vertex_stage);
+    if (tessellation_stage)
+        stage_list.emplace_back(tessellation_stage);
+    if (geometry_stage)
+        stage_list.emplace_back(geometry_stage);
+    if (fragment_stage)
+        stage_list.emplace_back(fragment_stage);
 
-    for (const auto& user_element : buffer_names)
+    return stage_list;
+}
+
+AMaterialBase::AMaterialBase(const MaterialInfos& in_material_infos) : material_infos(in_material_infos)
+{
+    if (material_infos.renderer_passes.empty())
+        LOG_FATAL("you need to specify at least one render pass to be used with");
+    
+    auto layout_bindings = make_layout_bindings();
+
+    for (const auto& pass : material_infos.renderer_passes)
     {
-        if (const auto found_buffer = shader_content.find(user_element); found_buffer != shader_content.end())
+        if (!Graphics::get()->get_renderer()->get_render_pass_configuration(pass))
         {
-            result_bindings.emplace_back(VkDescriptorSetLayoutBinding{
-                .binding            = found_buffer->second.location,
-                .descriptorType     = descriptor_type,
-                .descriptorCount    = 1,
-                .stageFlags         = shader_stage,
-                .pImmutableSamplers = nullptr,
+            LOG_WARNING("material %s is designed to be used with render pass %s, but renderer doesn't have any render pass with this name", to_string().c_str(), pass.c_str());
+            continue;
+        }
+        per_stage_pipeline[pass] = std::make_unique<MaterialPipeline>(material_infos, pass, layout_bindings);
+    }
+}
+
+MaterialPipeline* AMaterialBase::get_pipeline(const std::string& render_pass) const
+{
+    if (const auto found_pipeline = per_stage_pipeline.find(render_pass); found_pipeline != per_stage_pipeline.end())
+    {
+        return found_pipeline->second.get();
+    }
+    LOG_ERROR("material %s is not configured to be used with render pass %s", to_string().c_str(), render_pass.c_str());
+    return nullptr;
+}
+
+
+void AMaterialBase::bind_material(SwapchainFrame& render_context)
+{
+    auto pipeline = get_pipeline(render_context.render_pass);
+
+    if (material_infos.pipeline_infos.wireframe_lines_width)
+        vkCmdSetLineWidth(render_context.command_buffer, material_infos.pipeline_infos.wireframe_lines_width.value());
+
+    vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+}
+
+std::vector<TAssetPtr<AShader>> AMaterialBase::get_shader_stages() const
+{
+    return material_infos.get_shader_stages();
+}
+
+const MaterialInfos& AMaterialBase::get_material_infos() const
+{
+    return material_infos;
+}
+
+static std::optional<ShaderReflectProperty> find_shader_property(const TAssetPtr<AShader>& shader, const std::string& property_name, const VkDescriptorType& descriptor_type)
+{
+    switch (descriptor_type)
+    {
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        for (const auto& property : shader->get_image_samplers())
+            if (property.property_name == property_name)
+                return property;
+        break;
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        for (const auto& property : shader->get_uniform_buffers())
+            if (property.property_name == property_name)
+                return property;
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        for (const auto& property : shader->get_storage_buffers())
+            if (property.property_name == property_name)
+                return property;
+        break;
+    default:
+        break;
+    }
+
+    return {};
+}
+
+std::vector<VkDescriptorSetLayoutBinding> AMaterialBase::make_layout_bindings() const
+{
+    std::vector<VkDescriptorSetLayoutBinding> pipeline_bindings = {};
+
+    struct PropertySearchInfos
+    {
+        std::string      property_name;
+        VkDescriptorType descriptor_type;
+    };
+
+    for (const auto& shader_stage : get_shader_stages())
+    {
+        std::vector<PropertySearchInfos> wanted_properties = {};
+
+        for (const auto& property : shader_stage->get_shader_config().textures)
+        {
+            wanted_properties.emplace_back(PropertySearchInfos{
+                .property_name   = property.binding_name,
+                .descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            });
+        }
+
+        if (shader_stage->get_shader_config().use_scene_object_buffer)
+            wanted_properties.emplace_back(PropertySearchInfos{
+                .property_name   = G_MODEL_MATRIX_BUFFER_NAME,
+                .descriptor_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             });
 
-            binding_map[found_buffer->second.property_name] = found_buffer->second.location;
+        if (shader_stage->get_shader_config().use_view_data_buffer)
+            wanted_properties.emplace_back(PropertySearchInfos{
+                .property_name   = G_SCENE_DATA_BUFFER_NAME,
+                .descriptor_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            });
 
-            shader_content.erase(user_element);
-        }
-        else
+        // retrieve user properties
+        for (const auto& user_property : wanted_properties)
         {
-            LOG_FATAL("given shader property %s doesn't exists in the current shader context", user_element.c_str());
+            if (const auto found_property = find_shader_property(shader_stage, user_property.property_name, user_property.descriptor_type); found_property)
+            {
+                pipeline_bindings.emplace_back(VkDescriptorSetLayoutBinding{
+                    .binding            = found_property->location,
+                    .descriptorType     = user_property.descriptor_type,
+                    .descriptorCount    = 1,
+                    .stageFlags         = static_cast<VkShaderStageFlags>(shader_stage->get_shader_stage()),
+                    .pImmutableSamplers = nullptr,
+                });
+            }
+            else
+                LOG_ERROR("failed to find property %s of type %s in shader stage %s", user_property.property_name.c_str(), magic_enum::enum_name(user_property.descriptor_type).data(), shader_stage->to_string().c_str());
         }
     }
-
-    for (const auto& member_left : shader_content)
-        LOG_WARNING("You forget to give binding for shader property %s", member_left.first.c_str());
-    if (!shader_content.empty())
-        LOG_FATAL("cannot compile shader. Please see previous warnings for more informations");
-}
-
-void add_write_descriptor_set(std::vector<VkWriteDescriptorSet>& result_sets, VkDescriptorType descriptor_type, uint32_t binding, const VkDescriptorSet& desc_set, VkDescriptorImageInfo* image,
-                              VkDescriptorBufferInfo* buffer)
-{
-    result_sets.emplace_back(VkWriteDescriptorSet{
-        .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .pNext            = nullptr,
-        .dstSet           = desc_set,
-        .dstBinding       = binding,
-        .dstArrayElement  = 0,
-        .descriptorCount  = 1,
-        .descriptorType   = descriptor_type,
-        .pImageInfo       = image,
-        .pBufferInfo      = buffer,
-        .pTexelBufferView = nullptr,
-    });
-}
-
-AMaterial::AMaterial(const ShaderStageData& in_vertex_stage, const ShaderStageData& in_fragment_stage, const std::shared_ptr<PushConstant>& in_push_constant)
-    : vertex_stage(in_vertex_stage), fragment_stage(in_fragment_stage), push_constant(in_push_constant)
-{
-    pipeline.set_vertex_module(vertex_stage.shader->get_shader_module_ptr());
-    pipeline.set_fragment_module(fragment_stage.shader->get_shader_module_ptr());
-
-    std::shared_ptr<VkPushConstantRange> push_constant_ranges;
-    if (push_constant)
-    {
-        if (vertex_stage.shader->get_push_constants() || fragment_stage.shader->get_push_constants())
-        {
-            push_constant->stage_flags = vertex_stage.shader->get_push_constants() && fragment_stage.shader->get_push_constants() ? VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
-                                         : fragment_stage.shader->get_push_constants()                                            ? VK_SHADER_STAGE_FRAGMENT_BIT
-                                                                                                                                  : VK_SHADER_STAGE_VERTEX_BIT;
-
-            push_constant_ranges             = std::make_shared<VkPushConstantRange>();
-            push_constant_ranges->stageFlags = push_constant->stage_flags;
-            push_constant_ranges->offset     = 0;
-            push_constant_ranges->size       = static_cast<uint32_t>(push_constant->get_size());
-        }
-        else
-        {
-            LOG_ERROR("specified push constant that is not available in current shaders");
-        }
-    }
-    else if (vertex_stage.shader->get_push_constants() || fragment_stage.shader->get_push_constants())
-    {
-        LOG_ERROR("missing push constant parameter");
-    }
-    pipeline.set_push_constant_ranges(push_constant_ranges);
-    pipeline.set_layout_bindings(make_layout_bindings());
-    pipeline.rebuild();
-}
-
-std::vector<VkDescriptorSetLayoutBinding> AMaterial::make_layout_bindings()
-{
-    std::vector<VkDescriptorSetLayoutBinding> result_bindings;
-
-    vertex_bindings.clear();
-    fragment_bindings.clear();
-
-    // Vertex UBO
-    add_layout_binding_t(result_bindings, vertex_bindings, vertex_stage.shader->get_uniform_buffers(), vertex_stage.uniform_buffers, VK_SHADER_STAGE_VERTEX_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                         vertex_stage.shader->get_scene_data_buffer());
-    // Fragment UBO
-    add_layout_binding_t(result_bindings, fragment_bindings, fragment_stage.shader->get_uniform_buffers(), fragment_stage.uniform_buffers, VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                         fragment_stage.shader->get_scene_data_buffer());
-    // Vertex SSBO
-    add_layout_binding_t(result_bindings, vertex_bindings, vertex_stage.shader->get_storage_buffers(), vertex_stage.storage_buffers, VK_SHADER_STAGE_VERTEX_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                         vertex_stage.shader->get_model_matrix_buffer());
-    // Fragment SSBO
-    add_layout_binding_t(result_bindings, fragment_bindings, fragment_stage.shader->get_storage_buffers(), fragment_stage.storage_buffers, VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                         fragment_stage.shader->get_model_matrix_buffer());
-    // Vertex samplers
-    add_layout_binding_t(result_bindings, vertex_bindings, vertex_stage.shader->get_image_samplers(), vertex_stage.textures, VK_SHADER_STAGE_VERTEX_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    // Fragment samplers
-    add_layout_binding_t(result_bindings, fragment_bindings, fragment_stage.shader->get_image_samplers(), fragment_stage.textures, VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    return result_bindings;
-}
-
-void AMaterial::update_descriptor_sets(NCamera* in_camera, uint32_t imageIndex)
-{
-    std::vector<VkWriteDescriptorSet> write_descriptor_sets = {};
-
-    const auto descriptor_sets = pipeline.get_descriptor_sets()[imageIndex];
-
-    for (const auto& [key, asset] : vertex_stage.uniform_buffers)
-    {
-        if (auto binding = vertex_bindings.find(key); binding != vertex_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding->second, descriptor_sets, nullptr, asset->get_descriptor_buffer_info(imageIndex));
-        else
-            LOG_ERROR("failed to find binding for uniform buffer");
-    }
-
-    for (const auto& [key, asset] : fragment_stage.uniform_buffers)
-    {
-        if (auto binding = fragment_bindings.find(key); binding != fragment_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding->second, descriptor_sets, nullptr, asset->get_descriptor_buffer_info(imageIndex));
-        else
-            LOG_ERROR("failed to find binding for uniform buffer");
-    }
-
-    for (const auto& [key, asset] : vertex_stage.storage_buffers)
-    {
-        if (auto binding = vertex_bindings.find(key); binding != vertex_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, binding->second, descriptor_sets, nullptr, asset->get_descriptor_buffer_info(imageIndex));
-        else
-            LOG_ERROR("failed to find binding for ssbo buffer");
-    }
-
-    for (const auto& [key, asset] : fragment_stage.storage_buffers)
-    {
-        if (auto binding = fragment_bindings.find(key); binding != fragment_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, binding->second, descriptor_sets, nullptr, asset->get_descriptor_buffer_info(imageIndex));
-        else
-            LOG_ERROR("failed to find binding for ssbo buffer");
-    }
-
-    for (const auto& [key, asset] : vertex_stage.textures)
-    {
-        if (auto binding = vertex_bindings.find(key); binding != vertex_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding->second, descriptor_sets, asset->get_descriptor_image_info(imageIndex), nullptr);
-        else
-            LOG_ERROR("failed to find binding for sampler");
-    }
-
-    for (const auto& [key, asset] : fragment_stage.textures)
-    {
-        if (auto binding = fragment_bindings.find(key); binding != fragment_bindings.end())
-            add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding->second, descriptor_sets, asset->get_descriptor_image_info(imageIndex), nullptr);
-        else
-            LOG_ERROR("failed to find binding for sampler");
-    }
-
-    // scene UBO
-    if (const auto buffer = vertex_stage.shader->get_scene_data_buffer())
-        add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, buffer->location, descriptor_sets, nullptr, in_camera->get_scene_uniform_buffer()->get_descriptor_buffer_info(imageIndex));
-
-    if (const auto buffer = fragment_stage.shader->get_scene_data_buffer())
-        add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, buffer->location, descriptor_sets, nullptr, in_camera->get_scene_uniform_buffer()->get_descriptor_buffer_info(imageIndex));
-
-    // scene SSBO
-    if (const auto buffer = vertex_stage.shader->get_model_matrix_buffer())
-        add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffer->location, descriptor_sets, nullptr, in_camera->get_model_ssbo()->get_descriptor_buffer_info(imageIndex));
-
-    if (const auto buffer = fragment_stage.shader->get_model_matrix_buffer())
-        add_write_descriptor_set(write_descriptor_sets, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffer->location, descriptor_sets, nullptr, in_camera->get_model_ssbo()->get_descriptor_buffer_info(imageIndex));
-
-    vkUpdateDescriptorSets(GfxContext::get()->logical_device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
+    return pipeline_bindings;
 }

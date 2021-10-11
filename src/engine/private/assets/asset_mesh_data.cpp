@@ -4,66 +4,11 @@
 #include <string.h>
 
 #include "engine_interface.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
+#include "rendering/vulkan/material_pipeline.h"
 #include "rendering/vulkan/utils.h"
-#include "rendering/gfx_context.h"
 #include "statsRecorder.h"
-
-VkVertexInputBindingDescription Vertex::get_binding_description()
-{
-    VkVertexInputBindingDescription binding_description{};
-    binding_description.binding   = 0;
-    binding_description.stride    = sizeof(Vertex);
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    return binding_description;
-}
-
-std::vector<VkVertexInputAttributeDescription> Vertex::get_attribute_descriptions()
-{
-    std::vector<VkVertexInputAttributeDescription> attribute_description{};
-
-    VkVertexInputAttributeDescription new_attribute;
-    uint8_t                           currentLocation = 0;
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32B32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, pos);
-    attribute_description.push_back(new_attribute);
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, uv);
-    attribute_description.push_back(new_attribute);
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32B32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, col);
-    attribute_description.push_back(new_attribute);
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32B32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, norm);
-    attribute_description.push_back(new_attribute);
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32B32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, tang);
-    attribute_description.push_back(new_attribute);
-
-    new_attribute.binding  = 0;
-    new_attribute.location = currentLocation++;
-    new_attribute.format   = VK_FORMAT_R32G32B32_SFLOAT;
-    new_attribute.offset   = offsetof(Vertex, bitang);
-    attribute_description.push_back(new_attribute);
-
-    return attribute_description;
-}
 
 AMeshData::AMeshData(std::vector<Vertex> in_vertices, std::vector<uint32_t> in_indices) : vertices(std::move(in_vertices)), indices(std::move(in_indices))
 {
@@ -73,9 +18,9 @@ AMeshData::AMeshData(std::vector<Vertex> in_vertices, std::vector<uint32_t> in_i
 AMeshData::~AMeshData()
 {
     if (vertex_buffer != VK_NULL_HANDLE)
-        vmaDestroyBuffer(GfxContext::get()->vulkan_memory_allocator, vertex_buffer, vertex_buffer_allocation);
+        vmaDestroyBuffer(Graphics::get()->get_allocator(), vertex_buffer, vertex_buffer_allocation);
     if (index_buffer != VK_NULL_HANDLE)
-        vmaDestroyBuffer(GfxContext::get()->vulkan_memory_allocator, index_buffer, index_buffer_allocation);
+        vmaDestroyBuffer(Graphics::get()->get_allocator(), index_buffer, index_buffer_allocation);
     vertex_buffer = VK_NULL_HANDLE;
     index_buffer  = VK_NULL_HANDLE;
 }
@@ -107,32 +52,32 @@ void AMeshData::set_mesh_data(const std::vector<Vertex>& in_vertices, const std:
 
     vulkan_utils::create_buffer(vertex_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer, staging_buffer_memory);
 
-    vkMapMemory(GfxContext::get()->logical_device, staging_buffer_memory, 0, vertex_buffer_size, 0, &data);
+    vkMapMemory(Graphics::get()->get_logical_device(), staging_buffer_memory, 0, vertex_buffer_size, 0, &data);
     memcpy(data, in_vertices.data(), static_cast<size_t>(vertex_buffer_size));
-    vkUnmapMemory(GfxContext::get()->logical_device, staging_buffer_memory);
+    vkUnmapMemory(Graphics::get()->get_logical_device(), staging_buffer_memory);
 
-    vulkan_utils::create_vma_buffer(IEngineInterface::get()->get_window(), vertex_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer,
-                                    vertex_buffer_allocation, vertex_buffer_alloc_info);
+    vulkan_utils::create_vma_buffer(vertex_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer, vertex_buffer_allocation,
+                                    vertex_buffer_alloc_info);
 
-    vulkan_utils::copy_buffer(IEngineInterface::get()->get_window(), staging_buffer, vertex_buffer, vertex_buffer_size);
+    vulkan_utils::copy_buffer(staging_buffer, vertex_buffer, vertex_buffer_size);
 
-    vkDestroyBuffer(GfxContext::get()->logical_device, staging_buffer, vulkan_common::allocation_callback);
-    vkFreeMemory(GfxContext::get()->logical_device, staging_buffer_memory, vulkan_common::allocation_callback);
+    vkDestroyBuffer(Graphics::get()->get_logical_device(), staging_buffer, vulkan_common::allocation_callback);
+    vkFreeMemory(Graphics::get()->get_logical_device(), staging_buffer_memory, vulkan_common::allocation_callback);
 
     vulkan_utils::create_buffer(index_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer, staging_buffer_memory);
 
     /* Copy indices */
 
-    vkMapMemory(GfxContext::get()->logical_device, staging_buffer_memory, 0, index_buffer_size, 0, &data);
+    vkMapMemory(Graphics::get()->get_logical_device(), staging_buffer_memory, 0, index_buffer_size, 0, &data);
     memcpy(data, indices.data(), static_cast<size_t>(index_buffer_size));
-    vkUnmapMemory(GfxContext::get()->logical_device, staging_buffer_memory);
+    vkUnmapMemory(Graphics::get()->get_logical_device(), staging_buffer_memory);
 
-    vulkan_utils::create_vma_buffer(IEngineInterface::get()->get_window(), index_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer,
-                                    index_buffer_allocation, index_buffer_alloc_info);
-    vulkan_utils::copy_buffer(IEngineInterface::get()->get_window(), staging_buffer, index_buffer, index_buffer_size);
+    vulkan_utils::create_vma_buffer(index_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer, index_buffer_allocation,
+                                    index_buffer_alloc_info);
+    vulkan_utils::copy_buffer(staging_buffer, index_buffer, index_buffer_size);
 
-    vkDestroyBuffer(GfxContext::get()->logical_device, staging_buffer, vulkan_common::allocation_callback);
-    vkFreeMemory(GfxContext::get()->logical_device, staging_buffer_memory, vulkan_common::allocation_callback);
+    vkDestroyBuffer(Graphics::get()->get_logical_device(), staging_buffer, vulkan_common::allocation_callback);
+    vkFreeMemory(Graphics::get()->get_logical_device(), staging_buffer_memory, vulkan_common::allocation_callback);
 
     if (!vertices.empty())
     {

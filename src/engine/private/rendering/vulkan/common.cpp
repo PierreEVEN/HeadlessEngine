@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "config.h"
+#include "rendering/vulkan/command_pool.h"
 
 #include <cpputils/logger.hpp>
 
@@ -20,7 +21,8 @@ void vulkan_init()
 {
     create_instance();
     create_validation_layers();
-    LOG_VALIDATE("initialized vulkan");
+
+    LOG_VALIDATE("[ Core] Initialized vulkan");
 }
 
 void vulkan_shutdown()
@@ -60,7 +62,7 @@ void create_instance()
     {
         vkInstanceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(config::required_validation_layers.size());
         vkInstanceCreateInfo.ppEnabledLayerNames = config::required_validation_layers.data();
-        LOG_INFO("Linked validation layers");
+        LOG_INFO("[ Core] Linked validation layers");
         debugMessengerCreateInfos  = static_cast<VkDebugUtilsMessengerCreateInfoEXT>(vulkan_utils::debug_messenger_create_infos);
         vkInstanceCreateInfo.pNext = &debugMessengerCreateInfos;
     }
@@ -71,7 +73,7 @@ void create_instance()
     }
 
     VK_ENSURE(vkCreateInstance(&vkInstanceCreateInfo, allocation_callback, &instance), "Failed to create vulkan instance");
-    LOG_INFO("Created vulkan instance");
+    LOG_INFO("[ Core] Created vulkan instance");
     VK_CHECK(instance, "VkInstance is null");
 }
 
@@ -92,7 +94,7 @@ void create_validation_layers()
     {
         LOG_FATAL("Cannot create debug messenger : cannot find required extension");
     }
-    LOG_INFO("enabled validation layers");
+    LOG_INFO("[ Core] Enabled validation layers");
 }
 
 void destroy_validation_layers()
@@ -100,7 +102,7 @@ void destroy_validation_layers()
     if (!config::use_validation_layers)
         return;
 
-    LOG_INFO("Destroy validation layers");
+    LOG_INFO("[ Core] Destroy validation layers");
     auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
     if (func)
         func(instance, debugMessenger, allocation_callback);
@@ -108,7 +110,7 @@ void destroy_validation_layers()
 
 void destroy_instance()
 {
-    LOG_INFO("Destroy Vulkan instance");
+    LOG_INFO("[ Core] Destroy Vulkan instance");
     vkDestroyInstance(instance, allocation_callback);
 }
 
@@ -119,6 +121,7 @@ void set_msaa_sample_count(uint32_t in_sample_count)
 
 uint32_t get_msaa_sample_count()
 {
-    return G_MSAA_CURRENT_SAMPLE_COUNT;
+    return VK_SAMPLE_COUNT_1_BIT;
+    //G_MSAA_CURRENT_SAMPLE_COUNT;
 }
 } // namespace vulkan_common

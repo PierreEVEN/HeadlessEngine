@@ -34,8 +34,10 @@
 .idea
 .vs
 temp
+cmake-build-*
 bin
 saved
 imgui.ini
 
 data/models
+third_party/deps

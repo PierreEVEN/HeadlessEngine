@@ -12,7 +12,7 @@
 class Frustum;
 
 class AShaderBuffer;
-template <typename Struct_T> using ProxyFunctionType        = void (*)(Struct_T&, SwapchainStatus&, size_t, size_t);
+template <typename Struct_T> using ProxyFunctionType        = void (*)(Struct_T&, SwapchainFrame&, size_t, size_t);
 template <typename Struct_T> using ComponentTransformGetter = void (*)(Struct_T&, AShaderBuffer*, size_t);
 
 struct EntityHandle
@@ -30,7 +30,7 @@ class ISceneProxyEntityGroup
     virtual void remove_entity(const EntityHandle& in_handle) = 0;
 
     virtual void build_transformations(AShaderBuffer* buffer_storage, size_t& buffer_index) = 0;
-    virtual void render_group(SwapchainStatus& render_context, size_t& buffer_index)          = 0;
+    virtual void render_group(SwapchainFrame& render_context, size_t& buffer_index)          = 0;
     virtual void initialize_buffer(Frustum* in_frustum)                                     = 0;
     const size_t type_hash;
 
@@ -91,7 +91,7 @@ template <typename Struct_T> class TSceneProxyEntityGroup final : public ISceneP
         }
     }
 
-    void render_group(SwapchainStatus& render_context, size_t& buffer_index) override
+    void render_group(SwapchainFrame& render_context, size_t& buffer_index) override
     {
         size_t instance_count       = 1;
         size_t first_instance_index = 0;
@@ -271,7 +271,7 @@ class SceneProxy
         }
     }
 
-    void render(SwapchainStatus& render_context)
+    void render(SwapchainFrame& render_context)
     {
         BEGIN_NAMED_RECORD(RENDER_PROXIES);
         size_t buffer_index = 0;

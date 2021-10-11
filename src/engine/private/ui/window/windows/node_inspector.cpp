@@ -7,7 +7,11 @@
 #include "scene/node_base.h"
 #include "scene/node_camera.h"
 
+#include <cpputils/simplemacros.hpp>
+
+#if OS_WINDOWS
 #include <corecrt_math_defines.h>
+#endif
 
 NodeInspector::NodeInspector(NodeBase* in_node, NCamera* in_camera) : node(in_node), camera(in_camera)
 {

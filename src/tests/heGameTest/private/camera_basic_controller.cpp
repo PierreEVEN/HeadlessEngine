@@ -5,10 +5,14 @@
 #include "ios/input_manager.h"
 #include "scene/node_camera.h"
 
+#if OS_WINDOWS
 #include <corecrt_math_defines.h>
+#endif
 
 CameraBasicController::CameraBasicController(const std::shared_ptr<NCamera>& in_camera, InputManager* in_input_manager) : controlled_camera(in_camera), input_manager(in_input_manager)
 {
+    if (!input_manager)
+        LOG_FATAL("input manager is null");
     input_manager->add_action(InputAction("camera_move_forward", {keyboard::key_w}));
     input_manager->add_action(InputAction("camera_move_backward", {keyboard::key_s}));
     input_manager->add_action(InputAction("camera_move_right", {keyboard::key_d}));

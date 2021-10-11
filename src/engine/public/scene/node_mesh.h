@@ -6,12 +6,12 @@
 #include "types/fast_mutex.h"
 
 class AMeshData;
-class AMaterial;
+class AMaterialInstance;
 
 class NMesh : public NPrimitive
 {
   public:
-    NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterial> in_material);
+    NMesh(TAssetPtr<AMeshData> in_mesh, TAssetPtr<AMaterialInstance> in_material);
     virtual ~NMesh();
     static void register_component(Scene* target_scene);
 
@@ -22,7 +22,7 @@ class NMesh : public NPrimitive
     {
         return mesh;
     }
-    [[nodiscard]] TAssetPtr<AMaterial> get_material() const
+    [[nodiscard]] TAssetPtr<AMaterialInstance> get_material() const
     {
         return material;
     }
@@ -31,8 +31,8 @@ class NMesh : public NPrimitive
     virtual Box3D get_local_bounds() override;
 
   private:
-    TAssetPtr<AMeshData> mesh;
-    TAssetPtr<AMaterial> material;
-    FastMutex            proxy_data_lock;
-    EntityHandle         proxy_entity_handle;
+    TAssetPtr<AMeshData>         mesh;
+    TAssetPtr<AMaterialInstance> material;
+    FastMutex                    proxy_data_lock;
+    EntityHandle                 proxy_entity_handle;
 };

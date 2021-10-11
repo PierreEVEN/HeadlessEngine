@@ -1,26 +1,32 @@
 #pragma once
 
+#include "render_pass_description.h"
+
 #include <vulkan/vulkan.hpp>
 
 class Swapchain;
 
 class RenderPass
 {
-public:
-
-    RenderPass(Swapchain* target_swapchain);
-  virtual ~RenderPass();
+  public:
+    RenderPass(const RenderPassSettings& in_pass_description);
+    virtual ~RenderPass();
 
     [[nodiscard]] VkRenderPass get_render_pass() const
-  {
-      return render_pass;
-  }
+    {
+        return render_pass;
+    }
 
-private:
+    [[nodiscard]] const RenderPassSettings& get_render_pass_description() const
+    {
+        return pass_description;
+    }
 
-    void create_or_recreate_render_pass();
+  private:
+    void create_render_pass();
     void destroy_render_pass();
 
-    Swapchain*   swapchain = nullptr;
-    VkRenderPass render_pass = nullptr;
+    RenderPassSettings pass_description;
+    Swapchain*         swapchain   = nullptr;
+    VkRenderPass       render_pass = nullptr;
 };

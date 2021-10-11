@@ -1,5 +1,5 @@
 
-file(GLOB_RECURSE SOURCES *.cpp *.h)
+file(GLOB_RECURSE SOURCES *.cpp *.h *.hpp)
 add_library(Utils SHARED ${SOURCES})
 configure_project(Utils ${SOURCES})
 

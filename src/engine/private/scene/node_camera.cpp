@@ -29,7 +29,7 @@ glm::dmat4 NCamera::get_view_matrix() const
     return lookAt(get_world_position(), get_world_position() + get_forward_vector(), get_up_vector());
 }
 
-void NCamera::update_view(SwapchainStatus& render_context)
+void NCamera::update_view(SwapchainFrame& render_context)
 {
     render_context.view = this;
     // UPDATE CAMERA DATA

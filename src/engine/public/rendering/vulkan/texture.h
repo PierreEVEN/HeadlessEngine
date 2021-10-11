@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-class GfxContext;
+class GfxInterface;
 
 namespace vulkan_texture
 {

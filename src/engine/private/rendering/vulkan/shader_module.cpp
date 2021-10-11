@@ -3,7 +3,7 @@
 #include "rendering/vulkan/shader_module.h"
 
 #include "cpputils/logger.hpp"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 
 #include <StandAlone/ResourceLimits.h>
@@ -124,18 +124,39 @@ void ShaderModule::set_bytecode(const std::vector<uint32_t>& in_bytecode)
     access_lock.unlock();
 }
 
+static ShaderModule::ShaderCompilationError get_compilation_error(glslang_shader_t* shader)
+{
+    auto message = glslang_shader_get_info_log(shader);
+
+    uint32_t error_line   = 0;
+    uint32_t error_column = 0;
+
+    auto error_code = stringutils::split(message, {':'});
+    if (error_code.size() >= 3)
+    {
+        error_column = std::stoi(error_code[1]);
+        error_line   = std::stoi(error_code[2]);
+    }
+
+    return ShaderModule::ShaderCompilationError{
+        .error_string = message,
+        .error_line   = error_line,
+        .error_column = error_column,
+    };
+}
+
 void ShaderModule::set_plain_text(const std::string& in_shader_text)
 {
     glslang_stage_t glslang_shader_stage = GLSLANG_STAGE_COUNT;
     switch (shader_stage)
     {
-    case EShaderStage::VERTEX_SHADER:
+    case VK_SHADER_STAGE_VERTEX_BIT:
         glslang_shader_stage = GLSLANG_STAGE_VERTEX;
         break;
-    case EShaderStage::FRAGMENT_SHADER:
+    case VK_SHADER_STAGE_FRAGMENT_BIT:
         glslang_shader_stage = GLSLANG_STAGE_FRAGMENT;
         break;
-    case EShaderStage::GEOMETRY_SHADER:
+    case VK_SHADER_STAGE_GEOMETRY_BIT:
         glslang_shader_stage = GLSLANG_STAGE_GEOMETRY;
         break;
     default:
@@ -162,13 +183,13 @@ void ShaderModule::set_plain_text(const std::string& in_shader_text)
 
     if (!glslang_shader_preprocess(shader, &input))
     {
-        LOG_ERROR("failed to compile shader : %s", glslang_shader_get_info_log(shader));
+        last_compilation_error = get_compilation_error(shader);
         return;
     }
 
     if (!glslang_shader_parse(shader, &input))
     {
-        LOG_ERROR("failed to compile shader : %s", glslang_shader_get_info_log(shader));
+        last_compilation_error = get_compilation_error(shader);
         return;
     }
 
@@ -177,7 +198,7 @@ void ShaderModule::set_plain_text(const std::string& in_shader_text)
 
     if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
     {
-        LOG_ERROR("failed to compile shader : %s", glslang_shader_get_info_log(shader));
+        last_compilation_error = get_compilation_error(shader);
         return;
     }
 
@@ -185,7 +206,7 @@ void ShaderModule::set_plain_text(const std::string& in_shader_text)
 
     if (glslang_program_SPIRV_get_messages(program))
     {
-        LOG_INFO("%s", glslang_program_SPIRV_get_messages(program));
+        LOG_WARNING("%s", glslang_program_SPIRV_get_messages(program));
     }
 
     glslang_shader_delete(shader);
@@ -196,7 +217,7 @@ void ShaderModule::set_plain_text(const std::string& in_shader_text)
     set_bytecode(program_data);
 }
 
-void ShaderModule::set_shader_stage(EShaderStage in_shader_stage)
+void ShaderModule::set_shader_stage(VkShaderStageFlagBits in_shader_stage)
 {
     access_lock.lock();
     shader_stage = in_shader_stage;
@@ -215,6 +236,20 @@ const VkShaderModule& ShaderModule::get_shader_module()
     }
     access_lock.unlock();
     return module;
+}
+
+std::optional<ShaderModule::ShaderCompilationError> ShaderModule::get_error()
+{
+    auto error             = last_compilation_error;
+    last_compilation_error = {};
+    return error;
+}
+
+bool ShaderModule::is_valid() const
+{
+    if (bytecode.empty())
+        return false;
+    return true;
 }
 
 const std::vector<uint32_t>& ShaderModule::get_bytecode()
@@ -239,11 +274,14 @@ ShaderModule::~ShaderModule()
 
 void ShaderModule::create_shader_module()
 {
+    if (bytecode.empty())
+        return;
+
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = bytecode.size() * sizeof(uint32_t);
     createInfo.pCode    = reinterpret_cast<const uint32_t*>(bytecode.data());
-    if (VkResult res = vkCreateShaderModule(GfxContext::get()->logical_device, &createInfo, vulkan_common::allocation_callback, &module); !res == VK_SUCCESS)
+    if (VkResult res = vkCreateShaderModule(Graphics::get()->get_logical_device(), &createInfo, vulkan_common::allocation_callback, &module); !res == VK_SUCCESS)
     {
         LOG_ERROR("Failed to create shader module : %d", static_cast<uint32_t>(res));
         module = VK_NULL_HANDLE;
@@ -253,7 +291,7 @@ void ShaderModule::create_shader_module()
 void ShaderModule::destroy()
 {
     if (module != VK_NULL_HANDLE)
-        vkDestroyShaderModule(GfxContext::get()->logical_device, module, vulkan_common::allocation_callback);
+        vkDestroyShaderModule(Graphics::get()->get_logical_device(), module, vulkan_common::allocation_callback);
     module = VK_NULL_HANDLE;
 }
 

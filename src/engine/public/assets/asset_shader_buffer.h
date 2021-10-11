@@ -1,6 +1,7 @@
 #pragma once
 #include "rendering/vulkan/shader_buffer.h"
 #include "asset_base.h"
+#include <cstring>
 
 #define GLM_FORCE_LEFT_HANDED
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

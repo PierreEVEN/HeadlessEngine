@@ -5,18 +5,20 @@
 #include <vector>
 
 #include "config.h"
-#include "rendering/renderer/surface.h"
+#include "rendering/vulkan/utils.h"
+
+#include <vulkan/vulkan.hpp>
 #include <cpputils/logger.hpp>
 
 namespace capabilities
 {
 void check_all()
 {
-    LOG_INFO("checking vulkan support");
+    LOG_INFO("[ Core] Checking vulkan support");
     check_vk_extensions();
     if (config::use_validation_layers)
         check_validation_layer_support();
-    LOG_VALIDATE("vulkan is fully supported !");
+    LOG_VALIDATE("[ Core] Vulkan is fully supported !");
 }
 
 void check_vk_extensions()
@@ -26,7 +28,7 @@ void check_vk_extensions()
     std::vector<VkExtensionProperties> extensions(extension_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.data());
 
-    std::string log = "detected " + std::to_string(extension_count) + " supported extensions\n";
+    std::string log = "Detected " + std::to_string(extension_count) + " supported extensions\n";
 
     for (const VkExtensionProperties& extension : extensions)
     {
@@ -35,7 +37,7 @@ void check_vk_extensions()
 
     std::vector<const char*> required_extensions = vulkan_utils::get_required_extensions();
 
-    LOG_INFO("%s", log.c_str());
+    LOG_INFO("[ Core] %s", log.c_str());
 
     for (const auto& required_ext : required_extensions)
     {
@@ -51,7 +53,7 @@ void check_vk_extensions()
         if (!found_extension)
             LOG_ERROR("extension '%s' is required but cannot be found.", required_ext);
     }
-    LOG_INFO("all required extensions are supported !");
+    LOG_INFO("[ Core] All required extensions are supported !");
 }
 
 void check_validation_layer_support()
@@ -77,6 +79,6 @@ void check_validation_layer_support()
         if (!found_layer)
             LOG_WARNING("failed to enable required validation layer '%s'", layer_name);
     }
-    LOG_INFO("validation layers are supported");
+    LOG_INFO("[ Core] Validation layers are supported");
 }
 } // namespace capabilities

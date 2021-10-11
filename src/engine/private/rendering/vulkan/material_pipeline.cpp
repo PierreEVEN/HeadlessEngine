@@ -3,96 +3,96 @@
 #include "rendering/vulkan/material_pipeline.h"
 
 #include "assets/asset_mesh_data.h"
-#include "engine_interface.h"
-#include "rendering/gfx_context.h"
+#include "assets/asset_shader.h"
+#include "rendering/graphics.h"
 #include "rendering/renderer/render_pass.h"
+#include "rendering/renderer/renderer.h"
+#include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
-#include "rendering/vulkan/descriptor_pool.h"
 #include "rendering/vulkan/utils.h"
 
 #include <vulkan/vulkan.h>
 
-void MaterialPipeline::rebuild()
+MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings)
 {
-    if (should_recreate)
+    /**
+     * Create descriptor sets
+     */
+
+    /** Create descriptor set layout */
+    descriptor_set_layout.resize(Graphics::get()->get_swapchain_config()->get_image_count());
+    for (uint32_t i = 0; i < Graphics::get()->get_swapchain_config()->get_image_count(); ++i)
     {
-        destroy();
-        create_descriptor_sets(layout_bindings);
-        create_pipeline_layout();
-        create_pipeline();
-        should_recreate = false;
+        VkDescriptorSetLayoutCreateInfo layout_infos{
+            .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = static_cast<uint32_t>(layout_bindings.size()),
+            .pBindings    = layout_bindings.data(),
+        };
+        VK_ENSURE(vkCreateDescriptorSetLayout(Graphics::get()->get_logical_device(), &layout_infos, vulkan_common::allocation_callback, &descriptor_set_layout[i]), "Failed to create descriptor set layout");
     }
-}
+    /**
+     * Create pipeline
+     */
+    VertexInputInfo vertex_inputs = Vertex::get_attribute_descriptions();
 
-void MaterialPipeline::destroy()
-{
-    if (pipeline_layout != VK_NULL_HANDLE)
-        vkDestroyPipelineLayout(GfxContext::get()->logical_device, pipeline_layout, vulkan_common::allocation_callback);
-    if (pipeline != VK_NULL_HANDLE)
-        vkDestroyPipeline(GfxContext::get()->logical_device, pipeline, vulkan_common::allocation_callback);
-    if (descriptor_set_layout != VK_NULL_HANDLE)
-        vkDestroyDescriptorSetLayout(GfxContext::get()->logical_device, descriptor_set_layout, vulkan_common::allocation_callback);
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {};
 
-    pipeline_layout       = VK_NULL_HANDLE;
-    pipeline              = VK_NULL_HANDLE;
-    descriptor_sets       = {};
-    descriptor_set_layout = VK_NULL_HANDLE;
-}
+    std::vector<VkPushConstantRange> push_constant_range = {};
+    for (const auto& stage : material_infos.get_shader_stages())
+    {
+        shaderStages.emplace_back(VkPipelineShaderStageCreateInfo{
+            .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage  = stage->get_shader_stage(),
+            .module = stage->get_shader_module(),
+            .pName  = "main",
+        });
 
-void MaterialPipeline::create_pipeline_layout()
-{
+        if (stage->get_shader_config().vertex_inputs_override && stage->get_shader_stage() == VK_SHADER_STAGE_VERTEX_BIT)
+            vertex_inputs = stage->get_shader_config().vertex_inputs_override.value();
 
-    /** Pipeline layout */
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{
+        if (stage->get_shader_config().push_constants)
+        {
+            push_constant_range.emplace_back(VkPushConstantRange{
+                .stageFlags = static_cast<VkShaderStageFlags>(stage->get_shader_stage()),
+                .offset     = 0,
+                .size       = static_cast<uint32_t>(stage->get_shader_config().push_constants ? stage->get_shader_config().push_constants->get_range() : 0),
+            });
+        }
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_layout_infos{
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount         = 1,
-        .pSetLayouts            = &descriptor_set_layout,
-        .pushConstantRangeCount = static_cast<uint32_t>(push_constant_range ? 1 : 0),
-        .pPushConstantRanges    = push_constant_range.get(),
+        .setLayoutCount         = static_cast<uint32_t>(descriptor_set_layout.size()),
+        .pSetLayouts            = descriptor_set_layout.data(),
+        .pushConstantRangeCount = static_cast<uint32_t>(push_constant_range.size()),
+        .pPushConstantRanges    = push_constant_range.data(),
     };
-    VK_ENSURE(vkCreatePipelineLayout(GfxContext::get()->logical_device, &pipelineLayoutInfo, nullptr, &pipeline_layout), "Failed to create pipeline layout");
-}
+    VK_ENSURE(vkCreatePipelineLayout(Graphics::get()->get_logical_device(), &pipeline_layout_infos, nullptr, &pipeline_layout), "Failed to create pipeline layout");
 
-void MaterialPipeline::create_pipeline()
-{
-    VK_CHECK(descriptor_set_layout, "Descriptor set layout should be initialized before graphic pipeline");
-    VK_CHECK(IEngineInterface::get()->get_window()->get_render_pass(), "Render pass should be initialized before graphic pipeline");
+    auto* pass_configuration = Graphics::get()->get_renderer()->get_render_pass_configuration(render_pass);
 
-    VK_CHECK(vertex_module, "vertex module should not be null");
-    VK_CHECK(fragment_module, "fragment module should not be null");
+    if (!pass_configuration)
+        LOG_FATAL("pass configuration is null");
 
-    /** AShader pipeline */
-    VkPipelineShaderStageCreateInfo vertex_shader_stage{
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage  = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertex_module->get_shader_module(),
-        .pName  = "main",
+    VkVertexInputBindingDescription bindingDescription{
+        .binding   = 0,
+        .stride    = vertex_inputs.vertex_structure_size,
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    VkPipelineShaderStageCreateInfo fragment_shader_stage{
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragment_module->get_shader_module(),
-        .pName  = "main",
-    };
-
-    // PUSH CONSTANTS
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertex_shader_stage, fragment_shader_stage};
-
-    auto bindingDescription    = Vertex::get_binding_description();
-    auto attributeDescriptions = Vertex::get_attribute_descriptions();
+    const auto vertex_attribute_description = vertex_inputs.get_attributes();
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state{
         .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount   = 1,
-        .pVertexBindingDescriptions      = &bindingDescription,
-        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-        .pVertexAttributeDescriptions    = attributeDescriptions.data(),
+        .vertexBindingDescriptionCount   = static_cast<uint32_t>(bindingDescription.stride > 0 ? 1 : 0),
+        .pVertexBindingDescriptions      = bindingDescription.stride > 0 ? &bindingDescription : nullptr,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_description.size()),
+        .pVertexAttributeDescriptions    = vertex_attribute_description.data(),
     };
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology               = topology,
+        .topology               = material_infos.pipeline_infos.topology,
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -106,167 +106,116 @@ void MaterialPipeline::create_pipeline()
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable        = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode             = polygon_mode,
-        .cullMode                = VK_CULL_MODE_BACK_BIT,
+        .polygonMode             = material_infos.pipeline_infos.polygon_mode,
+        .cullMode                = static_cast<VkCullModeFlags>(material_infos.pipeline_infos.backface_culling ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE),
         .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable         = VK_FALSE,
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp          = 0.0f,
         .depthBiasSlopeFactor    = 0.0f,
-        .lineWidth               = wireframe_lines_width,
+        .lineWidth               = material_infos.pipeline_infos.wireframe_lines_width ? material_infos.pipeline_infos.wireframe_lines_width.value() : 1.f,
     };
 
     VkPipelineMultisampleStateCreateInfo multisampling{
         .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples  = static_cast<VkSampleCountFlagBits>(vulkan_common::get_msaa_sample_count()),
-        .sampleShadingEnable   = static_cast<VkBool32>(vulkan_common::get_msaa_sample_count() > 1 ? VK_TRUE : VK_FALSE),
-        .minSampleShading      = 1.0f,     // Optional
-        .pSampleMask           = nullptr,  // Optional
-        .alphaToCoverageEnable = VK_FALSE, // Optional
-        .alphaToOneEnable      = VK_FALSE, // Optional
+        .rasterizationSamples  = pass_configuration->sample_count,
+        .sampleShadingEnable   = static_cast<VkBool32>(pass_configuration->sample_count > 1 ? VK_TRUE : VK_FALSE),
+        .minSampleShading      = 1.0f,
+        .pSampleMask           = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable      = VK_FALSE,
     };
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil{
         .sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable       = static_cast<VkBool32>(depth_test ? VK_TRUE : VK_FALSE),
-        .depthWriteEnable      = static_cast<VkBool32>(depth_test ? VK_TRUE : VK_FALSE),
+        .depthTestEnable       = material_infos.pipeline_infos.depth_test,
+        .depthWriteEnable      = material_infos.pipeline_infos.depth_test,
         .depthCompareOp        = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable     = VK_FALSE,
-        .minDepthBounds        = 0.0f, // Optional
-        .maxDepthBounds        = 1.0f, // Optional
+        .minDepthBounds        = 0.0f,
+        .maxDepthBounds        = 1.0f,
     };
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment{
-        .blendEnable         = VK_FALSE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .colorBlendOp        = VK_BLEND_OP_ADD,      // Optional
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .alphaBlendOp        = VK_BLEND_OP_ADD,      // Optional
-        .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    };
+    std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment;
+    for (const auto& attachment : pass_configuration->color_attachments)
+    {
+        color_blend_attachment.emplace_back(VkPipelineColorBlendAttachmentState{
+            .blendEnable         = material_infos.pipeline_infos.is_translucent ? VK_TRUE : VK_FALSE,
+            .srcColorBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+            .dstColorBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,
+            .colorBlendOp        = VK_BLEND_OP_ADD,
+            .srcAlphaBlendFactor = material_infos.pipeline_infos.is_translucent ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .alphaBlendOp        = VK_BLEND_OP_ADD,
+            .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        });
+    }
 
     VkPipelineColorBlendStateCreateInfo color_blending{
         .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .logicOpEnable   = VK_FALSE,
-        .logicOp         = VK_LOGIC_OP_COPY, // Optional
-        .attachmentCount = 1,
-        .pAttachments    = &color_blend_attachment,
-        .blendConstants  = {0.0f, 0.f, 0.f, 0.f}, // Optional
+        .attachmentCount = static_cast<uint32_t>(color_blend_attachment.size()),
+        .pAttachments    = color_blend_attachment.data(),
     };
 
-    VkDynamicState                   dynamic_states_array[] = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
+    std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT};
+    if (material_infos.pipeline_infos.wireframe_lines_width)
+        dynamic_states_array.emplace_back(VK_DYNAMIC_STATE_LINE_WIDTH);
+
     VkPipelineDynamicStateCreateInfo dynamic_states{
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = 2,
-        .pDynamicStates    = dynamic_states_array,
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states_array.size()),
+        .pDynamicStates    = dynamic_states_array.data(),
     };
 
     VkGraphicsPipelineCreateInfo pipelineInfo{
         .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount          = 2,
-        .pStages             = shaderStages,
+        .stageCount          = static_cast<uint32_t>(shaderStages.size()),
+        .pStages             = shaderStages.data(),
         .pVertexInputState   = &vertex_input_state,
         .pInputAssemblyState = &input_assembly,
         .pViewportState      = &viewport_state,
         .pRasterizationState = &rasterizer,
         .pMultisampleState   = &multisampling,
-        .pDepthStencilState  = &depth_stencil, // Optional
+        .pDepthStencilState  = &depth_stencil,
         .pColorBlendState    = &color_blending,
-        .pDynamicState       = &dynamic_states, // Optional
+        .pDynamicState       = &dynamic_states,
         .layout              = pipeline_layout,
-        .renderPass          = IEngineInterface::get()->get_window()->get_render_pass()->get_render_pass(),
+        .renderPass          = Graphics::get()->get_renderer()->get_render_pass(render_pass)->get_render_pass(),
         .subpass             = 0,
-        .basePipelineHandle  = VK_NULL_HANDLE, // Optional
-        .basePipelineIndex   = -1,             // Optional
+        .basePipelineHandle  = VK_NULL_HANDLE,
+        .basePipelineIndex   = -1,
     };
 
-    VK_ENSURE(vkCreateGraphicsPipelines(GfxContext::get()->logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, vulkan_common::allocation_callback, &pipeline), "Failed to create material graphic pipeline");
-}
-
-void MaterialPipeline::mark_dirty()
-{
-    should_recreate = true;
-}
-
-void MaterialPipeline::create_descriptor_sets(std::vector<VkDescriptorSetLayoutBinding> layoutBindings)
-{
-    /** Create descriptor set layout */
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-    layoutInfo.pBindings    = layoutBindings.data();
-    VK_ENSURE(vkCreateDescriptorSetLayout(GfxContext::get()->logical_device, &layoutInfo, vulkan_common::allocation_callback, &descriptor_set_layout), "Failed to create descriptor set layout");
-
-    /** Allocate descriptor set */
-    std::vector<VkDescriptorSetLayout> layouts(IEngineInterface::get()->get_window()->get_swapchain()->get_image_count(), descriptor_set_layout);
-    descriptor_sets.resize(IEngineInterface::get()->get_window()->get_swapchain()->get_image_count());
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorSetCount = IEngineInterface::get()->get_window()->get_swapchain()->get_image_count();
-    allocInfo.pSetLayouts        = layouts.data();
-    allocInfo.descriptorPool     = VK_NULL_HANDLE;
-    IEngineInterface::get()->get_window()->get_descriptor_pool()->alloc_memory(allocInfo);
-    VK_ENSURE(vkAllocateDescriptorSets(GfxContext::get()->logical_device, &allocInfo, descriptor_sets.data()), "Failed to allocate descriptor sets");
+    VK_ENSURE(vkCreateGraphicsPipelines(Graphics::get()->get_logical_device(), VK_NULL_HANDLE, 1, &pipelineInfo, vulkan_common::allocation_callback, &pipeline), "Failed to create material graphic pipeline");
 }
 
 MaterialPipeline::~MaterialPipeline()
 {
-    destroy();
+    if (pipeline_layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(Graphics::get()->get_logical_device(), pipeline_layout, vulkan_common::allocation_callback);
+    pipeline_layout = VK_NULL_HANDLE;
+
+    if (pipeline != VK_NULL_HANDLE)
+        vkDestroyPipeline(Graphics::get()->get_logical_device(), pipeline, vulkan_common::allocation_callback);
+    pipeline = VK_NULL_HANDLE;
+
+    for (const auto& descriptor_layout : descriptor_set_layout)
+        vkDestroyDescriptorSetLayout(Graphics::get()->get_logical_device(), descriptor_layout, vulkan_common::allocation_callback);
+    descriptor_set_layout.clear();
 }
 
-void MaterialPipeline::set_vertex_module(std::shared_ptr<ShaderModule> in_module)
+VkDescriptorSetLayout* MaterialPipeline::get_descriptor_sets_layouts()
 {
-    vertex_module = in_module;
-    mark_dirty();
+    return descriptor_set_layout.data();
 }
 
-void MaterialPipeline::set_fragment_module(std::shared_ptr<ShaderModule> in_module)
+VkPipelineLayout* MaterialPipeline::get_pipeline_layout()
 {
-    fragment_module = in_module;
-    mark_dirty();
+    return &pipeline_layout;
 }
 
-void MaterialPipeline::enable_depth_test(bool b_in_depth_test)
+VkPipeline MaterialPipeline::get_pipeline() const
 {
-    depth_test = b_in_depth_test;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_wireframe(bool b_in_wireframe)
-{
-    wireframe = b_in_wireframe;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_wireframe_width(float in_width)
-{
-    wireframe_lines_width = in_width;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_push_constant_ranges(std::shared_ptr<VkPushConstantRange> in_push_constants)
-{
-    push_constant_range = in_push_constants;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_topology(VkPrimitiveTopology in_topology)
-{
-    topology = in_topology;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_polygon_mode(VkPolygonMode in_mode)
-{
-    polygon_mode = in_mode;
-    mark_dirty();
-}
-
-void MaterialPipeline::set_layout_bindings(const std::vector<VkDescriptorSetLayoutBinding>& in_bindings)
-{
-    layout_bindings = in_bindings;
-    mark_dirty();
+    return pipeline;
 }

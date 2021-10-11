@@ -1,8 +1,7 @@
 #include "rendering/vulkan/texture.h"
 
 #include "rendering/vulkan/common.h"
-#include "rendering/renderer/surface.h"
-#include "rendering/gfx_context.h"
+#include "rendering/graphics.h"
 
 #include <cpputils/logger.hpp>
 
@@ -23,7 +22,7 @@ void create_image_view_2d(VkImage image, VkImageView& view, VkFormat format, VkI
     viewInfo.subresourceRange.layerCount     = 1;
     viewInfo.subresourceRange.levelCount     = mipLevels;
 
-    VK_ENSURE(vkCreateImageView(GfxContext::get()->logical_device, &viewInfo, vulkan_common::allocation_callback, &view), "Failed to create view on texture image");
+    VK_ENSURE(vkCreateImageView(Graphics::get()->get_logical_device(), &viewInfo, vulkan_common::allocation_callback, &view), "Failed to create view on texture image");
 }
 
 void create_image_2d(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
@@ -44,19 +43,19 @@ void create_image_2d(uint32_t width, uint32_t height, uint32_t mipLevels, VkSamp
     imageInfo.samples       = numSamples;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    VK_ENSURE(vkCreateImage(GfxContext::get()->logical_device, &imageInfo, vulkan_common::allocation_callback, &image), "failed to create image");
+    VK_ENSURE(vkCreateImage(Graphics::get()->get_logical_device(), &imageInfo, vulkan_common::allocation_callback, &image), "failed to create image");
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(GfxContext::get()->logical_device, image, &memRequirements);
+    vkGetImageMemoryRequirements(Graphics::get()->get_logical_device(), image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize  = memRequirements.size;
-    allocInfo.memoryTypeIndex = vulkan_utils::find_memory_type(GfxContext::get()->physical_device, memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = vulkan_utils::find_memory_type(Graphics::get()->get_physical_device(), memRequirements.memoryTypeBits, properties);
 
-    VK_ENSURE(vkAllocateMemory(GfxContext::get()->logical_device, &allocInfo, vulkan_common::allocation_callback, &imageMemory), "failed to allocate image memory");
+    VK_ENSURE(vkAllocateMemory(Graphics::get()->get_logical_device(), &allocInfo, vulkan_common::allocation_callback, &imageMemory), "failed to allocate image memory");
 
-    vkBindImageMemory(GfxContext::get()->logical_device, image, imageMemory, 0);
+    vkBindImageMemory(Graphics::get()->get_logical_device(), image, imageMemory, 0);
 }
 
 void transition_image_layout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevel, VkCommandBuffer commandBuffer)
@@ -123,7 +122,7 @@ void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32
 void generate_mipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels, VkCommandBuffer commandBuffer)
 {
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(GfxContext::get()->physical_device, imageFormat, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(Graphics::get()->get_physical_device(), imageFormat, &formatProperties);
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
     {
         LOG_FATAL("This texture image format doesn't support image blitting");
