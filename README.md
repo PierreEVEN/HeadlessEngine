@@ -24,3 +24,7 @@ The code of the demo project is [here](src/tests/heGameTest/private/testGameInte
 - Execute `./Build.sh` (will download dependencies and generate project files)
 
 - Then build & run. (project files are located into the `./temp` directory)
+
+## Third party
+
+[Vulkan](https://www.lunarg.com/vulkan-sdk/) [Assimp](https://assimp.org/) [Dear ImGui](https://github.com/ocornut/imgui) [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo) [glfw](https://www.glfw.org/) [glm](https://github.com/g-truc/glm) [glslang](https://github.com/KhronosGroup/glslang) [Spirv-Cross](https://github.com/KhronosGroup/SPIRV-Cross) [stb](https://github.com/nothings/stb) [Vulkan memory allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
