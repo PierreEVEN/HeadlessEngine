@@ -261,7 +261,7 @@ void ImGuiImplementation::init_internal()
                                                                                     ShaderInfos{
                                                                                         .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                                                                                         .textures{
-                                                                                            TextureProperty{.binding_name = "sTexture", .texture = TAssetPtr<ATexture>("imgui_font_texture")},
+                                                                                            TextureProperty{.binding_name = "sTexture"},
                                                                                         },
                                                                                     });
 
@@ -333,7 +333,7 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
 
     auto         pipeline  = material_instance->get_material_base()->get_pipeline(render_pass);
     VkDeviceSize offsets[] = {0};
-    vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+    material_instance->bind_material(render_context);
     vkCmdBindVertexBuffers(render_context.command_buffer, 0, 1, &vertex_buffer[image_index].get_buffer(), offsets);
     vkCmdBindIndexBuffer(render_context.command_buffer, index_buffer[image_index].get_buffer(), 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 
@@ -397,8 +397,8 @@ void ImGuiImplementation::ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data,
                     // Bind descriptorset with font or user texture
                     VkDescriptorSet desc_set[1] = {static_cast<VkDescriptorSet>(pcmd->TextureId)};
                     if (!pcmd->TextureId)
-                        desc_set[1] = static_cast<VkDescriptorSet>(
-                            TAssetPtr<ATexture>("default_texture")->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts()));
+                        desc_set[1] = {static_cast<VkDescriptorSet>(
+                            TAssetPtr<ATexture>("default_texture")->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts()))};
                     vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1, desc_set, 0, NULL);
 
                     // Draw

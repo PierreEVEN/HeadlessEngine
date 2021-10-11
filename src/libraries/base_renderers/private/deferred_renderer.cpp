@@ -15,21 +15,13 @@ RendererConfiguration create_configuration()
     EventRenderRenderPass deferred_post_process_rendering;
 
     deferred_combine_render.add_lambda([&](SwapchainFrame* render_context) {
-        //@TODO fix crash when no vertex buffer is bound
         TAssetPtr<AMaterialInstance> material("deferred_resolve_material");
         if (!material)
         {
             LOG_WARNING("deferred_resolve_material is not valid");
             return;
         }
-        material->update_descriptor_sets(render_context->render_pass, render_context->view, render_context->image_index);
-
-        auto* pipeline = material->get_material_base()->get_pipeline(render_context->render_pass);
-
-        vkCmdBindDescriptorSets(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
-                                &(*material->get_descriptor_sets(render_context->render_pass))[render_context->image_index].descriptor_set, 0, nullptr);
-
-        vkCmdBindPipeline(render_context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+        material->bind_material(*render_context);
         vkCmdDraw(render_context->command_buffer, 3, 1, 0, 0);
     });
 
@@ -81,6 +73,7 @@ void DeferredRenderer::create_deferred_assets()
     {
         const ShaderInfos vertex_config{
             .shader_stage = VK_SHADER_STAGE_VERTEX_BIT,
+            .vertex_inputs_override = VertexInputInfo{},
         };
         const auto vertex_shader = AssetManager::get()->create<AShader>("deferred_resolve_vertex_shader", "data/shaders/deferred_resolve.vert.glsl", vertex_config);
 

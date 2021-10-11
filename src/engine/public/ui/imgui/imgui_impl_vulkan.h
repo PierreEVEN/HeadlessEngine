@@ -63,10 +63,7 @@ class ImGuiImplementation
     void init_context()
     {
         if (!context)
-        {
-            LOG_WARNING("CREATE");
             context = ImGui::CreateContext();
-        }
         ImGui::SetCurrentContext(context);
      }
 

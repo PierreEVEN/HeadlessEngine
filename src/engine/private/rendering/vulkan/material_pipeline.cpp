@@ -52,7 +52,7 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
 
         if (stage->get_shader_config().push_constants)
         {
-            push_constant_range.emplace_back(VkPushConstantRange {
+            push_constant_range.emplace_back(VkPushConstantRange{
                 .stageFlags = static_cast<VkShaderStageFlags>(stage->get_shader_stage()),
                 .offset     = 0,
                 .size       = static_cast<uint32_t>(stage->get_shader_config().push_constants ? stage->get_shader_config().push_constants->get_range() : 0),
@@ -84,8 +84,8 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state{
         .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount   = 1,
-        .pVertexBindingDescriptions      = &bindingDescription,
+        .vertexBindingDescriptionCount   = static_cast<uint32_t>(bindingDescription.stride > 0 ? 1 : 0),
+        .pVertexBindingDescriptions      = bindingDescription.stride > 0 ? &bindingDescription : nullptr,
         .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_description.size()),
         .pVertexAttributeDescriptions    = vertex_attribute_description.data(),
     };

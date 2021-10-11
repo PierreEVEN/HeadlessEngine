@@ -16,78 +16,50 @@ ATexture::~ATexture()
 
 VkDescriptorImageInfo* ATexture::get_descriptor_image_info(uint32_t image_index)
 {
-    if (descriptor_image_infos.empty() || dirty_descriptors[image_index])
+    if (descriptor_image_infos[image_index].is_dirty)
     {
-        const auto image_count = Graphics::get()->get_swapchain_config()->get_image_count();
-        descriptor_image_infos.resize(image_count);
-        if (dirty_descriptors.empty())
-            dirty_descriptors.resize(image_count, false);
-
-        dirty_descriptors[image_index] = false;
-
-        for (auto& descriptor : descriptor_image_infos)
-        {
-            descriptor = VkDescriptorImageInfo{
-                .sampler     = get_sampler(image_index),
-                .imageView   = get_view(image_index),
-                .imageLayout = get_image_layout(image_index),
-            };
-        }
+        descriptor_image_infos[image_index] = {
+            .is_dirty = false,
+            .descriptor =
+                VkDescriptorImageInfo{
+                    .sampler     = get_sampler(image_index),
+                    .imageView   = get_view(image_index),
+                    .imageLayout = get_image_layout(image_index),
+                },
+        };
     }
 
-    return &descriptor_image_infos[image_index];
+    return &descriptor_image_infos[image_index].descriptor;
 }
 
 ImTextureID ATexture::get_imgui_handle(uint32_t image_index, VkDescriptorSetLayout descriptor_set_layout)
 {
-    VkResult err;
-
-    const auto image_count = Graphics::get()->get_swapchain_config()->get_image_count();
-    if (dirty_imgui_descriptors.empty())
-        dirty_imgui_descriptors.resize(image_count, false);
-
-    if (dirty_imgui_descriptors[image_index])
+    if (imgui_desc_set[image_index].descriptor == VK_NULL_HANDLE)
     {
-        dirty_imgui_descriptors[image_index] = false;
+        VkDescriptorSetAllocateInfo alloc_info = {
+            .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorSetCount = 1,
+            .pSetLayouts        = &descriptor_set_layout,
+        };
+
+        Graphics::get()->get_descriptor_pool()->alloc_memory(alloc_info);
+
+        VK_ENSURE(vkAllocateDescriptorSets(Graphics::get()->get_logical_device(), &alloc_info, &imgui_desc_set[image_index].descriptor), "failed to allocate descriptor sets");
     }
-    //TODO PAS FINI BORDEL
-    if (imgui_desc_set == VK_NULL_HANDLE)
+    if (imgui_desc_set[image_index].is_dirty)
     {
-        if (!get_sampler(image_index))
-            return nullptr;
-        if (!get_view(image_index))
-            return nullptr;
-        if (!get_image(image_index))
-            return nullptr;
-
-        // Create Descriptor Set:
-        {
-            VkDescriptorSetAllocateInfo alloc_info = {
-                .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .descriptorSetCount = 1,
-                .pSetLayouts        = &descriptor_set_layout,
-            };
-
-            Graphics::get()->get_descriptor_pool()->alloc_memory(alloc_info);
-
-            err = vkAllocateDescriptorSets(Graphics::get()->get_logical_device(), &alloc_info, &imgui_desc_set);
-            VK_ENSURE(err);
-        }
-
-        // Update the Descriptor Set:
-        {
-            VkWriteDescriptorSet write_desc = {
-                .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet          = imgui_desc_set,
-                .descriptorCount = 1,
-                .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo      = get_descriptor_image_info(image_index),
-            };
-            vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), 1, &write_desc, 0, nullptr);
-        }
+        imgui_desc_set[image_index].is_dirty = false;
+        VkWriteDescriptorSet write_desc = {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = imgui_desc_set[image_index].descriptor,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo      = get_descriptor_image_info(image_index),
+        };
+        vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), 1, &write_desc, 0, nullptr);
     }
 
-    return imgui_desc_set;
+    return imgui_desc_set[image_index].descriptor;
 }
 
 ATexture2D::ATexture2D(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)

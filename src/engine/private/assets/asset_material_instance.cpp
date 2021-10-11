@@ -80,6 +80,11 @@ AMaterialInstance::AMaterialInstance(const TAssetPtr<AMaterialBase>& in_base_mat
                     LOG_ERROR("failed to find property %s", G_MODEL_MATRIX_BUFFER_NAME);
             }
         }
+
+        if (const auto& push_constant = stage->get_shader_config().push_constants)
+        {
+            push_constants[stage->get_shader_stage()] = push_constant.value();
+        }
     }
 
     for (const auto& pass : base_material->get_material_infos().renderer_passes)
@@ -187,9 +192,8 @@ void AMaterialInstance::update_descriptor_sets(const std::string& render_pass, N
         if (!texture)
         {
             LOG_WARNING("texture used in material %s is NULL", to_string().c_str());
-            texture = TAssetPtr<ATexture>("default_texture");
-            if (!texture)
-                LOG_FATAL("cannot find default texture");
+            property.base_property.texture = TAssetPtr<ATexture>("default_texture");
+            texture                        = property.base_property.texture;
         }
         VkWriteDescriptorSet descriptor = property.write_descriptor_set;
         descriptor.dstSet               = descriptor_sets;
@@ -216,4 +220,25 @@ std::vector<DescriptorSetsState>* AMaterialInstance::get_descriptor_sets(const s
     }
 
     return &descriptor_set_group->second;
+}
+
+void AMaterialInstance::bind_material(SwapchainFrame& render_context)
+{
+    render_context.last_used_material = this;
+
+    update_descriptor_sets(render_context.render_pass, render_context.view, render_context.image_index);
+
+    auto* pipeline = get_material_base()->get_pipeline(render_context.render_pass);
+
+    vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1,
+                            &(*get_descriptor_sets(render_context.render_pass))[render_context.image_index].descriptor_set, 0, nullptr);
+
+    if (render_context.last_used_material_base != get_material_base().get_const())
+    {
+        render_context.last_used_material_base = static_cast<AMaterialBase*>(get_material_base().get());
+
+        auto* pipeline = get_material_base()->get_pipeline(render_context.render_pass);
+
+        vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+    }
 }

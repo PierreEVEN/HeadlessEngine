@@ -35,9 +35,7 @@ AMaterialBase::AMaterialBase(const MaterialInfos& in_material_infos) : material_
 {
     if (material_infos.renderer_passes.empty())
         LOG_FATAL("you need to specify at least one render pass to be used with");
-
-    // @TODO reimplement push constant support
-
+    
     auto layout_bindings = make_layout_bindings();
 
     for (const auto& pass : material_infos.renderer_passes)
@@ -47,7 +45,6 @@ AMaterialBase::AMaterialBase(const MaterialInfos& in_material_infos) : material_
             LOG_WARNING("material %s is designed to be used with render pass %s, but renderer doesn't have any render pass with this name", to_string().c_str(), pass.c_str());
             continue;
         }
-
         per_stage_pipeline[pass] = std::make_unique<MaterialPipeline>(material_infos, pass, layout_bindings);
     }
 }

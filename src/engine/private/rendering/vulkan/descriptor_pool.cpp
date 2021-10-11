@@ -9,7 +9,7 @@
 #include <array>
 #include <cpputils/logger.hpp>
 
-void DescriptorPool::alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos)
+VkDescriptorPool DescriptorPool::alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos)
 {
     std::lock_guard<std::mutex> lock(find_pool_lock);
     if (alloc_infos.descriptorSetCount > config::max_descriptor_per_pool)
@@ -20,18 +20,20 @@ void DescriptorPool::alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos)
     {
         if (*pool && pool->has_space_for(alloc_infos.descriptorSetCount))
         {
-            pool->bind_alloc_infos(alloc_infos);
-            return;
+            auto vk_pool = pool->bind_alloc_infos(alloc_infos);
+            return vk_pool;
         }
     }
     LOG_INFO("create new descriptor pool");
     context_pools.push_back(new DescriptorPoolItem(alloc_infos));
+    return context_pools[context_pools.size() - 1]->pool;
 }
 
-void DescriptorPoolItem::bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos)
+VkDescriptorPool DescriptorPoolItem::bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos)
 {
     space_left -= allocInfos.descriptorSetCount;
     allocInfos.descriptorPool = pool;
+    return pool;
 }
 
 DescriptorPool::DescriptorPool()

@@ -2,6 +2,7 @@
 #include "assets/asset_ptr.h"
 #include "rendering/mesh/vertex.h"
 
+#include <cpputils/logger.hpp>
 #include <optional>
 #include <string>
 #include <vector>
@@ -16,7 +17,7 @@ class AShader;
 struct TextureProperty
 {
     std::string         binding_name = "";
-    TAssetPtr<ATexture> texture      = {};
+    TAssetPtr<ATexture> texture      = TAssetPtr<ATexture>("default_texture");
 };
 
 class BufferProperty final
@@ -59,6 +60,8 @@ class PushConstant final
         return pc;
     }
 
+    PushConstant() = default;
+
     PushConstant(PushConstant&& other)
     {
         copy_from(other);
@@ -75,9 +78,17 @@ class PushConstant final
             free(data);
     }
 
+    void operator=(const PushConstant& other)
+    {
+        copy_from(other);
+    }
+
     template <typename Structure_T> [[nodiscard]] Structure_T& get()
     {
-        return *dynamic_cast<Structure_T*>(data);
+        if (sizeof(Structure_T) != data_size)
+            LOG_FATAL("push_constant size doesn't match expected size (expected : %d, value = %d)", data_size, sizeof(Structure_T));
+
+        return *static_cast<Structure_T*>(data);
     }
 
     [[nodiscard]] size_t get_range() const
@@ -121,7 +132,6 @@ class PushConstant final
         memcpy(data, other.data, other.data_size);
     }
 
-    PushConstant()                  = default;
     std::vector<Property> members   = {};
     size_t                data_size = 0;
     void*                 data      = nullptr;

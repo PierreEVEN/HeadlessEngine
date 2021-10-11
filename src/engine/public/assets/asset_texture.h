@@ -1,9 +1,8 @@
 #pragma once
 #include "asset_base.h"
 #include "imgui.h"
+#include "rendering/renderer/swapchain_image_resource.h"
 #include "rendering/shaders/shader_property.h"
-
-#include <vulkan/vulkan.hpp>
 
 class ATexture : public AssetBase
 {
@@ -27,16 +26,28 @@ class ATexture : public AssetBase
   protected:
     void mark_descriptor_dirty()
     {
-        for (int i = 0; i < dirty_descriptors.size(); ++i)
-            dirty_descriptors[i] = true;
-        for (int i = 0; i < dirty_imgui_descriptors.size(); ++i)
-            dirty_imgui_descriptors[i] = true;
+        for (size_t i = 0; i < descriptor_image_infos.get_max_instance_count(); ++i)
+            descriptor_image_infos[i].is_dirty = true;
+
+        for (size_t i = 0; i < imgui_desc_set.get_max_instance_count(); ++i)
+            imgui_desc_set[i].is_dirty = true;
     }
 
-    std::vector<bool>                  dirty_descriptors       = {};
-    std::vector<VkDescriptorImageInfo> descriptor_image_infos  = {};
-    std::vector<bool>                  dirty_imgui_descriptors = {};
-    VkDescriptorSet                    imgui_desc_set          = VK_NULL_HANDLE;
+private:
+
+    struct DescriptorState
+    {
+        bool                  is_dirty = true;
+        VkDescriptorImageInfo descriptor;
+    };
+
+    struct ImGuiDescriptorState
+    {
+        bool            is_dirty = true;
+        VkDescriptorSet descriptor = VK_NULL_HANDLE;
+    };
+    SwapchainImageResource<DescriptorState>      descriptor_image_infos = {};
+    SwapchainImageResource<ImGuiDescriptorState> imgui_desc_set         = {};
 };
 
 class ATexture2D : public ATexture
