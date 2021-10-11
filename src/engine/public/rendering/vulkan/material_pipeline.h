@@ -12,13 +12,13 @@ class AShader;
 struct PipelineInfos
 {
     // Pipeline config
-    VkBool32            depth_test            = VK_TRUE;
-    VkBool32            wireframe             = VK_FALSE;
-    float               wireframe_lines_width = 1;
-    VkPrimitiveTopology topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode       polygon_mode          = VK_POLYGON_MODE_FILL;
-    bool                is_translucent        = false;
-    bool                backface_culling      = true;
+    VkBool32             depth_test            = VK_TRUE;
+    VkBool32             wireframe             = VK_FALSE;
+    std::optional<float> wireframe_lines_width = {};
+    VkPrimitiveTopology  topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode        polygon_mode          = VK_POLYGON_MODE_FILL;
+    bool                 is_translucent        = false;
+    bool                 backface_culling      = true;
 };
 
 struct MaterialInfos

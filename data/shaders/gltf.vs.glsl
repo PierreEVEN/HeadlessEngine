@@ -1,7 +1,7 @@
 #AUTO_LOCATION out vec3 normal;
 #AUTO_LOCATION out vec2 uvs;
 #AUTO_LOCATION out vec4 color;
-#AUTO_LOCATION out vec4 pos;
+#AUTO_LOCATION out vec3 pos;
 #AUTO_LOCATION out vec3 tangent;
 
 void main() {
@@ -15,7 +15,7 @@ void main() {
 	uvs = vertex_uvs;
 	
 	// Vertex position in world space
-	pos = model * tmpPos;
+	pos = vec3(model * tmpPos);
 	
 	// Normal in world space
 	mat3 mNormal = transpose(inverse(mat3(model)));

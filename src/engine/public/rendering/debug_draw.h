@@ -21,7 +21,7 @@ class DebugDraw final
     void draw_box(const Box3D& box);
     void draw_sphere(const glm::dvec3& center, double radius, int subdivisions = 5);
 
-    void render_wireframe(const SwapchainFrame& in_render_context);
+    void render_wireframe(SwapchainFrame& in_render_context);
 
   private:
     void create_or_resize_buffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlags usage);

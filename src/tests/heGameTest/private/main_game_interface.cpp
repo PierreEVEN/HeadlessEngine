@@ -11,10 +11,13 @@
 #include "scene/node_camera.h"
 #include "scene/node_mesh.h"
 #include "scene_importer.h"
+#include "backends/imgui_impl_glfw.h"
 #include "ui/imgui/imgui_impl_vulkan.h"
 #include "ui/window/windows/content_browser.h"
 #include "ui/window/windows/profiler.h"
 #include "ui/window/windows/scene_outliner.h"
+
+static bool g_debug_lines = false;
 
 RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
 {
@@ -59,6 +62,7 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
                     WindowManager::create<ProfilerWindow>("profiler", nullptr);
                 if (ImGui::MenuItem("content browser"))
                     WindowManager::create<ContentBrowser>("content browser", nullptr);
+                ImGui::Checkbox("show bounds", &g_debug_lines);
                 ImGui::EndMenu();
             }
             ImGui::Text("%d fps   ...   %lf ms", static_cast<int>(1.0 / get_delta_second()), get_delta_second() * 1000.0);
@@ -78,6 +82,10 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
         ImGui::EndFrame();
         ImGui::Render();
         imgui_instance->ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *render_context);
+
+        if (g_debug_lines)
+            for (const auto& primitive : root_scene->get_nodes())
+                main_camera->get_debug_draw()->draw_box(primitive->get_world_bounds());
     });
 
     return deferred_config;
@@ -148,7 +156,7 @@ void MainGameInterface::engine_load_resources()
     // scene_importer.import_file("data/models/fireplaceRoom.glb", "fireplaceRoom", root_scene.get())->set_relative_rotation(glm::dvec3(M_PI, 0, 0));
     // scene_importer.import_file("data/models/powerplant.glb", "powerplant", root_scene.get());
     // scene_importer.import_file("data/models/rungholt.glb", "rungholt", root_scene.get());
-    // scene_importer.import_file("data/models/bistro.glb", "cafe_ext", root_scene.get());
+     scene_importer.import_file("data/models/bistro.glb", "cafe_ext", root_scene.get());
     // scene_importer.import_file("data/models/bistro_interior.glb", "cafe_int", root_scene.get());
     // scene_importer.import_file("data/models/sibenik.glb", "sponza_elem", root_scene.get());
     // root_scene->add_node<NMesh>("cube", TAssetPtr<AMeshData>("default_cube"), TAssetPtr<AMaterialBase>("default_material"));

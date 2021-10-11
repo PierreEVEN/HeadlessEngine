@@ -237,8 +237,6 @@ void AMaterialInstance::bind_material(SwapchainFrame& render_context)
     {
         render_context.last_used_material_base = static_cast<AMaterialBase*>(get_material_base().get());
 
-        auto* pipeline = get_material_base()->get_pipeline(render_context.render_pass);
-
-        vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+        get_material_base()->bind_material(render_context);
     }
 }

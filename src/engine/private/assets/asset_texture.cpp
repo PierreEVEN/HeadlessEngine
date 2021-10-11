@@ -75,7 +75,7 @@ ATexture2D::ATexture2D(const std::vector<uint8_t>& data, uint32_t width, uint32_
         format = VK_FORMAT_R8G8_UNORM;
         break;
     case 3:
-        channels = 4; // @TODO FIX
+        channels = 4;
         format   = VK_FORMAT_R8G8B8A8_SRGB;
         break;
     case 4:
@@ -102,17 +102,11 @@ ATexture2D::~ATexture2D()
         vkDestroyImage(Graphics::get()->get_logical_device(), image, vulkan_common::allocation_callback);
     if (memory != VK_NULL_HANDLE)
         vkFreeMemory(Graphics::get()->get_logical_device(), memory, vulkan_common::allocation_callback);
-
-    /*
-    if (uiDisplayLayout != VK_NULL_HANDLE)
-        vkDestroyDescriptorSetLayout(G_LOGICAL_DEVICE, uiDisplayLayout, G_ALLOCATION_CALLBACK);
-        */
-
+    
     sampler = VK_NULL_HANDLE;
     view    = VK_NULL_HANDLE;
     image   = VK_NULL_HANDLE;
     memory  = VK_NULL_HANDLE;
-    // uiDisplayLayout    = VK_NULL_HANDLE;
 }
 
 void ATexture2D::create_image_and_view(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)

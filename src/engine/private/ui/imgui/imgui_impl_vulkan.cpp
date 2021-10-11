@@ -11,7 +11,6 @@
 
 #include "backends/imgui_impl_glfw.h"
 #include "rendering/graphics.h"
-#include "rendering/renderer/render_pass.h"
 #include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/descriptor_pool.h"
@@ -221,9 +220,8 @@ void ImGuiImplementation::init_internal()
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-
-    //@TODO handle imgui font
-    // G_IMGUI_DEFAULT_FONT = io.Fonts->AddFontFromFileTTF(G_DEFAULT_FONT_PATH.GetValue().GetData(), 20.f);
+    
+    io.Fonts->AddFontFromFileTTF("data/fonts/Roboto-Medium.ttf", 16.f);
 
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForVulkan(Graphics::get()->get_glfw_handle(), true);

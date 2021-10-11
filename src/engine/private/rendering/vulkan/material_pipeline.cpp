@@ -113,7 +113,7 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp          = 0.0f,
         .depthBiasSlopeFactor    = 0.0f,
-        .lineWidth               = material_infos.pipeline_infos.wireframe_lines_width,
+        .lineWidth               = material_infos.pipeline_infos.wireframe_lines_width ? material_infos.pipeline_infos.wireframe_lines_width.value() : 1.f,
     };
 
     VkPipelineMultisampleStateCreateInfo multisampling{
@@ -158,7 +158,10 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
         .pAttachments    = color_blend_attachment.data(),
     };
 
-    std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
+    std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT};
+    if (material_infos.pipeline_infos.wireframe_lines_width)
+        dynamic_states_array.emplace_back(VK_DYNAMIC_STATE_LINE_WIDTH);
+
     VkPipelineDynamicStateCreateInfo dynamic_states{
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
         .dynamicStateCount = static_cast<uint32_t>(dynamic_states_array.size()),

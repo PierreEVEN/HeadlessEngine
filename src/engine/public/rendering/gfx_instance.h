@@ -132,7 +132,6 @@ class GfxInterface
     /**
      * INSTANCE DATA
      */
-    //@TODO find best place for descriptor pool
     std::shared_ptr<DescriptorPool> descriptor_pool;
 
     // Renderer objects used by the main graphic context

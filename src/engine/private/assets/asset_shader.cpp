@@ -96,18 +96,16 @@ std::string ShaderReflectProperty::get_property_glsl_typename() const
 
 AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderInfos& in_shader_configuration, const TAssetPtr<AShader>& input_stage) : shader_configuration(in_shader_configuration)
 {
-    if (in_shader_configuration.shader_stage != VK_SHADER_STAGE_VERTEX_BIT && !input_stage)
-        LOG_FATAL("You should alway specify a valid input stage for shader stages that are not vertex stages");
-
-
-    shader_module = std::make_unique<ShaderModule>();
-    shader_module->set_shader_stage(shader_configuration.shader_stage);
     if (auto shader_data = read_shader_file(source_mesh_path); shader_data)
     {
+        if (in_shader_configuration.shader_stage != VK_SHADER_STAGE_VERTEX_BIT && !input_stage)
+            LOG_FATAL("You should alway specify a valid input stage for shader stages that are not vertex stages");
+
+        shader_module = std::make_unique<ShaderModule>();
+        shader_module->set_shader_stage(shader_configuration.shader_stage);
         const ShaderPreprocessor preprocessor(shader_data.value(), in_shader_configuration, input_stage,
                                               in_shader_configuration.vertex_inputs_override ? in_shader_configuration.vertex_inputs_override.value() : Vertex::get_attribute_descriptions());
-        const auto&              shader_code = preprocessor.try_get_shader_code();
-        shader_module->set_plain_text(shader_code);
+        shader_module->set_plain_text(preprocessor.try_get_shader_code());
         const auto& bytecode = shader_module->get_bytecode();
         if (auto error = shader_module->get_error())
         {
@@ -117,12 +115,9 @@ AShader::AShader(const std::filesystem::path& source_mesh_path, const ShaderInfo
         }
         else
             build_reflection_data(bytecode);
+        LOG_INFO("successfully compiled shader %s", to_string().c_str());
     }
-    else
-    {
-        LOG_ERROR("failed to read shader file %s", source_mesh_path.string().c_str());
-    }
-    LOG_INFO("successfully compiled shader %s", to_string().c_str());
+    else LOG_ERROR("failed to read shader file %s", source_mesh_path.string().c_str());
 }
 
 AShader::AShader(const std::vector<uint32_t>& shader_bytecode, const ShaderInfos& in_shader_configuration) : shader_configuration(in_shader_configuration)

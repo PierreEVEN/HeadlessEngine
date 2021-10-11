@@ -60,6 +60,16 @@ MaterialPipeline* AMaterialBase::get_pipeline(const std::string& render_pass) co
 }
 
 
+void AMaterialBase::bind_material(SwapchainFrame& render_context)
+{
+    auto pipeline = get_pipeline(render_context.render_pass);
+
+    if (material_infos.pipeline_infos.wireframe_lines_width)
+        vkCmdSetLineWidth(render_context.command_buffer, material_infos.pipeline_infos.wireframe_lines_width.value());
+
+    vkCmdBindPipeline(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->get_pipeline());
+}
+
 std::vector<TAssetPtr<AShader>> AMaterialBase::get_shader_stages() const
 {
     return material_infos.get_shader_stages();

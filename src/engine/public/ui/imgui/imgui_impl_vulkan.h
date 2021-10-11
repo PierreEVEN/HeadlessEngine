@@ -5,8 +5,6 @@
 #include "imgui_internal.h"
 #include "assets/asset_material.h"
 #include "assets/asset_texture.h"
-#include "backends/imgui_impl_glfw.h"
-#include "rendering/graphics.h"
 #include "rendering/renderer/render_pass_description.h"
 
 class AMaterialInstance;
