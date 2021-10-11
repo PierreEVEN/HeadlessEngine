@@ -24,7 +24,3 @@ The code of the demo project is [here](src/tests/heGameTest/private/testGameInte
 - Execute `./Build.sh` (will download dependencies and generate project files)
 
 - Then build & run. (project files are located into the `./temp` directory)
-
-That's all
-
-> note : I don't guarantee it can be used as an external library for the moment.
