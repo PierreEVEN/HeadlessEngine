@@ -4,6 +4,12 @@ This is the prototype of a 3D game engine using the Vulkan API. The goal is to o
 
 I'm working on this project in my spare time and currently considere it as a learning project.
 
+## Demo
+
+![unknown](https://user-images.githubusercontent.com/24438631/136795565-0bfdb609-ef96-44de-9579-f8c0b2a79f83.png)
+The code of the demo project is [here](src/tests/heGameTest/Private/testGameInterface.cpp)
+
+
 [Documentation](doc/README.md)
 
 *This project is in active development. I'll post more informations about it later.*
