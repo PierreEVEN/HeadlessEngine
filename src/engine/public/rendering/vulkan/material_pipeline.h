@@ -1,58 +1,53 @@
 #pragma once
 
-#include "rendering/renderer/render_pass_description.h"
-#include "shader_module.h"
+#include "assets/asset_ptr.h"
+#include "rendering/mesh/vertex.h"
+#include "rendering/shaders/shader_property.h"
 
-#include <vector>
+#include <optional>
 #include <vulkan/vulkan.h>
 
-struct MaterialPipelineBindings
+class AShader;
+
+struct PipelineInfos
 {
-    std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings  = {};
-    std::unordered_map<std::string, uint32_t> vertex_binding_map   = {};
-    std::unordered_map<std::string, uint32_t> fragment_binding_map = {};
+    // Pipeline config
+    VkBool32             depth_test            = VK_TRUE;
+    VkBool32             wireframe             = VK_FALSE;
+    std::optional<float> wireframe_lines_width = {};
+    VkPrimitiveTopology  topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode        polygon_mode          = VK_POLYGON_MODE_FILL;
+    bool                 is_translucent        = false;
+    bool                 backface_culling      = true;
 };
 
-struct MaterialPipelineConfiguration
+struct MaterialInfos
 {
-    TAssetPtr<AShader>       vertex_module         = {};
-    TAssetPtr<AShader>       fragment_module       = {};
-    std::string              renderer_stages       = {};
-    MaterialPipelineBindings descriptor_bindings   = {};
-    VkBool32                 depth_test            = VK_TRUE;
-    VkBool32                 wireframe             = VK_FALSE;
-    float                    wireframe_lines_width = 1;
-    VkPrimitiveTopology      topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode            polygon_mode          = VK_POLYGON_MODE_FILL;
+    // Shader stages
+    TAssetPtr<AShader> vertex_stage       = {};
+    TAssetPtr<AShader> tessellation_stage = {};
+    TAssetPtr<AShader> geometry_stage     = {};
+    TAssetPtr<AShader> fragment_stage     = {};
 
-    [[nodiscard]] bool is_valid() const
-    {
-        return vertex_module && fragment_module && !renderer_stages.empty();
-    }
+    std::vector<std::string> renderer_passes = {};
+    PipelineInfos            pipeline_infos  = {};
+
+    [[nodiscard]] bool                            is_valid() const;
+    [[nodiscard]] std::vector<TAssetPtr<AShader>> get_shader_stages() const;
 };
 
 class MaterialPipeline final
 {
   public:
-    MaterialPipeline() = default;
+    MaterialPipeline(const MaterialInfos& material_infos, const std::string& render_pass, const std::vector<VkDescriptorSetLayoutBinding>& layout_bindings);
     ~MaterialPipeline();
 
-    void update_configuration(const MaterialPipelineConfiguration& in_configuration);
-    void init_or_rebuild_pipeline();
-
-    [[nodiscard]] VkPipelineLayout                     get_pipeline_layout() const;
-    [[nodiscard]] VkPipeline                           get_pipeline() const;
-    [[nodiscard]] const std::vector<VkDescriptorSet>&  get_descriptor_sets() const;
-    [[nodiscard]] const MaterialPipelineConfiguration& get_pipeline_configuration() const;
+    [[nodiscard]] VkPipelineLayout*      get_pipeline_layout();
+    [[nodiscard]] VkPipeline             get_pipeline() const;
+    [[nodiscard]] VkDescriptorSetLayout* get_descriptor_sets_layouts();
 
   private:
-    void destroy();
-    void create_pipeline();
-
-    MaterialPipelineConfiguration pipeline_configuration = {};
-    std::vector<VkDescriptorSet>  descriptor_sets        = {};
-    VkDescriptorSetLayout         descriptor_set_layout  = VK_NULL_HANDLE;
-    VkPipelineLayout              pipeline_layout        = VK_NULL_HANDLE;
-    VkPipeline                    pipeline               = VK_NULL_HANDLE;
-    bool                          is_dirty               = true;
+    std::vector<VkDescriptorSetLayout> descriptor_set_layout = {};
+    VkPipelineLayout                   pipeline_layout       = VK_NULL_HANDLE;
+    VkPipeline                         pipeline              = VK_NULL_HANDLE;
 };

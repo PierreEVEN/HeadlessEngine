@@ -13,22 +13,24 @@ struct SwapchainFrame;
 
 DECLARE_DELEGATE_MULTICAST(EventRenderRenderPass, SwapchainFrame*)
 
-class AMaterial;
+class AMaterialBase;
+class AMaterialInstance;
 class NCamera;
 
 class DrawInterface;
 
 struct SwapchainFrame
 {
-    bool            is_valid           = false;
-    VkCommandBuffer command_buffer     = VK_NULL_HANDLE;
-    VkFramebuffer   framebuffer        = VK_NULL_HANDLE;
-    uint32_t        image_index        = 0;
-    uint32_t        res_x              = 0;
-    uint32_t        res_y              = 0;
-    AMaterial*      last_used_material = nullptr;
-    NCamera*        view               = nullptr;
-    std::string     render_pass        = "";
+    bool               is_valid                = false;
+    VkCommandBuffer    command_buffer          = VK_NULL_HANDLE;
+    VkFramebuffer      framebuffer             = VK_NULL_HANDLE;
+    uint32_t           image_index             = 0;
+    uint32_t           res_x                   = 0;
+    uint32_t           res_y                   = 0;
+    AMaterialBase*     last_used_material_base = nullptr;
+    AMaterialInstance* last_used_material      = nullptr;
+    NCamera*           view                    = nullptr;
+    std::string        render_pass             = "";
 };
 
 struct RenderPassAttachment

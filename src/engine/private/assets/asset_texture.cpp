@@ -4,40 +4,79 @@
 #include <cmath>
 
 #include "rendering/graphics.h"
+#include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
+#include "rendering/vulkan/descriptor_pool.h"
 #include "rendering/vulkan/texture.h"
 #include "rendering/vulkan/utils.h"
 
+ATexture::~ATexture()
+{
+}
+
 VkDescriptorImageInfo* ATexture::get_descriptor_image_info(uint32_t image_index)
 {
-    if (image_index >= descriptor_image_infos.size())
+    if (descriptor_image_infos[image_index].is_dirty)
     {
-        for (int64_t i = descriptor_image_infos.size(); i <= image_index; ++i)
-        {
-            descriptor_image_infos.emplace_back(VkDescriptorImageInfo{
-                .sampler     = get_sampler(image_index),
-                .imageView   = get_view(image_index),
-                .imageLayout = get_image_layout(image_index),
-            });
-        }
+        descriptor_image_infos[image_index] = {
+            .is_dirty = false,
+            .descriptor =
+                VkDescriptorImageInfo{
+                    .sampler     = get_sampler(image_index),
+                    .imageView   = get_view(image_index),
+                    .imageLayout = get_image_layout(image_index),
+                },
+        };
     }
-    return &descriptor_image_infos[image_index];
+
+    return &descriptor_image_infos[image_index].descriptor;
+}
+
+ImTextureID ATexture::get_imgui_handle(uint32_t image_index, VkDescriptorSetLayout descriptor_set_layout)
+{
+    if (imgui_desc_set[image_index].descriptor == VK_NULL_HANDLE)
+    {
+        VkDescriptorSetAllocateInfo alloc_info = {
+            .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorSetCount = 1,
+            .pSetLayouts        = &descriptor_set_layout,
+        };
+
+        Graphics::get()->get_descriptor_pool()->alloc_memory(alloc_info);
+
+        VK_ENSURE(vkAllocateDescriptorSets(Graphics::get()->get_logical_device(), &alloc_info, &imgui_desc_set[image_index].descriptor), "failed to allocate descriptor sets");
+    }
+    if (imgui_desc_set[image_index].is_dirty)
+    {
+        imgui_desc_set[image_index].is_dirty = false;
+        VkWriteDescriptorSet write_desc = {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = imgui_desc_set[image_index].descriptor,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo      = get_descriptor_image_info(image_index),
+        };
+        vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), 1, &write_desc, 0, nullptr);
+    }
+
+    return imgui_desc_set[image_index].descriptor;
 }
 
 ATexture2D::ATexture2D(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
 {
-    channels = 4; // = in_channels; @TODO handle channels properly
+    channels = in_channels;
 
     switch (channels)
     {
     case 1:
-        format = VK_FORMAT_R8_SRGB;
+        format = VK_FORMAT_R8_UNORM;
         break;
     case 2:
-        format = VK_FORMAT_R8G8_SRGB;
+        format = VK_FORMAT_R8G8_UNORM;
         break;
     case 3:
-        format = VK_FORMAT_R8G8B8_SRGB;
+        channels = 4;
+        format   = VK_FORMAT_R8G8B8A8_SRGB;
         break;
     case 4:
         format = VK_FORMAT_R8G8B8A8_SRGB;
@@ -63,17 +102,11 @@ ATexture2D::~ATexture2D()
         vkDestroyImage(Graphics::get()->get_logical_device(), image, vulkan_common::allocation_callback);
     if (memory != VK_NULL_HANDLE)
         vkFreeMemory(Graphics::get()->get_logical_device(), memory, vulkan_common::allocation_callback);
-
-    /*
-    if (uiDisplayLayout != VK_NULL_HANDLE)
-        vkDestroyDescriptorSetLayout(G_LOGICAL_DEVICE, uiDisplayLayout, G_ALLOCATION_CALLBACK);
-        */
-
+    
     sampler = VK_NULL_HANDLE;
     view    = VK_NULL_HANDLE;
     image   = VK_NULL_HANDLE;
     memory  = VK_NULL_HANDLE;
-    // uiDisplayLayout    = VK_NULL_HANDLE;
 }
 
 void ATexture2D::create_image_and_view(const std::vector<uint8_t>& data, uint32_t width, uint32_t height, uint8_t in_channels)
@@ -91,8 +124,8 @@ void ATexture2D::create_image_and_view(const std::vector<uint8_t>& data, uint32_
     memcpy(raw_data, data.data(), static_cast<size_t>(data_size));
     vkUnmapMemory(Graphics::get()->get_logical_device(), stagingBufferMemory);
 
-    vulkan_texture::create_image_2d(width, height, mips_levels, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL,
-                                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, memory);
+    vulkan_texture::create_image_2d(width, height, mips_levels, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, memory);
 
     auto cmd_buffer = vulkan_utils::begin_single_time_commands();
 

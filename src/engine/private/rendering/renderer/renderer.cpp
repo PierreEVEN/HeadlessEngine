@@ -20,6 +20,13 @@ static std::string add_attachment_string(const RenderPassAttachment& attachment)
     return attachment_string;
 }
 
+Renderer::Renderer(Swapchain* in_swapchain) : swapchain(in_swapchain)
+{
+}
+
+Renderer::~Renderer()
+{
+}
 
 std::string RendererConfiguration::to_string() const
 {
@@ -36,7 +43,7 @@ std::string RendererConfiguration::to_string() const
         for (size_t j = 0; j < pass.color_attachments.size(); ++j)
         {
             const auto& col_attachment = pass.color_attachments[j];
-            configuration_string += stringutils::format("\t\t[ %d]\n%s", j, add_attachment_string(col_attachment).c_str());   
+            configuration_string += stringutils::format("\t\t[ %d]\n%s", j, add_attachment_string(col_attachment).c_str());
         }
         if (pass.depth_attachment)
         {
@@ -47,27 +54,26 @@ std::string RendererConfiguration::to_string() const
     return configuration_string;
 }
 
-Renderer::Renderer(Swapchain* in_swapchain) : swapchain(in_swapchain)
-{
-}
-
-Renderer::~Renderer()
-{
-}
-
-void Renderer::init(VkExtent2D in_render_resolution)
+void Renderer::init_or_resize(VkExtent2D in_render_resolution)
 {
     Graphics::get()->wait_device();
 
     render_resolution = in_render_resolution;
 
-    render_passes.clear();
-    per_pass_framebuffer.clear();
-
-    for (const auto& pass_description : renderer_configuration.get_pass_descriptions())
+    if (render_passes.empty())
     {
-        render_passes.emplace_back(std::make_unique<RenderPass>(pass_description));
-        per_pass_framebuffer.emplace_back(std::make_unique<Framebuffer>(render_passes[render_passes.size() - 1].get(), render_resolution, swapchain));
+        for (const auto& pass_description : renderer_configuration.get_pass_descriptions())
+        {
+            render_passes.emplace_back(std::make_unique<RenderPass>(pass_description));
+            per_pass_framebuffer.emplace_back(std::make_unique<Framebuffer>(render_passes[render_passes.size() - 1].get(), render_resolution, swapchain));
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < per_pass_framebuffer.size(); ++i)
+        {
+            per_pass_framebuffer[i]->resize_framebuffer(in_render_resolution);
+        }
     }
 }
 
@@ -100,7 +106,7 @@ void Renderer::render_frame(SwapchainFrame& swapchain_frame)
 
         VkViewport viewport{
             .x        = 0,
-            .y        = static_cast<float>(render_resolution.height), // Flip viewport vertically to avoid problem with imported models
+            .y        = static_cast<float>(render_resolution.height), // Flip viewport vertically to avoid textures to be displayed upside down
             .width    = static_cast<float>(render_resolution.width),
             .height   = -static_cast<float>(render_resolution.height),
             .minDepth = 0.0f,
@@ -138,19 +144,19 @@ RenderPass* Renderer::get_render_pass(const std::string& pass_name)
     return nullptr;
 }
 
-void Renderer::set_render_pass_description(RendererConfiguration in_renderer_configuration)
+void Renderer::set_render_pass_description(const RendererConfiguration& in_renderer_configuration)
 {
-    if (in_renderer_configuration.get_pass_descriptions().empty())
+    renderer_configuration = in_renderer_configuration;
+
+    if (renderer_configuration.get_pass_descriptions().empty())
         LOG_FATAL("you need to specify at least one pass");
 
-    for (const auto& pass : in_renderer_configuration.get_pass_descriptions())
+    for (const auto& pass : renderer_configuration.get_pass_descriptions())
         if (pass.pass_name.empty())
             LOG_FATAL("you need to specify a name for each render pass");
 
-    LOG_INFO("set render pass configuration : \n%s", in_renderer_configuration.to_string().c_str());
-    
-    auto& last_render_pass                 = in_renderer_configuration.get_pass_descriptions()[in_renderer_configuration.get_pass_descriptions().size() - 1];
-    last_render_pass.b_use_swapchain_image = true;
+    LOG_INFO("[ GFX] Set render pass configuration : \n%s", in_renderer_configuration.to_string().c_str());
 
-    renderer_configuration = in_renderer_configuration;
+    auto& last_render_pass                 = renderer_configuration.get_pass_descriptions()[renderer_configuration.get_pass_descriptions().size() - 1];
+    last_render_pass.b_use_swapchain_image = true;
 }

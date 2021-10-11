@@ -18,12 +18,12 @@ void init()
         return UINT8_MAX;
     });
     Logger::get().set_log_file("./saved/log/Log - %s.log");
-    LOG_INFO("Initialize game engine");
+    LOG_INFO("[ Core] Initialize game engine");
     glslang_initialize_process();
 
     job_system::Worker::create_workers();
 
-    LOG_INFO("initialize rendering");
+    LOG_INFO("[ Core] Initialize rendering");
     glfwInit();
     capabilities::check_all();
     vulkan_common::vulkan_init();
@@ -31,7 +31,7 @@ void init()
 
 void cleanup()
 {
-    LOG_INFO("Cleanup game engine");
+    LOG_INFO("[ Core] Cleanup game engine");
 
     // Destroy rendering window
     vulkan_common::vulkan_shutdown();

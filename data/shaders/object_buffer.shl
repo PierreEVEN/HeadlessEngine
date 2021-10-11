@@ -1,0 +1,10 @@
+
+struct OBJECT_DATA_TYPE{
+	mat4 model;
+};
+
+#AUTO_BINDING readonly buffer INSTANCE_TRANSFORM_DATA_TYPE{
+	OBJECT_DATA_TYPE objects[];
+} INSTANCE_TRANSFORM_DATA;
+
+#define instance_transform INSTANCE_TRANSFORM_DATA.objects

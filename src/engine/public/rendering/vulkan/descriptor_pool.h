@@ -21,7 +21,7 @@ class DescriptorPoolItem final
         return space_left >= required_space;
     }
 
-    void bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos);
+    VkDescriptorPool bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos);
 
     VkDescriptorPool pool       = VK_NULL_HANDLE;
     uint32_t         space_left = 0;
@@ -34,7 +34,7 @@ class DescriptorPool final
     DescriptorPool();
     ~DescriptorPool();
 
-    void alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos);
+    VkDescriptorPool alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos);
 
   private:
     std::vector<DescriptorPoolItem*> context_pools;

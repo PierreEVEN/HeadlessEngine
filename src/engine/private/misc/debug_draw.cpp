@@ -2,68 +2,43 @@
 
 #include "rendering/debug_draw.h"
 
-#include "assets/asset_mesh_data.h"
 #include "assets/asset_shader_buffer.h"
 #include "rendering/graphics.h"
 #include "rendering/vulkan/common.h"
 #include "scene/node_camera.h"
+#include "assets/asset_shader.h"
+#include "assets/asset_material_instance.h"
 
 #include <vulkan/vulkan_core.h>
 
-static constexpr const char* vertex_code = "\
-#version 460 \n\
-layout(location = 0) in vec3 pos; \
-layout(location = 1) in vec2 uv; \
-layout(location = 2) in vec4 col; \
-layout(location = 3) in vec3 norm; \
-layout(location = 4) in vec3 tang; \
-layout(location = 5) in vec3 bitang; \
-layout(binding = 9) uniform GlobalCameraUniformBuffer { \
-    mat4                 worldProjection; \
-    mat4                 viewMatrix; \
-    vec3                 cameraLocation; \
-} ubo; \
-\
-void main() \
-{ \
-    gl_Position = ubo.worldProjection * ubo.viewMatrix * vec4(pos.xyz, 1.0); \
-} \
-";
-
-static constexpr const char* fragment_code = " \
-#version 460 \n\
-#extension GL_ARB_separate_shader_objects : enable \n\
-layout(location = 0) out vec4 outColor; \
-\
-void main() \
-{ \
-    outColor = vec4(1, 0, 0, 0);\
-} \
-";
-
 DebugDraw::DebugDraw(NCamera* in_context_camera) : context_camera(in_context_camera)
 {
-    return;
-    material_pipeline.update_configuration(MaterialPipelineConfiguration{
-        .vertex_module   = TAssetPtr<AShader>(), //@TODO create a custom shader asset
-        .fragment_module = TAssetPtr<AShader>(),
-        .renderer_stages = "",
-        .descriptor_bindings =
-            MaterialPipelineBindings{
-                .descriptor_bindings = { //@TODO autobuild descriptor bindings
-                    VkDescriptorSetLayoutBinding{
-                        .binding            = 9,
-                        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .descriptorCount    = 1,
-                        .stageFlags         = VK_SHADER_STAGE_VERTEX_BIT,
-                        .pImmutableSamplers = nullptr,
-                    },
-                },
-            },
-        .topology     = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-        .polygon_mode = VK_POLYGON_MODE_LINE,
-    });
-    material_pipeline.init_or_rebuild_pipeline();
+
+    const ShaderInfos vertex_config{
+        .shader_stage         = VK_SHADER_STAGE_VERTEX_BIT,
+        .use_view_data_buffer = true,
+    };
+    const auto vertex_shader = AssetManager::get()->create<AShader>("debug_draw_vertex_shader", "data/shaders/debug_draw.vert.glsl", vertex_config);
+
+    const ShaderInfos fragment_config{
+        .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+    };
+    const auto fragment_shader = AssetManager::get()->create<AShader>("debug_draw_fragment_shader", "data/shaders/debug_draw.frag.glsl", fragment_config, vertex_shader);
+
+    MaterialInfos material_infos{.vertex_stage    = vertex_shader,
+                                 .fragment_stage  = fragment_shader,
+                                 .renderer_passes = {"render_scene"},
+                                 .pipeline_infos  = {
+                                     .depth_test            = true,
+                                     .wireframe             = false,
+                                     .wireframe_lines_width = 2.f,
+                                     .topology              = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+                                     .polygon_mode          = VK_POLYGON_MODE_LINE,
+                                     .is_translucent        = false,
+                                     .backface_culling      = false,
+                                 }};
+    const auto    material = AssetManager::get()->create<AMaterialBase>("debug_draw_material_base", material_infos);
+    AssetManager::get()->create<AMaterialInstance>("debug_draw_material_instance", material);
 }
 
 DebugDraw::~DebugDraw()
@@ -137,7 +112,7 @@ void DebugDraw::create_or_resize_buffer(VkBuffer& buffer, VkDeviceMemory& buffer
     p_buffer_size = new_size;
 }
 
-void DebugDraw::render_wireframe(const SwapchainFrame& in_render_context)
+void DebugDraw::render_wireframe(SwapchainFrame& in_render_context)
 {
     write_lock.lock();
     if (!vertices.empty())
@@ -162,25 +137,8 @@ void DebugDraw::render_wireframe(const SwapchainFrame& in_render_context)
         VK_ENSURE(vkMapMemory(Graphics::get()->get_logical_device(), buffer_memories[in_render_context.image_index], 0, new_data_size, 0, (void**)(&vtx_dst)));
         memcpy(vtx_dst, vertices.data(), new_data_size);
         vkUnmapMemory(Graphics::get()->get_logical_device(), buffer_memories[in_render_context.image_index]);
-
-        std::vector<VkWriteDescriptorSet> write_descriptor_sets = {};
-        write_descriptor_sets.emplace_back(VkWriteDescriptorSet{
-            .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext            = nullptr,
-            .dstSet           = material_pipeline.get_descriptor_sets()[in_render_context.image_index],
-            .dstBinding       = 9,
-            .dstArrayElement  = 0,
-            .descriptorCount  = 1,
-            .descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pImageInfo       = nullptr,
-            .pBufferInfo      = context_camera->get_scene_uniform_buffer()->get_descriptor_buffer_info(in_render_context.image_index),
-            .pTexelBufferView = nullptr,
-        });
-
-        vkUpdateDescriptorSets(Graphics::get()->get_logical_device(), static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
-        vkCmdBindDescriptorSets(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline_layout(), 0, 1, &material_pipeline.get_descriptor_sets()[in_render_context.image_index],
-                                0, nullptr);
-        vkCmdBindPipeline(in_render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_pipeline.get_pipeline());
+        
+        TAssetPtr<AMaterialInstance>("debug_draw_material_instance")->bind_material(in_render_context);
 
         // draw vertices
         VkDeviceSize offsets[] = {0};

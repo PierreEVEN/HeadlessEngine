@@ -4,6 +4,13 @@ This is the prototype of a 3D game engine using the Vulkan API. The goal is to o
 
 I'm working on this project in my spare time and currently considere it as a learning project.
 
+## Demo
+
+![unknown](https://user-images.githubusercontent.com/24438631/136795565-0bfdb609-ef96-44de-9579-f8c0b2a79f83.png)
+The code of the demo project is [here](src/tests/heGameTest/private/testGameInterface.cpp)
+
+## Documentation
+
 [Documentation](doc/README.md)
 
 *This project is in active development. I'll post more informations about it later.*
@@ -18,6 +25,15 @@ I'm working on this project in my spare time and currently considere it as a lea
 
 - Then build & run. (project files are located into the `./temp` directory)
 
-That's all
+## Third party
 
-> note : I don't guarantee it can be used as an external library for the moment.
+- [Vulkan](https://www.lunarg.com/vulkan-sdk/)
+- [Assimp](https://assimp.org/)
+- [Dear ImGui](https://github.com/ocornut/imgui) 
+- [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo) 
+- [glfw](https://www.glfw.org/) 
+- [glm](https://github.com/g-truc/glm) 
+- [glslang](https://github.com/KhronosGroup/glslang) 
+- [Spirv-Cross](https://github.com/KhronosGroup/SPIRV-Cross) 
+- [stb](https://github.com/nothings/stb) 
+- [Vulkan memory allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)

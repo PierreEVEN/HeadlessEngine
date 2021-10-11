@@ -3,12 +3,12 @@
 #include "asset_base.h"
 
 class AMeshData;
-class AMaterial;
+class AMaterialInstance;
 
 class Mesh : public AssetBase
 {
   public:
-    Mesh(const TAssetPtr<AMeshData>& in_mesh_data, const TAssetPtr<AMaterial>& in_mesh_material) : mesh_data(in_mesh_data), mesh_material(in_mesh_material)
+    Mesh(const TAssetPtr<AMeshData>& in_mesh_data, const TAssetPtr<AMaterialInstance>& in_mesh_material) : mesh_data(in_mesh_data), mesh_material(in_mesh_material)
     {
     }
 
@@ -17,12 +17,12 @@ class Mesh : public AssetBase
         return mesh_data;
     }
 
-    const TAssetPtr<AMaterial>& get_material() const
+    const TAssetPtr<AMaterialInstance>& get_material() const
     {
         return mesh_material;
     }
 
   private:
     TAssetPtr<AMeshData> mesh_data;
-    TAssetPtr<AMaterial> mesh_material;
+    TAssetPtr<AMaterialInstance> mesh_material;
 };

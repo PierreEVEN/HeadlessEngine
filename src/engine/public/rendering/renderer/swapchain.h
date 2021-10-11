@@ -2,6 +2,7 @@
 
 #include "render_pass_description.h"
 #include "rendering/vulkan/utils.h"
+#include "swapchain_image_resource.h"
 
 #include <cpputils/eventmanager.hpp>
 #include <vector>
@@ -10,7 +11,6 @@
 DECLARE_DELEGATE_MULTICAST(EventOnSwapchainRecreate)
 
 class GfxInterface;
-class AMaterial;
 class NCamera;
 
 class Swapchain
@@ -19,9 +19,9 @@ class Swapchain
     Swapchain(GfxInterface* in_graphic_instance);
     virtual ~Swapchain();
 
-    void            resize_swapchain(const VkExtent2D& new_extend);
+    void           resize_swapchain(const VkExtent2D& new_extend);
     SwapchainFrame acquire_frame();
-    void            submit_frame(const SwapchainFrame& context);
+    void           submit_frame(const SwapchainFrame& context);
 
     [[nodiscard]] VkSwapchainKHR get_swapchain_khr() const
     {
@@ -46,14 +46,24 @@ class Swapchain
     [[nodiscard]] VkCompositeAlphaFlagBitsKHR   select_composite_alpha_flags() const;
     [[nodiscard]] VkSurfaceTransformFlagBitsKHR get_surface_transformation_flags() const;
 
-    uint32_t                     current_frame_id           = 0;
-    GfxInterface*                 graphic_instance           = nullptr;
-    bool                         is_swapchain_dirty         = false;
-    VkExtent2D                   swapchain_extend           = {};
-    VkSwapchainKHR               swapchain_khr                  = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> command_buffers            = {};
-    std::vector<VkSemaphore>     image_acquire_semaphore    = {};
-    std::vector<VkSemaphore>     render_finished_semaphores = {};
-    std::vector<VkFence>         in_flight_fences           = {};
-    std::vector<VkFence>         images_in_flight           = {};
+    uint32_t       current_frame_id   = 0;
+    GfxInterface*  graphic_instance   = nullptr;
+    bool           is_swapchain_dirty = false;
+    VkExtent2D     swapchain_extend   = {};
+    VkSwapchainKHR swapchain_khr      = VK_NULL_HANDLE;
+
+    struct ImageData
+    {
+        VkCommandBuffer command_buffer   = VK_NULL_HANDLE;
+        VkFence         images_in_flight = VK_NULL_HANDLE;
+    };
+    struct InFlightData
+    {
+        VkSemaphore image_acquire_semaphore    = VK_NULL_HANDLE;
+        VkSemaphore render_finished_semaphores = VK_NULL_HANDLE;
+        VkFence     in_flight_fences           = VK_NULL_HANDLE;
+    };
+
+    SwapchainImageResource<ImageData>    per_image_data = {};
+    SwapchainImageResource<InFlightData> in_flight_data = {};
 };

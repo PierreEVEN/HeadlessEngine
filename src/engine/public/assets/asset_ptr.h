@@ -13,6 +13,7 @@ class IAssetPtr
     IAssetPtr(const AssetId& in_asset_id);
     IAssetPtr(AssetBase* in_asset);
     explicit IAssetPtr(const IAssetPtr& other);
+    explicit IAssetPtr(IAssetPtr&& other) noexcept;
     virtual ~IAssetPtr();
 
     void set(AssetBase* in_asset);
@@ -32,12 +33,16 @@ class IAssetPtr
         return !asset;
     }
 
+    void operator=(const IAssetPtr& other);
+
     explicit operator bool() const
     {
         return asset && asset_id;
     }
 
   private:
+    void unbind();
+    void bind();
     void on_delete_asset(AssetBase* deleted_asset);
 
     std::shared_ptr<AssetId> asset_id = nullptr;

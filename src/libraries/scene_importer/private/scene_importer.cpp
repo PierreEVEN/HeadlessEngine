@@ -1,21 +1,21 @@
 
-#include "ios/scene_importer.h"
+#include "scene_importer.h"
+#include "mesh_importer.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
 #include <cpputils/logger.hpp>
 
-#include "assets/asset_material.h"
-#include "assets/asset_mesh.h"
-#include "assets/asset_texture.h"
-#include "ios/mesh_importer.h"
-#include "scene/node_base.h"
-#include "scene/node_mesh.h"
-#include "scene/scene.h"
+#include <assets/asset_material.h>
+#include <assets/asset_material_instance.h>
+#include <assets/asset_texture.h>
+#include <scene/node_base.h>
+#include <scene/node_mesh.h>
+#include <scene/scene.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "ui/window/windows/profiler.h"
 
 std::shared_ptr<NodeBase> SceneImporter::process_node(const aiScene* scene, aiNode* ai_node, const std::shared_ptr<NodeBase>& parent, Scene* context_scene)
 {
@@ -55,6 +55,36 @@ std::shared_ptr<NodeBase> SceneImporter::create_node(const aiScene* scene, aiNod
     }
 
     return node;
+}
+
+void SceneImporter::create_default_resources()
+{
+    // Gltf Shader
+    {
+        const ShaderInfos vertex_infos{
+            .shader_stage            = VK_SHADER_STAGE_VERTEX_BIT,
+            .use_view_data_buffer    = true,
+            .use_scene_object_buffer = true,
+        };
+        const auto vertex_shader = AssetManager::get()->create<AShader>("gltf_vertex_shader", "data/shaders/gltf.vs.glsl", vertex_infos);
+
+        const ShaderInfos fragment_infos{
+            .shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .textures{
+                TextureProperty{.binding_name = "diffuse_color", .texture = TAssetPtr<ATexture>("default_texture")},
+            },
+        };
+
+        const auto fragment_shader = AssetManager::get()->create<AShader>("gltf_fragment_shader", "data/shaders/gltf.fs.glsl", fragment_infos, vertex_shader);
+
+        MaterialInfos material_infos{
+            .vertex_stage    = vertex_shader,
+            .fragment_stage  = fragment_shader,
+            .renderer_passes = {"render_scene"},
+        };
+
+        AssetManager::get()->create<AMaterialBase>("gltf_base_material", material_infos);
+    }
 }
 
 std::shared_ptr<NodeBase> SceneImporter::import_file(const std::filesystem::path& source_file, const std::string& asset_name, Scene* context_scene)
@@ -125,7 +155,7 @@ TAssetPtr<ATexture2D> SceneImporter::process_texture(aiTexture* texture, size_t 
     return text;
 }
 
-TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMaterial* material, size_t id)
+TAssetPtr<AMaterialInstance> SceneImporter::process_material(const aiScene* scene, aiMaterial* material, size_t id)
 {
     aiColor3D diffuse_color;
     material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color);
@@ -146,26 +176,15 @@ TAssetPtr<AMaterial> SceneImporter::process_material(const aiScene* scene, aiMat
                 break;
             }
         }
-
-        LOG_INFO("diffuse : %s => %d", texture_ptr->mFilename.C_Str(), diffuse_index);
     }
 
-    LOG_INFO("using texture %d", diffuse_index);
+    LOG_DEBUG("using diffuse %d", diffuse_index);
 
-    ShaderStageConfiguration vertex_stage{
-        .shader = TAssetPtr<AShader>("gltf_vertex_shader"),
-    };
-    ShaderStageConfiguration fragment_stage{
-        .shader   = TAssetPtr<AShader>("gltf_fragment_shader"),
-        .textures = {{"diffuse_color", TAssetPtr<ATexture>("default_texture")}},
-    };
+    const auto instance_id       = AssetManager::get()->find_valid_asset_id(object_name + "_material_instance_" + std::string(material->GetName().C_Str()));
+    auto       material_instance = AssetManager::get()->create<AMaterialInstance>(instance_id, TAssetPtr<AMaterialBase>("gltf_base_material"));
 
     if (diffuse_index >= 0)
-    {
-        TAssetPtr texture = static_cast<ATexture*>(texture_refs[diffuse_index].get());
-        fragment_stage.textures["diffuse_color"] = texture;
-    }
+        material_instance->set_texture("diffuse_color", static_cast<ATexture*>(texture_refs[diffuse_index].get()));
 
-    const auto asset_id = AssetManager::get()->find_valid_asset_id(object_name + "_material_" + std::string(material->GetName().C_Str()));
-    return AssetManager::get()->create<AMaterial>(asset_id, vertex_stage, fragment_stage, std::vector<std::string>{"render_scene", "combine_deferred", "post_processing_0"});
+    return material_instance;
 }

@@ -2,6 +2,7 @@
 #include "rendering/gfx_instance.h"
 
 #include "engine_interface.h"
+#include "assets/asset_material_instance.h"
 #include "rendering/graphics.h"
 #include "rendering/renderer/renderer.h"
 #include "rendering/swapchain_config.h"
@@ -9,6 +10,8 @@
 #include "rendering/vulkan/common.h"
 #include "rendering/vulkan/descriptor_pool.h"
 #include "rendering/vulkan/utils.h"
+#include "ui/imgui/imgui_impl_vulkan.h"
+
 #include <config.h>
 #include <cpputils/logger.hpp>
 #include <set>
@@ -38,7 +41,7 @@ void GfxInterface::init(const WindowParameters& window_parameters)
     VK_CHECK(physical_device, "Cannot find any suitable GPU");
     VkPhysicalDeviceProperties selected_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &selected_device_properties);
-    LOG_INFO("Picking physical device %d (%s)", selected_device_properties.deviceID, selected_device_properties.deviceName);
+    LOG_INFO("[ GFX] Picking physical device %d (%s)", selected_device_properties.deviceID, selected_device_properties.deviceName);
 
     LOG_INFO("[ GFX] : pick swapchain settings");
     // retrieve swapchain settings
@@ -73,14 +76,18 @@ void GfxInterface::init(const WindowParameters& window_parameters)
     swapchain = std::shared_ptr<Swapchain>(create_swapchain());
     swapchain->on_swapchain_recreate.add_lambda([]() {
         const auto swapchain_extend = Graphics::get()->get_swapchain()->get_swapchain_extend();
-        Graphics::get()->get_renderer()->init(swapchain_extend);
+        Graphics::get()->get_renderer()->init_or_resize(swapchain_extend);
         LOG_INFO("recreate swapchain : (%d x %d)", swapchain_extend.width, swapchain_extend.height);
     });
 
     LOG_INFO("[ GFX] : create renderer");
     renderer = std::shared_ptr<Renderer>(create_renderer());
+
+    /**
+     * RENDER PASS
+     */
     renderer->set_render_pass_description(get_default_render_pass_configuration());
-    renderer->init(swapchain->get_swapchain_extend());
+    renderer->init_or_resize(swapchain->get_swapchain_extend());
 
     LOG_VALIDATE("[ GFX] : successfully initialized graphics");
 }
@@ -181,7 +188,7 @@ VkPhysicalDevice GfxInterface::select_physical_device(VkSurfaceKHR surface)
         vkGetPhysicalDeviceProperties(device, &pProperties);
         PhysLog += "\t-" + std::string(pProperties.deviceName) + " (driver version : " + std::to_string(pProperties.driverVersion) + ")\n";
     }
-    LOG_INFO("%s", PhysLog.c_str());
+    LOG_INFO("[ Core] %s", PhysLog.c_str());
 
     // Pick desired device
     for (const auto& device : devices)

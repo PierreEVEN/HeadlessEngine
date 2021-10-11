@@ -1,0 +1,11 @@
+
+// UNIFORM BUFFER
+#AUTO_BINDING uniform SCENE_DATA_BUFFER_TYPE {
+    mat4 worldProjection;
+    mat4 viewMatrix;
+	vec3 cameraLocation;
+} SCENE_DATA_BUFFER;
+
+#define worldProjection SCENE_DATA_BUFFER.worldProjection
+#define viewMatrix SCENE_DATA_BUFFER.viewMatrix
+#define cameraLocation SCENE_DATA_BUFFER.cameraLocation

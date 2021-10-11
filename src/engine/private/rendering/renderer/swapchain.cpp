@@ -37,7 +37,7 @@ void Swapchain::resize_swapchain(const VkExtent2D& new_extend)
 
 SwapchainFrame Swapchain::acquire_frame()
 {
-    vkWaitForFences(Graphics::get()->get_logical_device(), 1, &in_flight_fences[current_frame_id], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(Graphics::get()->get_logical_device(), 1, &in_flight_data[current_frame_id].in_flight_fences, VK_TRUE, UINT64_MAX);
 
     // Don't render if window is minimized
     if (get_swapchain_extend().width == 0 || get_swapchain_extend().height == 0)
@@ -45,7 +45,7 @@ SwapchainFrame Swapchain::acquire_frame()
 
     // Retrieve the next available image ID
     uint32_t       image_index;
-    const VkResult result = vkAcquireNextImageKHR(Graphics::get()->get_logical_device(), swapchain_khr, UINT64_MAX, image_acquire_semaphore[current_frame_id], VK_NULL_HANDLE, &image_index);
+    const VkResult result = vkAcquireNextImageKHR(Graphics::get()->get_logical_device(), swapchain_khr, UINT64_MAX, in_flight_data[current_frame_id].image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreate_swapchain();
@@ -59,13 +59,13 @@ SwapchainFrame Swapchain::acquire_frame()
     }
 
     // Ensure the selected image is available.
-    if (images_in_flight[image_index] != VK_NULL_HANDLE)
-        vkWaitForFences(Graphics::get()->get_logical_device(), 1, &images_in_flight[image_index], VK_TRUE, UINT64_MAX);
-    images_in_flight[image_index] = in_flight_fences[current_frame_id];
+    if (per_image_data[current_frame_id].images_in_flight != VK_NULL_HANDLE)
+        vkWaitForFences(Graphics::get()->get_logical_device(), 1, &per_image_data[current_frame_id].images_in_flight, VK_TRUE, UINT64_MAX);
+    per_image_data[current_frame_id].images_in_flight = in_flight_data[current_frame_id].in_flight_fences;
 
     const SwapchainFrame render_context{
         .is_valid       = true,
-        .command_buffer = command_buffers[image_index],
+        .command_buffer = per_image_data[current_frame_id].command_buffer,
         .framebuffer    = nullptr,
         .image_index    = image_index,
         .res_x          = swapchain_extend.width,
@@ -99,17 +99,17 @@ void Swapchain::submit_frame(const SwapchainFrame& context)
     const VkSubmitInfo submit_infos{
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount   = 1,
-        .pWaitSemaphores      = &image_acquire_semaphore[current_frame_id],
+        .pWaitSemaphores      = &in_flight_data[current_frame_id].image_acquire_semaphore,
         .pWaitDstStageMask    = wait_stage,
         .commandBufferCount   = 1,
         .pCommandBuffers      = &context.command_buffer,
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &render_finished_semaphores[current_frame_id],
+        .pSignalSemaphores    = &in_flight_data[current_frame_id].render_finished_semaphores,
     };
 
     /** Submit command buffers */
-    vkResetFences(Graphics::get()->get_logical_device(), 1, &in_flight_fences[current_frame_id]);
-    Graphics::get()->submit_graphic_queue(submit_infos, in_flight_fences[current_frame_id]); // Pass fence to know when all the data are submitted
+    vkResetFences(Graphics::get()->get_logical_device(), 1, &in_flight_data[current_frame_id].in_flight_fences);
+    Graphics::get()->submit_graphic_queue(submit_infos, in_flight_data[current_frame_id].in_flight_fences); // Pass fence to know when all the data are submitted
 
     /**
      * Present to swapchain
@@ -118,7 +118,7 @@ void Swapchain::submit_frame(const SwapchainFrame& context)
     const VkPresentInfoKHR present_infos{
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores    = &render_finished_semaphores[current_frame_id],
+        .pWaitSemaphores    = &in_flight_data[current_frame_id].render_finished_semaphores,
         .swapchainCount     = 1,
         .pSwapchains        = &swapchain_khr,
         .pImageIndices      = &context.image_index,
@@ -143,56 +143,55 @@ void Swapchain::submit_frame(const SwapchainFrame& context)
 void Swapchain::recreate_frame_objects()
 {
     destroy_frame_objects();
-
-    const uint32_t image_count = Graphics::get()->get_swapchain_config()->get_image_count();
-
-    command_buffers.resize(image_count, VK_NULL_HANDLE);
-    image_acquire_semaphore.resize(config::max_frame_in_flight, VK_NULL_HANDLE);
-    render_finished_semaphores.resize(config::max_frame_in_flight, VK_NULL_HANDLE);
-    in_flight_fences.resize(config::max_frame_in_flight, VK_NULL_HANDLE);
-    images_in_flight.resize(image_count, VK_NULL_HANDLE);
-
+    
     VkCommandBufferAllocateInfo command_buffer_infos{
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool        = command_pool::get(),
         .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = static_cast<uint32_t>(command_buffers.size()),
+        .commandBufferCount = 1,
     };
+    for (size_t i = 0; i < per_image_data.get_max_instance_count(); ++i)
+        VK_ENSURE(vkAllocateCommandBuffers(Graphics::get()->get_logical_device(), &command_buffer_infos, &per_image_data[i].command_buffer), "Failed to allocate command buffer");
 
-    VkSemaphoreCreateInfo semaphore_infos{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    VkSemaphoreCreateInfo semaphore_infos{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
 
     VkFenceCreateInfo fence_infos{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
-    VK_ENSURE(vkAllocateCommandBuffers(Graphics::get()->get_logical_device(), &command_buffer_infos, command_buffers.data()), "Failed to allocate command buffer");
-    for (size_t i = 0; i < config::max_frame_in_flight; i++)
+    for (size_t i = 0; i < in_flight_data.get_max_instance_count(); ++i)
     {
-        VK_ENSURE(vkCreateSemaphore(Graphics::get()->get_logical_device(), &semaphore_infos, vulkan_common::allocation_callback, &image_acquire_semaphore[i]), "Failed to create image available semaphore #%d" + i);
-        VK_ENSURE(vkCreateSemaphore(Graphics::get()->get_logical_device(), &semaphore_infos, vulkan_common::allocation_callback, &render_finished_semaphores[i]), "Failed to create render finnished semaphore #%d" + i)
-        VK_ENSURE(vkCreateFence(Graphics::get()->get_logical_device(), &fence_infos, vulkan_common::allocation_callback, &in_flight_fences[i]), "Failed to create fence #%d" + i);
+        auto& data = in_flight_data[i];
+        VK_ENSURE(vkCreateSemaphore(Graphics::get()->get_logical_device(), &semaphore_infos, vulkan_common::allocation_callback, &data.image_acquire_semaphore), "Failed to create image available semaphore #%d" + i);
+        VK_ENSURE(vkCreateSemaphore(Graphics::get()->get_logical_device(), &semaphore_infos, vulkan_common::allocation_callback, &data.render_finished_semaphores), "Failed to create render finnished semaphore #%d" + i)
+        VK_ENSURE(vkCreateFence(Graphics::get()->get_logical_device(), &fence_infos, vulkan_common::allocation_callback, &data.in_flight_fences), "Failed to create fence #%d" + i);
     }
 }
 
 void Swapchain::destroy_frame_objects()
 {
-    if (!command_buffers.empty())
-        vkFreeCommandBuffers(Graphics::get()->get_logical_device(), command_pool::get(), static_cast<uint32_t>(command_buffers.size()), command_buffers.data());
+    for (size_t i = 0; i < in_flight_data.get_max_instance_count(); ++i)
+    {
+        auto& data = in_flight_data[i];
+        if (data.in_flight_fences)
+            vkDestroySemaphore(Graphics::get()->get_logical_device(), data.image_acquire_semaphore, vulkan_common::allocation_callback);
 
-    for (const auto& semaphore : render_finished_semaphores)
-        vkDestroySemaphore(Graphics::get()->get_logical_device(), semaphore, vulkan_common::allocation_callback);
+        if (data.in_flight_fences)
+            vkDestroySemaphore(Graphics::get()->get_logical_device(), data.render_finished_semaphores, vulkan_common::allocation_callback);
 
-    for (const auto& semaphore : image_acquire_semaphore)
-        vkDestroySemaphore(Graphics::get()->get_logical_device(), semaphore, vulkan_common::allocation_callback);
+        if (data.in_flight_fences)
+            vkDestroyFence(Graphics::get()->get_logical_device(), data.in_flight_fences, vulkan_common::allocation_callback);
 
-    for (const auto& fence : in_flight_fences)
-        vkDestroyFence(Graphics::get()->get_logical_device(), fence, vulkan_common::allocation_callback);
-
-    command_buffers.clear();
-    render_finished_semaphores.clear();
-    image_acquire_semaphore.clear();
-    in_flight_fences.clear();
+        data = InFlightData{};
+    }
+    for (size_t i = 0; i < per_image_data.get_max_instance_count(); ++i)
+    {
+        vkFreeCommandBuffers(Graphics::get()->get_logical_device(), command_pool::get(), 1, &per_image_data[i].command_buffer);
+        per_image_data[i].command_buffer = VK_NULL_HANDLE;
+    }
 }
 
 void Swapchain::check_resize_swapchain(bool b_force)

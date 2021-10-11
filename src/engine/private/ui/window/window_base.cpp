@@ -48,6 +48,8 @@ void WindowManager::remove_window(WindowBase* window)
 
 WindowManager* WindowManager::get()
 {
+    if (!window_manager)
+        window_manager = std::make_unique<WindowManager>();
     return window_manager.get();
 }
 

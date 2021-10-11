@@ -8,11 +8,21 @@
 class Swapchain;
 class RenderPass;
 
+struct FramebufferImageInfo
+{
+    VkExtent2D            image_extent     = {0, 0};
+    VkSampleCountFlagBits sample_count     = VK_SAMPLE_COUNT_1_BIT;
+    VkFormat              image_format     = VK_FORMAT_UNDEFINED;
+    bool                  is_depth_stencil = true;
+    int                   image_count      = 1;
+    bool                  b_use_sampler    = false;
+};
+
 class AFramebufferImage final : public ATexture
 {
   public:
-    AFramebufferImage(class Swapchain* source_swapchain);
-    AFramebufferImage(const VkExtent2D& image_extent, VkSampleCountFlagBits sample_count, VkFormat image_format, bool is_depth_stencil, int image_count = 1, bool b_use_sampler = false);
+    AFramebufferImage(class Swapchain* in_source_swapchain);
+    AFramebufferImage(const FramebufferImageInfo& in_framebuffer_image_info);
     ~AFramebufferImage() override;
 
     [[nodiscard]] VkImage get_image(uint32_t image_index = 0) const override
@@ -27,7 +37,6 @@ class AFramebufferImage final : public ATexture
     [[nodiscard]] VkImageLayout get_image_layout(uint32_t image_index = 0) const override
     {
         return image_layout;
-        ;
     }
 
     [[nodiscard]] VkSampler get_sampler(uint32_t image_index = 0) const override
@@ -35,14 +44,20 @@ class AFramebufferImage final : public ATexture
         return sampler;
     }
 
-  private:
-    void create_sampler();
+    void resize_buffer(VkExtent2D in_buffer_size);
 
-    std::vector<VkImage>        images       = {};
-    std::vector<VkDeviceMemory> memories     = {};
-    std::vector<VkImageView>    views        = {};
-    VkImageLayout               image_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    VkSampler                   sampler      = VK_NULL_HANDLE;
+  private:
+    void create_or_recreate();
+    void create_sampler();
+    void delete_resources();
+
+    Swapchain*                  source_swapchain = nullptr;
+    FramebufferImageInfo        framebuffer_image_info = {};
+    std::vector<VkImage>        images           = {};
+    std::vector<VkDeviceMemory> memories         = {};
+    std::vector<VkImageView>    views            = {};
+    VkImageLayout               image_layout     = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkSampler                   sampler          = VK_NULL_HANDLE;
 };
 
 class Framebuffer
@@ -55,6 +70,8 @@ class Framebuffer
     {
         return framebuffers[image];
     }
+
+    void resize_framebuffer(const VkExtent2D& new_extent);
 
   private:
     struct BufferImageRef

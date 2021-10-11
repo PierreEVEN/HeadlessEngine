@@ -16,7 +16,7 @@ void NodeBase::set_world_position(const glm::dvec3& in_position)
 void NodeBase::set_world_rotation(const glm::dquat& in_rotation)
 {
     if (parent)
-        rel_rotation = inverse(parent->get_world_transform()) * mat4_cast(in_rotation); //@TODO : ensure set world rotation works
+        rel_rotation = inverse(parent->get_world_transform()) * mat4_cast(in_rotation);
     else
         rel_rotation = in_rotation;
     recompute_transform();
@@ -25,7 +25,7 @@ void NodeBase::set_world_rotation(const glm::dquat& in_rotation)
 void NodeBase::set_world_scale(const glm::dvec3& in_scale)
 {
     if (parent)
-        rel_scale = glm::dvec3(1, 1, 1) / parent->get_world_scale() * in_scale; //@TODO : ensure set world scale works
+        rel_scale = glm::dvec3(1, 1, 1) / parent->get_world_scale() * in_scale;
     else
         rel_scale = in_scale;
 
@@ -57,7 +57,6 @@ void NodeBase::attach_to(const std::shared_ptr<NodeBase>& new_parent_node, const
         LOG_WARNING("cannot attach_to component to this one");
         return;
     }
-
     new_parent_node->children.emplace_back(this);
     parent = new_parent_node.get();
 
