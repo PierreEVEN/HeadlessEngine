@@ -34,17 +34,17 @@ RendererConfiguration create_configuration()
                         // Albedo
                         {
                             .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0.75f, 1.f, 1.2f, 1.0f}}}),
+                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0.75f, 1.f, 1.2f, 1.f}}}),
                         },
                         // World Normals
                         {
                             .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 0}}}),
+                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 1.f}}}),
                         },
                         // World Position
                         {
                             .image_format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 0}}}),
+                            .clear_value  = std::optional<VkClearValue>({.color = {.float32{0, 0, 0, 1.f}}}),
                         },
                     },
                 .depth_attachment =
@@ -83,7 +83,7 @@ void DeferredRenderer::create_deferred_assets()
             .textures{
                 TextureProperty{.binding_name = "samplerAlbedo", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_0")},
                 TextureProperty{.binding_name = "samplerNormal", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_1")},
-                TextureProperty{.binding_name = "samplerPosition", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_depth")},
+                TextureProperty{.binding_name = "samplerPosition", .texture = TAssetPtr<ATexture>("framebuffer_image-render_scene_2")},
             },
         };
         auto fragment_shader = AssetManager::get()->create<AShader>("deferred_resolve_fragment_shader", "data/shaders/deferred_resolve.frag.glsl", fragment_config, vertex_shader);

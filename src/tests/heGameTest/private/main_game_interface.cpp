@@ -12,6 +12,9 @@
 #include "scene/node_mesh.h"
 #include "scene_importer.h"
 #include "ui/imgui/imgui_impl_vulkan.h"
+#include "ui/window/windows/content_browser.h"
+#include "ui/window/windows/profiler.h"
+#include "ui/window/windows/scene_outliner.h"
 
 RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
 {
@@ -21,8 +24,6 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
     deferred_config.get_render_pass("render_scene")->on_pass_rendering.add_lambda([&](SwapchainFrame* render_context) {
         main_camera->update_view(*render_context);
     });
-
-
 
     deferred_config.add_render_pass(ImGuiImplementation::get_ui_render_pass(TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0"), imgui_instance));
 
@@ -36,10 +37,43 @@ RendererConfiguration MainGameInterface::get_default_render_pass_configuration()
             LOG_FATAL("background image is null");
         }
 
-        ImGui::GetBackgroundDrawList()->AddImage(TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")->get_imgui_handle(render_context->image_index, *mat->get_descriptor_sets_layouts()), ImVec2{0, 0},
-                                                 ImVec2{static_cast<float>(Graphics::get()->get_swapchain()->get_swapchain_extend().width), static_cast<float>(Graphics::get()->get_swapchain()->get_swapchain_extend().height)});
+        ImGui::GetBackgroundDrawList()->AddImage(
+            TAssetPtr<ATexture>("framebuffer_image-combine_deferred_0")->get_imgui_handle(render_context->image_index, *mat->get_descriptor_sets_layouts()), ImVec2{0, 0},
+            ImVec2{static_cast<float>(Graphics::get()->get_swapchain()->get_swapchain_extend().width), static_cast<float>(Graphics::get()->get_swapchain()->get_swapchain_extend().height)});
 
-        ImGui::ShowDemoWindow();
+        if (ImGui::BeginMainMenuBar())
+        {
+            if (ImGui::BeginMenu("file"))
+            {
+                if (ImGui::MenuItem("quit"))
+                    close();
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("misc"))
+            {
+                if (ImGui::MenuItem("scene outliner"))
+                    WindowManager::create<SceneOutliner>("scene outliner", nullptr, root_scene.get(), main_camera.get());
+                if (ImGui::MenuItem("demo window"))
+                    WindowManager::create<DemoWindow>("demo window", nullptr);
+                if (ImGui::MenuItem("profiler"))
+                    WindowManager::create<ProfilerWindow>("profiler", nullptr);
+                if (ImGui::MenuItem("content browser"))
+                    WindowManager::create<ContentBrowser>("content browser", nullptr);
+                ImGui::EndMenu();
+            }
+            ImGui::Text("%d fps   ...   %lf ms", static_cast<int>(1.0 / get_delta_second()), get_delta_second() * 1000.0);
+            ImGui::EndMainMenuBar();
+        }
+
+        ImGui::SetNextWindowPos(ImVec2(-4, -4));
+        ImGui::SetNextWindowSize(ImVec2(Graphics::get()->get_swapchain()->get_swapchain_extend().width + 8.f, Graphics::get()->get_swapchain()->get_swapchain_extend().height + 8.f));
+        if (ImGui::Begin("BackgroundHUD", nullptr, ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground))
+        {
+            ImGui::DockSpace(ImGui::GetID("Master dockSpace"), ImVec2(0.f, 0.f), ImGuiDockNodeFlags_PassthruCentralNode);
+        }
+        ImGui::End();
+
+        WindowManager::get()->draw();
 
         ImGui::EndFrame();
         ImGui::Render();
@@ -105,9 +139,6 @@ void MainGameInterface::engine_load_resources()
 
     imgui_instance = std::make_unique<ImGuiImplementation>();
 
-
-    
-
     SceneImporter scene_importer;
     // auto san_miguel = scene_importer.import_file("data/models/sanMiguel.glb", "sanMiguel", root_scene.get());
     // san_miguel->set_relative_rotation(glm::dvec3(M_PI / 2, 0, M_PI));
@@ -123,7 +154,6 @@ void MainGameInterface::engine_load_resources()
     // root_scene->add_node<NMesh>("cube", TAssetPtr<AMeshData>("default_cube"), TAssetPtr<AMaterialBase>("default_material"));
 
     const auto sponza_root = scene_importer.import_file("data/models/sponza.glb", "sponza_elem", root_scene.get());
-
     const int max_x = 10, max_y = 10;
     for (int x = 0; x < max_x; ++x)
     {

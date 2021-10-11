@@ -2,7 +2,7 @@
 
 void demo_deferred() {
 	if (uv.x +(uv.y * 0.2 - 0.1) < 1.0/3)
-		outColor = texture(samplerPosition, uv) / 4;	
+		outColor = texture(samplerPosition, uv);	
 	else if (uv.x +(uv.y * 0.2 - 0.1) < 2.0/3)
 		outColor = texture(samplerAlbedo, uv);	
 	else 
