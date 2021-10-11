@@ -7,8 +7,9 @@ I'm working on this project in my spare time and currently considere it as a lea
 ## Demo
 
 ![unknown](https://user-images.githubusercontent.com/24438631/136795565-0bfdb609-ef96-44de-9579-f8c0b2a79f83.png)
-The code of the demo project is [here](src/tests/heGameTest/Private/testGameInterface.cpp)
+The code of the demo project is [here](src/tests/heGameTest/private/testGameInterface.cpp)
 
+## Documentation
 
 [Documentation](doc/README.md)
 
