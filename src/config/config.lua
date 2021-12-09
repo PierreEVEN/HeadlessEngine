@@ -1,0 +1,2 @@
+
+declare_module("config")

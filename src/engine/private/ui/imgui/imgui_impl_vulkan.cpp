@@ -9,7 +9,7 @@
 #include "assets/asset_texture.h"
 #include <cpputils/logger.hpp>
 
-#include "backends/imgui_impl_glfw.h"
+#include "ui/imgui/imgui_impl_glfw.h"
 #include "rendering/graphics.h"
 #include "rendering/swapchain_config.h"
 #include "rendering/vulkan/common.h"
