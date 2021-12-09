@@ -1,5 +1,3 @@
-name: C++ CI
-
 on:
   push:
     branches: [ feature/switch_to_xmake ]
@@ -27,43 +25,5 @@ jobs:
     # Build engine Release
     - name: compile-release
       shell: cmd
-      run: |
-        xmake -y
-        
-  build-linux:
-  
-    runs-on: ubuntu-latest
-
-    steps:
-    
-    - uses: actions/checkout@v2
-    
-    - name: Setup xmake
-      uses: xmake-io/github-action-setup-xmake@v1
-      with:
-        xmake-version: latest
-        
-    # Build engine Release
-    - name: compile-release
-      shell: bash
-      run: |
-        xmake -y
-
-  build-macos:
-  
-    runs-on: macos-latest
-
-    steps:
-    
-    - uses: actions/checkout@v2
-    
-    - name: Setup xmake
-      uses: xmake-io/github-action-setup-xmake@v1
-      with:
-        xmake-version: latest
-               
-    # Build engine Release
-    - name: compile-release
-      shell: bash
       run: |
         xmake -y
