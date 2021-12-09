@@ -1,8 +1,8 @@
 on:
   push:
-    branches: [ feature/switch_to_xmake ]
+    branches: [ main ]
   pull_request:
-    branches: [ feature/switch_to_xmake ]
+    branches: [ main ]
 
 
 env:
