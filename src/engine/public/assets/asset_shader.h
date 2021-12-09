@@ -5,7 +5,7 @@
 #include "rendering/vulkan/shader_module.h"
 
 #include <optional>
-#include <spirv_cross.hpp>
+#include <spirv_cross/spirv_cross.hpp>
 #include <vulkan/vulkan_core.h>
 
 constexpr const char* G_SCENE_DATA_BUFFER_NAME   = "SCENE_DATA_BUFFER";

@@ -11,7 +11,7 @@
 #include "scene/node_camera.h"
 #include "scene/node_mesh.h"
 #include "scene_importer.h"
-#include "backends/imgui_impl_glfw.h"
+#include "ui/imgui/imgui_impl_glfw.h"
 #include "ui/imgui/imgui_impl_vulkan.h"
 #include "ui/window/windows/content_browser.h"
 #include "ui/window/windows/profiler.h"

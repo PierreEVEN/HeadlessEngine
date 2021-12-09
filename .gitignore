@@ -41,3 +41,12 @@ imgui.ini
 
 data/models
 third_party/deps
+
+# Xmake cache
+.xmake/
+build/
+
+# MacOS Cache
+.DS_Store
+
+
