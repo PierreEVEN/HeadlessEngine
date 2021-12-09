@@ -1,6 +1,6 @@
 # Headless Engine
 
-![example workflow](https://github.com/PierreEVEN/HeadlessEngine/actions/workflows/default/badge.svg)
+![example workflow](https://github.com/PierreEVEN/HeadlessEngine/actions/workflows/default.yml/badge.svg)
 
 This is the prototype of a 3D game engine using the Vulkan API. The goal is to offer a straightforward but powerful game engine whith which you can quickly create a scene in a few lines of code.
 
