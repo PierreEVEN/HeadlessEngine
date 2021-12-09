@@ -28,7 +28,7 @@ jobs:
     - name: compile-release
       shell: cmd
       run: |
-        xmake
+        xmake -y
         
   build-linux:
   
@@ -47,7 +47,7 @@ jobs:
     - name: compile-release
       shell: bash
       run: |
-        xmake
+        xmake -y
 
   build-macos:
   
@@ -66,4 +66,4 @@ jobs:
     - name: compile-release
       shell: bash
       run: |
-        xmake
+        xmake -y
