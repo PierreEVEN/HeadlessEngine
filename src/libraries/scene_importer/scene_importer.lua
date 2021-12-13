@@ -1,2 +1,1 @@
-add_requires("assimp", "cpputils", "glm", "vulkan-loader", "vulkan-memory-allocator", "spirv-cross", "imgui docking", "glfw", "stb")
 declare_module("scene_importer", {"engine"}, {"assimp", "cpputils", "glm", "vulkan-loader", "vulkan-memory-allocator", "spirv-cross", "imgui", "glfw", "stb"})

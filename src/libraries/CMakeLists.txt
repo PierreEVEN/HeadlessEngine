@@ -1,2 +1,0 @@
-add_subfodler_target(scene_importer Libs)
-add_subfodler_target(base_renderers Libs)
