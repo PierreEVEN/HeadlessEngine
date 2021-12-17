@@ -1,0 +1,50 @@
+#pragma once
+
+#include "assertion.h"
+#include "device.h"
+#include "vk_physical_device.h"
+#include "vulkan/instance.h"
+
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
+
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+#include <cpputils/logger.hpp>
+
+namespace gfx::vulkan
+{
+static VmaAllocator vulkan_memory_allocator = VK_NULL_HANDLE;
+
+namespace allocator
+{
+void create()
+{
+    VmaAllocatorCreateInfo allocatorInfo = {
+        .physicalDevice = GET_VK_PHYSICAL_DEVICE(),
+        .device         = get_device(),
+        .instance       = get_instance(),
+    };
+    VK_CHECK(vmaCreateAllocator(&allocatorInfo, &vulkan_memory_allocator), "failed to create vma allocator");
+}
+
+void destroy()
+{
+    vmaDestroyAllocator(vulkan_memory_allocator);
+}
+
+} // namespace allocator
+
+const VkAllocationCallbacks* get_allocator()
+{
+    return nullptr;
+}
+
+const VmaAllocator& get_vma_allocator()
+{
+    if (vulkan_memory_allocator == VK_NULL_HANDLE)
+        LOG_FATAL("vulkan memory allocator should have been created first");
+    
+    return vulkan_memory_allocator;
+}
+} // namespace gfx::vulkan

@@ -14,6 +14,16 @@ set_rundir(".")
 
 DEBUG = false;
 
+GRAPHIC_BACKEND = "NONE"
+APPLICATION_BACKEND = "NONE"
+
+-- //@TODO : detect vk api support
+GRAPHIC_BACKEND = "VULKAN"
+
+if is_plat("windows") then
+	APPLICATION_BACKEND = "WIN32"
+end
+
 
 set_runtimes(is_mode("debug") and "MTd" or "MT")
 		
@@ -39,8 +49,12 @@ function declare_module(module_name, deps, packages, is_executable)
 		
 		for _, ext in ipairs({".h", ".hpp", ".inl", ".natvis"}) do
 			add_headerfiles("public/(**"..ext..")")
-			add_headerfiles("private/(**"..ext..")")
 		end
+				
+		set_group("engine_old")
+		
+		add_defines("GFX_USE_"..GRAPHIC_BACKEND)
+		add_defines("APP_USE_"..APPLICATION_BACKEND)
 		
 		if deps then
 			if DEBUG then

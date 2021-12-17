@@ -1,2 +1,0 @@
-
-declare_module("graphics", {"config", "utils", "job_system", "application"}, {"glfw", "glm", "cpputils", "vulkan-hpp", "vulkan-memory-allocator", "glslang", "spirv-cross", "vulkan-loader", "vulkan-validationlayers", "imgui", "imguizmo"})
