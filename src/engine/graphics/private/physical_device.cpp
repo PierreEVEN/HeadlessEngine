@@ -1,7 +1,5 @@
 #include "gfx/physical_device.h"
 
-#include "gfx/instance.h"
-
 #if GFX_USE_VULKAN
 #include "vulkan/vk_physical_device.h"
 #include "vulkan/instance.h"

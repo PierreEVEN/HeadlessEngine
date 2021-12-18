@@ -1,4 +1,3 @@
-#include "gfx/instance.h"
 
 #include "application/application.h"
 #include "assertion.h"
