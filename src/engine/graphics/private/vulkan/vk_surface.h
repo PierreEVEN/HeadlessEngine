@@ -15,6 +15,7 @@ class Surface_VK : public Surface
 
     void submit_command_buffer(const CommandBuffer* command_buffer) override
     {
+        (void)command_buffer;
     }
 
   private:

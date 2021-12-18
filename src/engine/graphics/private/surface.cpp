@@ -13,7 +13,8 @@ Surface* Surface::create_surface(application::window::Window* container)
 {
 #if GFX_USE_VULKAN
     return new vulkan::Surface_VK(container);
-#endif
+#else
     return nullptr;
+#endif
 }
 } // namespace gfx

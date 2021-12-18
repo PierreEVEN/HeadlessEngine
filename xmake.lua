@@ -6,7 +6,7 @@ set_allowedmodes("debug", "release")
 set_defaultmode("release")
 set_warnings("allextra")
 set_allowedarchs("windows|x64")
-set_optimize("none") -- aggressive
+set_optimize("aggressive") -- aggressive
 set_languages("clatest", "cxx20")
 set_rundir(".")
 

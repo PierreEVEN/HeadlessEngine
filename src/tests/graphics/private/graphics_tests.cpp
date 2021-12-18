@@ -6,116 +6,15 @@
 
 #include <thread>
 
+#include "ecs/ecs.h"
+
 #include <cpputils/logger.hpp>
-
-struct TestComponent
-{
-
-    void test_func()
-    {
-        local_var++;
-    }
-
-    int local_var;
-};
-
-struct TestComponentParent
-{
-
-    virtual void test_func()
-    {
-        local_var++;
-    }
-
-    int local_var;
-};
-
-struct DerivComponent : public TestComponentParent
-{
-    void test_func() override
-    {
-        local_var--;
-    }
-};
-
-#define TEST_N 10000000
 
 int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
-    {
-        std::vector<DerivComponent> deriv_comp;
-        deriv_comp.resize(TEST_N);
-        for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) DerivComponent();
 
-      std::vector<TestComponentParent*> rand_comp;
-        rand_comp.resize(TEST_N);
-        for (auto& comp : rand_comp)
-            comp = new DerivComponent();
-
-        auto now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->test_func();
-        LOG_WARNING(" AVEC APPEL DE METHODE VIRTUELLE");
-
-        LOG_DEBUG("A) Tick sauce unreal : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.test_func();
-        LOG_DEBUG("B) Tick a la unreal mais memoire contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.local_var++;
-        LOG_DEBUG("D) foreach sans appel de fonction et memoire contigue (ECS stonks) : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->local_var++;
-        LOG_DEBUG("E) foreach sans appel de fonction mais memoire pas contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        for (int i = 0; i < TEST_N; ++i)
-            delete rand_comp[i];
-    }
-    {
-        std::vector<TestComponent> deriv_comp;
-        deriv_comp.resize(TEST_N);
-        for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) TestComponent();
-
-        std::vector<TestComponent*> rand_comp;
-        rand_comp.resize(TEST_N);
-        for (auto& comp : rand_comp)
-            comp = new TestComponent();
-
-        auto now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->test_func();
-        LOG_WARNING(" SANS APPEL DE METHODE VIRTUELLE");
-
-        LOG_DEBUG("A) Tick sauce unreal : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.test_func();
-        LOG_DEBUG("B) Tick a la unreal mais memoire contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.local_var++;
-        LOG_DEBUG("D) foreach sans appel de fonction et memoire contigue (ECS stonks) : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->local_var++;
-        LOG_DEBUG("E) foreach sans appel de fonction mais memoire pas contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        for (int i = 0; i < TEST_N; ++i)
-            delete rand_comp[i];
-    }
-    exit(EXIT_SUCCESS);
+    ecs::ecs_test();
 
     /**
      * 1° initialize the application and the gfx backend
