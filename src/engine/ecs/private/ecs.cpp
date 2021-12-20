@@ -1,18 +1,9 @@
 #include "ecs/ecs.h"
 
+#include "ecs/actor.h"
+
 namespace ecs
 {
-
-void MyComponent::pre_render()
-{
-}
-
-void MyComponent::render(gfx::CommandBuffer* command_buffer)
-{
-    (void)command_buffer;
-    internal_val++;
-}
-
 std::unique_ptr<ECS> ecs_singleton;
 
 ECS& ECS::get()
@@ -22,95 +13,331 @@ ECS& ECS::get()
     return *ecs_singleton.get();
 }
 
+ECS::~ECS()
+{
+}
+
+ActorVariant* ECS::find_variant(const std::vector<ComponentTypeID>& variant_spec)
+{
+    for (ActorVariant* archetype : variant_registry)
+        if (archetype->variant_specification == variant_spec)
+            return archetype;
+
+    ActorVariant* new_variant          = new ActorVariant();
+    new_variant->variant_specification = variant_spec;
+    variant_registry.emplace_back(new_variant);
+
+    for (size_t i = 0; i < variant_spec.size(); ++i)
+    {
+        new_variant->component_data.emplace_back(new ComponentDataType[0]);
+        new_variant->per_component_data_size.emplace_back(0);
+    }
+
+    return new_variant;
+}
+
+void ECS::add_empty_actor(const ActorID actor_instance_id)
+{
+    ActorMetaData actor_data;
+    actor_data.variant                 = nullptr;
+    actor_data.data_index              = 0;
+    actor_meta_data[actor_instance_id] = actor_data;
+}
+
+void ECS::remove_actor(const ActorID& removed_actor)
+{
+    if (!actor_meta_data.contains(removed_actor))
+        return; // it doesn't exist
+
+    ActorMetaData& record = actor_meta_data[removed_actor];
+
+    ActorVariant* oldArchetype = record.variant;
+
+    if (!oldArchetype)
+    {
+        actor_meta_data.erase(removed_actor);
+        return; // we wouldn't know where to delete
+    }
+
+    for (std::size_t i = 0; i < oldArchetype->variant_specification.size(); ++i)
+    {
+        const ComponentTypeID& oldCompId = oldArchetype->variant_specification[i];
+
+        const IComponent* const comp = component_registry[oldCompId];
+
+        const std::size_t& compSize = comp->type_size();
+
+        comp->component_destroy(&oldArchetype->component_data[i][record.data_index * compSize]);
+    }
+
+    for (std::size_t i = 0; i < oldArchetype->variant_specification.size(); ++i)
+    {
+        const ComponentTypeID& oldCompID = oldArchetype->variant_specification[i];
+
+        const IComponent* const oldComp = component_registry[oldCompID];
+
+        const std::size_t& oldCompDataSize = oldComp->type_size();
+
+        ComponentDataType* newData = new unsigned char[oldArchetype->per_component_data_size[i] - oldCompDataSize];
+        oldArchetype->per_component_data_size[i] -= oldCompDataSize;
+        for (std::size_t e = 0, ei = 0; e < oldArchetype->linked_actors.size(); ++e)
+        {
+            if (e == record.data_index)
+                continue;
+
+            oldComp->component_move(&oldArchetype->component_data[i][e * oldCompDataSize], &newData[ei * oldCompDataSize]);
+
+            oldComp->component_destroy(&oldArchetype->component_data[i][e * oldCompDataSize]);
+
+            ++ei;
+        }
+
+        delete[] oldArchetype->component_data[i];
+
+        oldArchetype->component_data[i] = newData;
+    }
+
+    actor_meta_data.erase(removed_actor);
+
+    const auto removed_iterator = std::ranges::find(oldArchetype->linked_actors, removed_actor);
+
+    std::for_each(removed_iterator, oldArchetype->linked_actors.end(), [this, &oldArchetype, &removed_actor](const ActorID& eid) {
+        if (eid == removed_actor)
+            return; // no need to adjust our removing one
+        ActorMetaData& moveR = actor_meta_data[eid];
+        moveR.data_index -= 1;
+    });
+
+    oldArchetype->linked_actors.erase(removed_iterator);
+}
+
+ActorID ECS::make_new_actor_id()
+{
+    return last_actor_id++;
+}
+
+
+
+
+
+
+
+
+
+
+struct TestComponent
+{
+
+    void test_func()
+    {
+        local_var++;
+    }
+
+    int local_var;
+};
+
+struct TestComponentParent
+{
+
+    virtual void test_func()
+    {
+        local_var++;
+    }
+
+    int local_var;
+};
+
+struct DerivComponent : public TestComponentParent
+{
+    void test_func() override
+    {
+        local_var--;
+    }
+};
+
+#define TEST_N 10000000
+
+void perf_test()
+{
+    Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
+    {
+        std::vector<DerivComponent> deriv_comp;
+        deriv_comp.resize(TEST_N);
+        for (int i = 0; i < TEST_N; ++i)
+            new (&deriv_comp[i]) DerivComponent();
+
+        std::vector<TestComponentParent*> rand_comp;
+        rand_comp.resize(TEST_N);
+        for (auto& comp : rand_comp)
+            comp = new DerivComponent();
+
+        auto now = std::chrono::steady_clock::now();
+        for (auto& comp : rand_comp)
+            comp->test_func();
+        LOG_WARNING(" AVEC APPEL DE METHODE VIRTUELLE");
+
+        LOG_DEBUG("A) Tick sauce unreal : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : deriv_comp)
+            comp.test_func();
+        LOG_DEBUG("B) Tick a la unreal mais memoire contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : deriv_comp)
+            comp.local_var++;
+        LOG_DEBUG("D) foreach sans appel de fonction et memoire contigue (ECS stonks) : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : rand_comp)
+            comp->local_var++;
+        LOG_DEBUG("E) foreach sans appel de fonction mais memoire pas contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        for (int i = 0; i < TEST_N; ++i)
+            delete rand_comp[i];
+    }
+    {
+        std::vector<TestComponent> deriv_comp;
+        deriv_comp.resize(TEST_N);
+        for (int i = 0; i < TEST_N; ++i)
+            new (&deriv_comp[i]) TestComponent();
+
+        std::vector<TestComponent*> rand_comp;
+        rand_comp.resize(TEST_N);
+        for (auto& comp : rand_comp)
+            comp = new TestComponent();
+
+        auto now = std::chrono::steady_clock::now();
+        for (auto& comp : rand_comp)
+            comp->test_func();
+        LOG_WARNING(" SANS APPEL DE METHODE VIRTUELLE");
+
+        LOG_DEBUG("A) Tick sauce unreal : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : deriv_comp)
+            comp.test_func();
+        LOG_DEBUG("B) Tick a la unreal mais memoire contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : deriv_comp)
+            comp.local_var++;
+        LOG_DEBUG("D) foreach sans appel de fonction et memoire contigue (ECS stonks) : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        now = std::chrono::steady_clock::now();
+        for (auto& comp : rand_comp)
+            comp->local_var++;
+        LOG_DEBUG("E) foreach sans appel de fonction mais memoire pas contigue : \n%d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        for (int i = 0; i < TEST_N; ++i)
+            delete rand_comp[i];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct MyComp
 {
     MyComp(float val)
     {
         (void)val;
     }
-
+    
     void tick()
     {
-    }
-};
-struct MyComp2
-{
-    MyComp2(float val)
-    {
-        (void)val;
+        val++;
     }
 
-    void pre_render()
+    int val;
+};
+struct MyComp2 : public MyComp
+{
+    MyComp2(float val) : MyComp(val)
     {
+    }
+
+    virtual void tick()
+    {
+        val--;
     }
 };
 
 void ecs_test()
 {
-    /*
+    ECS::get().register_component_type<MyComp>();
+    ECS::get().register_component_type<MyComp2>();
+
+    std::vector<Actor*> actors;
+
+    auto now = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < 10000000; ++i)
     {
-        // register different components
-        auto comp_data = register_component<MyComponent>();
+        Actor* new_actor = new Actor;
+        new_actor->add_component<MyComp>(10.f);
+        actors.emplace_back(new_actor);
+    }
+    LOG_DEBUG("Create duration : %d", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
 
-        // Create an example of components
-        const size_t component_count = 10000000;
-        auto*        component_data  = static_cast<uint8_t*>(malloc(sizeof(MyComponent) * 10000000));
-        for (size_t i = 0; i < component_count; ++i)
-            new (component_data + i * sizeof(MyComponent)) MyComponent();
+    perf_test();
 
-        // Example game loop
-        do
+    LOG_WARNING("ECS perfs");
+    now = std::chrono::steady_clock::now();
+    // example game loop
+    do
+    {
+        gfx::CommandBuffer* command_buffer = {}; // @TODO
+
+        // Execute tick, pre-render, render method for every components
+        for (const auto& variant : ECS::get().get_variants())
         {
-            // foreach comp class
-            do
+            for (size_t i = 0; i < variant->variant_specification.size(); ++i)
             {
-                if (comp_data.pre_render_runner)
-                    comp_data.pre_render_runner->execute(component_data, component_count);
+                IComponent* component_type = ECS::get().get_component_type(variant->variant_specification[i]);
 
-                if (comp_data.render_runner)
-                    comp_data.render_runner->execute(component_data, component_count, nullptr);
+                if (component_type->tick_runner) // Only if the component implement the tick method
+                    component_type->tick_runner->execute(variant->component_data[i], variant->linked_actors.size());
 
-                if (comp_data.tick_runner)
-                    comp_data.tick_runner->execute(component_data, component_count);
-            } while (false);
-        } while (false);
 
-        free(component_data);
-    }
-    */
+                if (component_type->pre_render_runner) // Only if the component implement the pre-render method
+                    component_type->pre_render_runner->execute(variant->component_data[i], variant->linked_actors.size());
 
-    auto ecs = ECS::get();
-
-    ecs.register_component_type<MyComp>();
-    ecs.register_component_type<MyComp2>();
-
-    ActorID actor_1 = ecs.make_new_actor_id();
-    ecs.add_empty_actor(actor_1);
-    ecs.add_component<MyComp>(actor_1, 10.f);
-    ecs.add_component<MyComp2>(actor_1, 10.f);
-}
-
-void IComponent::resize_component_memory(size_t new_size, ActorVariant* variant, size_t component_type_index) const
-{
-    if (new_size > variant->per_component_data_size[0])
-    {
-        size_t size = type_size();
-
-        LOG_INFO("need to resize data from %ld to %ld", variant->per_component_data_size[0], new_size);
-
-        variant->per_component_data_size[0] *= 2;
-        variant->per_component_data_size[0] += size;
-
-        // Move components to their new memory block
-        auto* new_component_data = new ComponentDataType[variant->per_component_data_size[component_type_index]];
-        for (std::size_t e = 0; e < variant->linked_actors.size(); ++e)
-        {
-            component_move(&variant->component_data[component_type_index][e * size], &new_component_data[e * size]);
-            component_destroy(&variant->component_data[component_type_index][e * size]);
+                if (component_type->render_runner) // Only if the component implement the render method
+                    component_type->render_runner->execute(variant->component_data[i], variant->linked_actors.size(), command_buffer);
+            }
         }
-        delete[] variant->component_data[0];
 
-        variant->component_data[0] = new_component_data;
+        LOG_DEBUG("total duration : %d", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
+
+        //@TODO add custom runners for maximal performances
+
+    } while (false);
+
+    now = std::chrono::steady_clock::now();
+    for (auto& actor : actors)
+    {
+        //delete actor;
     }
+    LOG_DEBUG("Destroy duration : %d", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
 }
+
 } // namespace ecs
