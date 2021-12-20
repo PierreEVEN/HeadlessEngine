@@ -15,6 +15,22 @@ ECS& ECS::get()
 
 ECS::~ECS()
 {
+    for (const ActorVariant* variant : variant_registry)
+    {
+        for (size_t i = 0; i < variant->variant_specification.size(); ++i)
+        {
+            const IComponent* const component           = component_registry[variant->variant_specification[i]];
+            const size_t&           component_item_size = component->type_size();
+            for (size_t e = 0; e < variant->linked_actors.size(); ++e)
+            {
+                component->component_destroy(&variant->component_data[i][e * component_item_size]);
+            }
+            delete[] variant->component_data[i];
+        }
+        delete variant;
+    }
+    for (auto& comp : component_registry)
+        delete comp.second;
 }
 
 ActorVariant* ECS::find_variant(const std::vector<ComponentTypeID>& variant_spec)
@@ -101,7 +117,8 @@ void ECS::remove_actor(const ActorID& removed_actor)
 
     const auto removed_iterator = std::ranges::find(oldArchetype->linked_actors, removed_actor);
 
-    std::for_each(removed_iterator, oldArchetype->linked_actors.end(), [this, &oldArchetype, &removed_actor](const ActorID& eid) {
+    std::for_each(removed_iterator, oldArchetype->linked_actors.end(), [this, &oldArchetype, &removed_actor](const ActorID& eid)
+    {
         if (eid == removed_actor)
             return; // no need to adjust our removing one
         ActorMetaData& moveR = actor_meta_data[eid];
@@ -117,17 +134,8 @@ ActorID ECS::make_new_actor_id()
 }
 
 
-
-
-
-
-
-
-
-
 struct TestComponent
 {
-
     void test_func()
     {
         local_var++;
@@ -138,7 +146,6 @@ struct TestComponent
 
 struct TestComponentParent
 {
-
     virtual void test_func()
     {
         local_var++;
@@ -164,7 +171,7 @@ void perf_test()
         std::vector<DerivComponent> deriv_comp;
         deriv_comp.resize(TEST_N);
         for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) DerivComponent();
+            new(&deriv_comp[i]) DerivComponent();
 
         std::vector<TestComponentParent*> rand_comp;
         rand_comp.resize(TEST_N);
@@ -200,7 +207,7 @@ void perf_test()
         std::vector<TestComponent> deriv_comp;
         deriv_comp.resize(TEST_N);
         for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) TestComponent();
+            new(&deriv_comp[i]) TestComponent();
 
         std::vector<TestComponent*> rand_comp;
         rand_comp.resize(TEST_N);
@@ -235,33 +242,13 @@ void perf_test()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct MyComp
 {
     MyComp(float val)
     {
         (void)val;
     }
-    
+
     void tick()
     {
         val++;
@@ -269,9 +256,11 @@ struct MyComp
 
     int val;
 };
+
 struct MyComp2 : public MyComp
 {
-    MyComp2(float val) : MyComp(val)
+    MyComp2(float val)
+        : MyComp(val)
     {
     }
 
@@ -317,7 +306,6 @@ void ecs_test()
                 if (component_type->tick_runner) // Only if the component implement the tick method
                     component_type->tick_runner->execute(variant->component_data[i], variant->linked_actors.size());
 
-
                 if (component_type->pre_render_runner) // Only if the component implement the pre-render method
                     component_type->pre_render_runner->execute(variant->component_data[i], variant->linked_actors.size());
 
@@ -329,7 +317,6 @@ void ecs_test()
         LOG_DEBUG("total duration : %d", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
 
         //@TODO add custom runners for maximal performances
-
     } while (false);
 
     now = std::chrono::steady_clock::now();
@@ -339,5 +326,4 @@ void ecs_test()
     }
     LOG_DEBUG("Destroy duration : %d", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
 }
-
 } // namespace ecs

@@ -6,6 +6,9 @@
 #include <cpputils/logger.hpp>
 #include <unordered_map>
 
+#include "ecs/system.h"
+
+
 namespace ecs
 {
 void ecs_test();
