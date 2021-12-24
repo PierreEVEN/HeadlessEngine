@@ -1,3 +1,4 @@
+#include "ecs_benchmark.h"
 #include "application/application.h"
 #include "application/window.h"
 #include "gfx/surface.h"
@@ -14,6 +15,8 @@ int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
+    LOG_WARNING("##### RUNNING BENCHMARK TESTS (%d entities) #####", TEST_N);
+    perf_test();
     ecs::ecs_test();
 
     /**

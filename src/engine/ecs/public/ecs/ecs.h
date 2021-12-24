@@ -8,10 +8,17 @@
 
 #include "ecs/system.h"
 
+#define TEST_N 20000
 
 namespace ecs
 {
 void ecs_test();
+
+template <typename T>
+concept has_add_systems_function = requires(T& t)
+{
+    T::add_systems(nullptr);
+};
 
 class ECS final
 {
@@ -29,6 +36,9 @@ class ECS final
         if (is_component_type_registered<Component_T>())
             return;
         component_registry[TComponent<Component_T>::get_type_id()] = new TComponent<Component_T>();
+
+        if constexpr (has_add_systems_function<Component_T>)
+            Component_T::add_systems(&system_factory);
     }
 
     void                                                              add_empty_actor(const ActorID actor_instance_id);
@@ -48,6 +58,15 @@ class ECS final
         return component_registry[type_id];
     }
 
+    [[nodiscard]] SystemFactory* get_system_factory()
+    {
+        return &system_factory;
+    }
+
+    void tick();
+    void pre_render();
+    void render(gfx::CommandBuffer* command_buffer);
+
   private:
     ECS() = default;
 
@@ -55,6 +74,7 @@ class ECS final
     std::unordered_map<ActorID, ActorMetaData>       actor_meta_data;
     std::vector<ActorVariant*>                       variant_registry;
     ActorID                                          last_actor_id = 0;
+    SystemFactory                                    system_factory;
 };
 
 template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_component(const ActorID& to_actor, CtorArgs_T&&... args)
@@ -78,9 +98,11 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
     if (!initial_variant)
     {
         // 1) Find an existing variant with given specs or create a new one
-        std::vector<ComponentTypeID> new_variant_spec = {added_component_type_id};
-        const IComponent*            component_type   = component_registry[added_component_type_id];
-        final_variant                                 = find_variant(new_variant_spec);
+        const std::vector new_variant_spec = {added_component_type_id};
+        const IComponent* component_type   = component_registry[added_component_type_id];
+        final_variant                      = find_variant(new_variant_spec);
+
+        ComponentDataType* raw_memory = final_variant->add_actor(to_actor);
 
         // 2) Eventually resize the component's data (there is one component at this moment)
         const std::size_t actual_data_size = final_variant->linked_actors.size() * type_size;
@@ -180,10 +202,12 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
         auto moved_back_actors = std::ranges::find(initial_variant->linked_actors, to_actor);
 
         // Move index back to erase the removed one
-        std::for_each(moved_back_actors, initial_variant->linked_actors.end(), [this, &initial_variant](const ActorID& eid) {
-            ActorMetaData& moveR = actor_meta_data[eid];
-            --moveR.data_index;
-        });
+        std::for_each(moved_back_actors, initial_variant->linked_actors.end(),
+                      [this, &initial_variant](const ActorID& eid)
+                      {
+                          ActorMetaData& moveR = actor_meta_data[eid];
+                          --moveR.data_index;
+                      });
 
         // Remove the last index
         initial_variant->linked_actors.erase(moved_back_actors);
@@ -224,6 +248,7 @@ template <class Component_T, typename... CtorArgs_T> void ECS::remove_component(
     std::ranges::sort(final_variant_specs);
     ActorVariant* final_variant = find_variant(final_variant_specs);
 
+    // Move to new variant
     for (std::size_t j = 0; j < final_variant_specs.size(); ++j)
     {
         const ComponentTypeID&  new_component_id        = final_variant_specs[j];
@@ -235,6 +260,7 @@ template <class Component_T, typename... CtorArgs_T> void ECS::remove_component(
 
         std::vector<ComponentTypeID> old_component_spec = initial_variant->variant_specification;
 
+        // Copy old component data into the new variant
         for (std::size_t i = 0; i < initial_variant->variant_specification.size(); ++i)
         {
             const ComponentTypeID old_component_id = initial_variant->variant_specification[i];
@@ -251,43 +277,28 @@ template <class Component_T, typename... CtorArgs_T> void ECS::remove_component(
         }
     }
 
+    // Remove from old variant
     for (std::size_t i = 0; i < initial_variant->variant_specification.size(); ++i)
     {
-        const ComponentTypeID& oldCompTypeID = initial_variant->variant_specification[i];
+        const ComponentTypeID& old_component_type_id = initial_variant->variant_specification[i];
 
         // if this is the component being removed, we should also destruct it
-        if (oldCompTypeID == compTypeId)
+        if (old_component_type_id == compTypeId)
             component_registry[compTypeId]->component_destroy(&initial_variant->component_data[i][actor_data.data_index * sizeof(Component_T)]);
 
-        const IComponent* oldComp = component_registry[oldCompTypeID];
-
+        const IComponent* oldComp         = component_registry[old_component_type_id];
         const std::size_t oldCompDataSize = oldComp->type_size();
-
-        initial_variant->per_component_data_size[i] -= oldCompDataSize;
-        auto* newData = new ComponentDataType[initial_variant->per_component_data_size[i]];
-        for (std::size_t e = 0, ei = 0; e < initial_variant->linked_actors.size(); ++e)
-        {
-            if (e == actor_data.data_index)
-                continue;
-
-            oldComp->component_move(&initial_variant->component_data[i][e * oldCompDataSize], &newData[ei * oldCompDataSize]);
-            oldComp->component_destroy(&initial_variant->component_data[i][e * oldCompDataSize]);
-            ++ei;
-        }
-
-        delete[] initial_variant->component_data[i];
-
-        initial_variant->component_data[i] = newData;
+        LOG_WARNING("try resize to %d", initial_variant->per_component_data_size[i] - oldCompDataSize);
+        oldComp->resize_component_memory(initial_variant->per_component_data_size[i] - oldCompDataSize, initial_variant, i);
     }
 
-    // each entity in the old archetypes entityIds after this one now
-    // has an index 1 less
     auto willBeRemoved = std::ranges::find(initial_variant->linked_actors, from_actor);
-
-    std::for_each(willBeRemoved, initial_variant->linked_actors.end(), [this, &initial_variant](const ActorID& eid) {
-        ActorMetaData& moveR = actor_meta_data[eid];
-        --moveR.data_index;
-    });
+    std::for_each(willBeRemoved, initial_variant->linked_actors.end(),
+                  [this, &initial_variant](const ActorID& eid)
+                  {
+                      ActorMetaData& moveR = actor_meta_data[eid];
+                      --moveR.data_index;
+                  });
 
     initial_variant->linked_actors.erase(std::ranges::remove(initial_variant->linked_actors, from_actor).begin(), initial_variant->linked_actors.end());
 

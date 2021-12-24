@@ -2,5 +2,5 @@
 
 declare_module("ecs", {"graphics"}, {"cpputils"})
 
-target("application")
+target("ecs")
 	set_group("engine_new")

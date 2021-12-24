@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+inline bool isATest = false;
+
 namespace gfx
 {
 class CommandBuffer;
