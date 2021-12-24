@@ -2,15 +2,11 @@
 
 #include "benchmark_types.h"
 
-
-namespace entt_bench
+namespace raw_bench
 {
-
 void create_entities();
 
 void iterate_entities();
 
 void destroy_entities();
-
-
-}
+} // namespace ecs_bench

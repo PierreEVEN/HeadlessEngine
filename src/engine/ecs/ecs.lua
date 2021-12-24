@@ -1,6 +1,6 @@
 
 
-declare_module("ecs", {"graphics"}, {"cpputils"})
+declare_module("ecs", {"types"}, {"cpputils"})
 
 target("ecs")
 	set_group("engine_new")

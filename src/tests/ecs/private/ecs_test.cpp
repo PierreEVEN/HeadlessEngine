@@ -1,4 +1,6 @@
 #include "ecs_benchmark.h"
+#include "entt_benchmark.h"
+#include "raw_benchmark.h"
 #include "ecs/actor.h"
 
 #include "ecs/ecs.h"
@@ -7,52 +9,11 @@
 
 #include "entt/entt.hpp"
 
-struct MyComp
-{
-    MyComp(float in_val) : val(in_val)
-    {
-    }
-
-    void tick()
-    {
-        val++;
-    }
-    
-    static void add_systems(ecs::SystemFactory* factory)
-    {
-        factory->tick<MyComp>(
-            [](ecs::TSystemIterable<MyComp> iterator)
-            {
-                for (auto [entity, comp1] : iterator)
-                {
-                    comp1.val = static_cast<float>(*entity);
-                }
-            });
-    }
-
-    float val;
-  private:
-};
-
-struct MyComp2
-{
-    MyComp2(float in_val) : val(in_val)
-    {
-    }
-
-    void tick()
-    {
-        val--;
-    }
-    
-  private:
-    float val;
-};
-
 int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
+    /*
     ecs::ECS::get().register_component_type<MyComp>();
     ecs::ECS::get().register_component_type<MyComp2>();
 
@@ -90,71 +51,25 @@ int main()
     act1.~Actor();
     act2.~Actor();
     act3.~Actor();
+    */
+
+    LOG_VALIDATE("Starting performance tests with %d entities", BENCH_ENTITIES);
+    LOG_VALIDATE("<<<<<< TESTING RAW EXAMPLES >>>>>>");
+    raw_bench::create_entities();
+    raw_bench::iterate_entities();
+    raw_bench::destroy_entities();
+
+    LOG_VALIDATE("<<<<<< TESTING ENTT >>>>>>");
+    entt_bench::create_entities();
+    entt_bench::iterate_entities();
+    entt_bench::destroy_entities();
+
+    LOG_VALIDATE("<<<<<< TESTING ECS >>>>>>");
+    ecs_bench::create_entities();
+    ecs_bench::iterate_entities();
+    ecs_bench::destroy_entities();
 
 
-
-    LOG_WARNING("######### ------ PERFORMANCE TESTS ------ #########");
-    perf_test();
-
-    LOG_WARNING("###### ENTITY PERF TESTS ######");
-    entt::registry registry;
-
-    auto now = std::chrono::steady_clock::now();
-    for (size_t i = 0; i < TEST_N; ++i)
-    {
-        const auto entity = registry.create();
-        registry.emplace<MyComp>(entity, 20);
-    }
-    LOG_DEBUG("Created %d entities in %d us", TEST_N, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-    auto view = registry.view<MyComp>();
-    now = std::chrono::steady_clock::now();
-    view.each(
-        [](MyComp& my_comp)
-        {
-            my_comp.val++;
-        });
-    LOG_DEBUG("Run entt loop : (%d entities) %d us", TEST_N, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-    now                     = std::chrono::steady_clock::now();
-    const auto velocityView = registry.view<MyComp>();
-    for (const entt::entity entity : velocityView)
-    {
-        velocityView.get<MyComp>(entity).val++;
-    }
-    LOG_DEBUG("Run entt loop V2 : (%d entities) %d us", TEST_N, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-    registry.~basic_registry();
-    // registry.destroy();
-
-    LOG_WARNING("##### RUNNING ECS PERF TEST (%d entities) #####", TEST_N);
-    
-    std::vector<ecs::Actor*> actors;
-    actors.resize(TEST_N);
-
-    now = std::chrono::steady_clock::now();
-    for (int i = 0; i < TEST_N; ++i)
-    {
-        const auto new_actor = new ecs::Actor();
-        new_actor->add_component<MyComp>(10.f);
-        actors[i] = new_actor;
-    }
-    LOG_DEBUG("Created %d entities in %d us", TEST_N, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-    // example game loop
-    do
-    {
-        gfx::CommandBuffer* command_buffer = {}; // @TODO
-        ecs::ECS::get().tick();
-        ecs::ECS::get().pre_render();
-        ecs::ECS::get().render(command_buffer);
-    } while (false);
-
-    now = std::chrono::steady_clock::now();
-    for (const auto& actor : actors)
-        delete actor;
-    LOG_DEBUG("Destroy %d entities in %d us", TEST_N, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-
+    LOG_VALIDATE("finnished performance tests");
     exit(EXIT_SUCCESS);
 }

@@ -1,102 +1,49 @@
 #include "ecs_benchmark.h"
 
+#include "ecs/actor.h"
 #include "ecs/ecs.h"
+#include "profiler/profiler.h"
+
 #include <cpputils/logger.hpp>
 
-
-
-void TestComponent::test_func()
+namespace ecs_bench
 {
-    local_var++;
-}
+std::vector<ecs::Actor> actors;
 
-void TestComponentParent::test_func()
+void create_entities()
 {
-    local_var++;
-}
-
-void DerivComponent::test_func()
-{
-    local_var--;
-}
-
-void perf_test()
-{
-    LOG_WARNING("##### RUNNING BENCHMARK TESTS (%d entities) #####", TEST_N);
-    Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
+    Profiler prof;
+    actors.resize(BENCH_ENTITIES);
+    for (int i = 0; i < BENCH_ENTITIES; ++i)
     {
-        std::vector<DerivComponent> deriv_comp;
-        deriv_comp.resize(TEST_N);
-        for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) DerivComponent();
-
-        std::vector<TestComponentParent*> rand_comp;
-        rand_comp.resize(TEST_N);
-        for (auto& comp : rand_comp)
-            comp = new DerivComponent();
-
-        auto now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->test_func();
-        LOG_WARNING("1) Using a virtual method");
-
-        LOG_DEBUG("a. Virtual method call on randomly allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.test_func();
-        LOG_DEBUG("b. Virtual method call on continuous allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.local_var++;
-        LOG_DEBUG("c. iterate over components with continuous allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : rand_comp)
-            comp->local_var++;
-        LOG_DEBUG("d. iterate over components with randomly allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        for (int i = 0; i < TEST_N; ++i)
-            delete rand_comp[i];
+        actors[i].add_component<FirstComponent>(10.f);
     }
-    {
-        std::vector<TestComponent> deriv_comp;
-        deriv_comp.resize(TEST_N);
-        for (int i = 0; i < TEST_N; ++i)
-            new (&deriv_comp[i]) TestComponent();
-
-        std::vector<TestComponent*> rand_comp;
-        rand_comp.resize(TEST_N);
-        for (auto& comp : rand_comp)
-            comp = new TestComponent();
-
-        auto now = std::chrono::steady_clock::now();
-        for (const auto& comp : rand_comp)
-            comp->test_func();
-        LOG_WARNING("2) Without using a virtual method");
-
-        LOG_DEBUG("a. method call on randomly allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.test_func();
-
-        LOG_DEBUG("b. method call on continuous allocated memory (Best theoretical perfs using an ECS on a callback) : \n\t\t=> %d us",
-                  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (auto& comp : deriv_comp)
-            comp.local_var++;
-        LOG_DEBUG("c. iterate over components with continuous allocated memory (Best theoretical perfs using the full ECS) : \n\t\t=> %d us",
-                  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        now = std::chrono::steady_clock::now();
-        for (const auto& comp : rand_comp)
-            comp->local_var++;
-        LOG_DEBUG("d. iterate over components with randomly allocated memory : \n\t\t=> %d us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - now).count());
-
-        for (int i = 0; i < TEST_N; ++i)
-            delete rand_comp[i];
-    }
+    LOG_INFO("CREATE : %lf ms", prof.get_ms());
 }
+
+void iterate_entities()
+{
+    Profiler prof1;
+    for (const auto& variant : ecs::ECS::get().get_variants())
+    {
+        for (size_t i = 0; i < variant->components.size(); ++i)
+        {
+            const ecs::IComponent* component_type = variant->components[i].component_type;
+            if (component_type->tick_runner) // Only if the component implement the tick method
+                component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
+        }
+    }
+    LOG_INFO("RUN SLOW : %lf ms", prof1.get_ms());
+
+    Profiler prof2;
+    ecs::ECS::get().get_system_factory()->execute_tick();
+    LOG_INFO("RUN FAST : %lf ms", prof2.get_ms());
+}
+
+void destroy_entities()
+{
+    Profiler prof;
+    actors.clear();
+    LOG_INFO("DESTROY : %lf ms", prof.get_ms());
+}
+} // namespace ecs_bench

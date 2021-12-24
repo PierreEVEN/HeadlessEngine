@@ -1,11 +1,11 @@
 #pragma once
-#include "ecs/system.h"
 #include "actor_meta_data.h"
 #include "component.h"
+#include "ecs/system.h"
 #include "ecs_type.h"
 
 #include <cpputils/logger.hpp>
-#include <unordered_map>
+#include <types/robin_hood_map.h>
 
 namespace ecs
 {
@@ -64,14 +64,20 @@ class ECS final
     void pre_render();
     void render(gfx::CommandBuffer* command_buffer);
 
+    [[nodiscard]] size_t count_actors() const
+    {
+        return actor_registry.size();
+    }
+
   private:
     friend struct ActorVariant;
 
     ECS() = default;
 
-    std::unordered_map<ComponentTypeID, IComponent*> component_registry;
-    std::unordered_map<ActorID, ActorMetaData>       actor_registry;
-    std::vector<ActorVariant*>                       variant_registry;
+    robin_hood::unordered_map<ComponentTypeID, IComponent*> component_registry;
+    robin_hood::unordered_map<ActorID, ActorMetaData>       actor_registry;
+    robin_hood::unordered_map<ActorID, uint32_t>       actor_links;
+    std::vector<ActorVariant*>                              variant_registry;
 
     ActorID       last_actor_id = 0;
     SystemFactory system_factory;
@@ -79,13 +85,8 @@ class ECS final
 
 template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_component(const ActorID& to_actor, CtorArgs_T&&... args)
 {
-    Component_T* component_memory = nullptr;
-
     if (!is_component_type_registered<Component_T>())
-    {
-        LOG_ERROR("component type %s is not registered. Please call ECS::get().register_component<%s>(); before", typeid(Component_T).name(), typeid(Component_T).name());
-        return component_memory;
-    }
+        register_component_type<Component_T>();
 
     // Retrieve initial context and type infos
     const ComponentTypeID added_component_type_id = TComponent<Component_T>::get_type_id();
@@ -96,10 +97,10 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
     {
         // 1) Find an existing variant with given specs or create a new one
         std::vector new_variant_spec = {added_component_type_id};
-        auto*             final_variant    = find_variant(new_variant_spec);
+        auto*       final_variant    = find_variant(new_variant_spec);
 
         final_variant->add_actor(actor_data);
-        component_memory = new (final_variant->get_last_element_memory(added_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
+        return new (final_variant->get_last_element_memory(added_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
     }
     else // We need to find an existing variant or to create a new one for the given actor
     {
@@ -111,9 +112,8 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
         auto* final_variant = find_variant(new_specifications); // find or create variant with given specs
 
         final_variant->move_actor_from(actor_data, actor_data->variant);
-        component_memory = new (final_variant->get_last_element_memory(added_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
+        return new (final_variant->get_last_element_memory(added_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
     }
-    return component_memory;
 }
 
 template <class Component_T> void ECS::remove_component(const ActorID& from_actor)

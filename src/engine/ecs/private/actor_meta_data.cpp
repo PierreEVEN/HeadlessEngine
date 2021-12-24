@@ -14,7 +14,6 @@ ActorVariant::ActorVariant(const std::vector<ComponentTypeID>& in_specification)
             LOG_FATAL("component with id %lu is not registered", in_specification[i])
 
         components[i] = ComponentData{
-            .data_size      = 0,
             .type_size      = component->type_size(),
             .component_data = {},
             .type_id        = in_specification[i],
@@ -31,30 +30,25 @@ void ActorVariant::add_actor(ActorMetaData* actor)
     linked_actors.emplace_back(actor->actor_id);
 
     for (auto& component : components)
-        resize_component_data(component);
+        component.component_data.resize(linked_actors.size() * component.type_size);
 }
 
 void ActorVariant::remove_actor(ActorMetaData* actor)
 {
-    size_t removed_index = 0;
-    for (size_t i = 0; i < linked_actors.size(); ++i)
-    {
-        if (linked_actors[i] == actor->actor_id)
-        {
-            removed_index = i;
-            break;
-        }
-    }
+    uint32_t removed_index = actor->data_index;
+
+    // Move last component's data into the removed one to erase it
+    for (auto& component : components)
+        component.component_type->component_move(&component.component_data[actor->data_index * component.type_size], &component.component_data[(linked_actors.size() - 1) * component.type_size]);
+
+    const auto last_ptr = linked_actors.end() - 1;
+
+    ECS::get().actor_registry[*last_ptr].data_index = removed_index;
+    linked_actors[removed_index]                    = *last_ptr;
+    linked_actors.pop_back();
 
     for (auto& component : components)
-        component.component_type->component_move(&component.component_data[(removed_index)*component.type_size], &component.component_data[(linked_actors.size() - 1) * component.type_size]);
-    
-    ECS::get().actor_registry[*(linked_actors.end() - 1)].data_index = static_cast<uint32_t>(removed_index);
-
-    linked_actors.erase(linked_actors.end() - 1);
-
-    for (auto& component : components)
-        resize_component_data(component);
+        component.component_data.resize(linked_actors.size() * component.type_size);
 
     actor->variant    = nullptr;
     actor->data_index = 0;
