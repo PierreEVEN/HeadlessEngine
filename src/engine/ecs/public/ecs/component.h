@@ -5,8 +5,6 @@
 
 #include <algorithm>
 
-inline bool isATest = false;
-
 namespace gfx
 {
 class CommandBuffer;
@@ -45,8 +43,6 @@ class IComponent
     virtual void                 component_destroy(ComponentDataType* data) const                                = 0;
     virtual void                 component_move(ComponentDataType* source, ComponentDataType* destination) const = 0;
     [[nodiscard]] virtual size_t type_size() const                                                               = 0;
-
-    void resize_component_memory(size_t new_size, struct ActorVariant* variant, size_t component_type_index) const;
 
     // Different runner for each component's method
     IMethodRunner<>*                    pre_render_runner = nullptr;

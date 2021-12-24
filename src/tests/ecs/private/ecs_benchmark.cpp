@@ -22,6 +22,7 @@ void DerivComponent::test_func()
 
 void perf_test()
 {
+    LOG_WARNING("##### RUNNING BENCHMARK TESTS (%d entities) #####", TEST_N);
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
     {
         std::vector<DerivComponent> deriv_comp;

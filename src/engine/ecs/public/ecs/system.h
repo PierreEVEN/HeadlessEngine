@@ -10,11 +10,11 @@ namespace ecs
 {
 template <typename... Component_T> struct TSystemIterator
 {
-    TSystemIterator(size_t in_index, std::tuple<Component_T*...> in_components = std::tuple<Component_T*...>{}) : index(in_index), storage(in_components)
+    TSystemIterator(size_t in_index, ActorID* actor_it = nullptr, std::tuple<Component_T*...> in_components = std::tuple<Component_T*...>{}) : actor_iterator(actor_it), index(in_index), storage(in_components)
     {
     }
 
-    using type = std::tuple<Component_T&...>;
+    using type = std::tuple<ActorID*, Component_T&...>;
 
     type operator++()
     {
@@ -23,12 +23,12 @@ template <typename... Component_T> struct TSystemIterator
 
     [[nodiscard]] type operator*()
     {
-        return std::apply(
-            [ptr_index = index](Component_T*... from_ptr)
-            {
-                return std::forward_as_tuple(*(from_ptr + ptr_index)...);
-            },
-            storage);
+        return std::tuple_cat(std::make_tuple<ActorID*>(&actor_iterator[index]), std::apply(
+                                                                                    [ptr_index = index](Component_T*... from_ptr)
+                                                                                    {
+                                                                                        return std::forward_as_tuple(from_ptr[ptr_index]...);
+                                                                                    },
+                                                                                    storage));
     }
 
     template <typename... Other_T> [[nodiscard]] bool operator==(const TSystemIterator<Other_T...>& other) const
@@ -42,10 +42,9 @@ template <typename... Component_T> struct TSystemIterator
     }
 
   private:
-
+    ActorID*                    actor_iterator;
     size_t                      index;
     std::tuple<Component_T*...> storage;
-
 };
 
 template <typename... Component_T> class TSystemIterable
@@ -53,9 +52,7 @@ template <typename... Component_T> class TSystemIterable
   public:
     using iterator = TSystemIterator<Component_T...>;
 
-    TSystemIterable(ActorVariant* variant)
-        : from(0, build_base<0, Component_T...>(variant)),
-          to(variant->linked_actors.size())
+    TSystemIterable(ActorVariant* variant) : from(0, variant->linked_actors.data(), build_base<0, Component_T...>(variant)), to(variant->linked_actors.size())
     {
     }
 
@@ -78,11 +75,11 @@ template <typename... Component_T> class TSystemIterable
         CurrentComp_T* first_component_ptr = nullptr;
 
         size_t index = 0;
-        for (const auto& component : variant->variant_specification)
+        for (const auto& component : variant->components)
         {
-            if (component == TComponent<CurrentComp_T>::get_type_id())
+            if (component.type_id == TComponent<CurrentComp_T>::get_type_id())
             {
-                first_component_ptr = reinterpret_cast<CurrentComp_T*>(variant->component_data[index]);
+                first_component_ptr = reinterpret_cast<CurrentComp_T*>(variant->components[index].component_data.data());
                 break;
             }
             index++;
