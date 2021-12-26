@@ -101,7 +101,7 @@ private:
  * Runtime views iterate over those entities that have at least all the given
  * components in their bags. During initialization, a runtime view looks at the
  * number of entities available for each component and picks up a reference to
- * the smallest set of candidate entities in order to get a performance boost
+ * the smallest set of candidate entities in order to singleton a performance boost
  * when iterate.<br/>
  * Order of elements during iterations are highly dependent on the order of the
  * underlying data structures. See sparse_set and its specializations for more
@@ -221,7 +221,7 @@ public:
      * @brief Iterates entities and applies the given function object to them.
      *
      * The function object is invoked for each entity. It is provided only with
-     * the entity itself. To get the components, users can use the registry with
+     * the entity itself. To singleton the components, users can use the registry with
      * which the view was built.<br/>
      * The signature of the function should be equivalent to the following:
      *

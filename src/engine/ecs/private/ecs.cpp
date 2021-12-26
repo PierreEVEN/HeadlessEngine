@@ -6,7 +6,7 @@ namespace ecs
 {
 std::unique_ptr<ECS> ecs_singleton;
 
-ECS& ECS::get()
+ECS& singleton()
 {
     if (!ecs_singleton)
         ecs_singleton = std::unique_ptr<ECS>(new ECS());
@@ -32,10 +32,10 @@ ActorVariant* ECS::find_variant(std::vector<ComponentTypeID>& variant_spec)
 void ECS::add_empty_actor(const ActorID actor_instance_id)
 {
     actor_registry.emplace(actor_instance_id, ActorMetaData{
-        .variant    = nullptr,
-        .data_index = 0,
-        .actor_id   = actor_instance_id,
-    });
+                                                  .variant    = nullptr,
+                                                  .data_index = 0,
+                                                  .actor_id   = actor_instance_id,
+                                              });
 }
 
 void ECS::remove_actor(const ActorID& removed_actor)
@@ -45,8 +45,8 @@ void ECS::remove_actor(const ActorID& removed_actor)
     if (actor_it == actor_registry.end())
         return; // it doesn't exist
 
-    robin_hood::pair<ActorID, ActorMetaData>& pair = *actor_it;
-    const ActorMetaData& actor_data = pair.second;
+    robin_hood::pair<ActorID, ActorMetaData>& pair       = *actor_it;
+    const ActorMetaData&                      actor_data = pair.second;
 
     if (actor_data.variant)
         actor_data.variant->remove_actor(&pair.second);
@@ -61,44 +61,31 @@ ActorID ECS::make_new_actor_id()
 
 void ECS::tick()
 {
-    // Execute tick, pre-render, render method for every components
-    for (const auto& variant : ECS::get().get_variants())
-    {
+    for (const auto& variant : get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
-        {
-            const IComponent* component_type = variant->components[i].component_type;
-            if (component_type->tick_runner) // Only if the component implement the tick method
-                component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
-        }
-    }
+            if (variant->components[i].component_type->tick_runner) // Only if the component implement the tick method
+                variant->components[i].component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
     system_factory.execute_tick();
+    on_tick.execute();
 }
 
-void ECS::pre_render()
+void ECS::pre_render(gfx::View* view)
 {
-    // Execute tick, pre-render, render method for every components
-    for (const auto& variant : ECS::get().get_variants())
-    {
+    on_pre_render.execute(view);
+    system_factory.execute_pre_render(view);
+    for (const auto& variant : get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
-        {
-            const IComponent* component_type = variant->components[i].component_type;
-            if (component_type->pre_render_runner) // Only if the component implement the tick method
-                component_type->pre_render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
-        }
-    }
+            if (variant->components[i].component_type->pre_render_runner) // Only if the component implement the pre_render method
+                variant->components[i].component_type->pre_render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), view);
 }
 
-void ECS::render(gfx::CommandBuffer* command_buffer)
+void ECS::render(gfx::View* view)
 {
-    // Execute tick, pre-render, render method for every components
-    for (const auto& variant : ECS::get().get_variants())
-    {
+    for (const auto& variant : get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
-        {
-            const IComponent* component_type = variant->components[i].component_type;
-            if (component_type->render_runner) // Only if the component implement the tick method
-                component_type->render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), command_buffer);
-        }
-    }
+            if (variant->components[i].component_type->render_runner) // Only if the component implement the render method
+                variant->components[i].component_type->render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), view);
+    system_factory.execute_render(view);
+    on_render.execute(view);
 }
 } // namespace ecs

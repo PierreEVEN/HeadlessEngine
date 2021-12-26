@@ -1,12 +1,24 @@
 #pragma once
+#include "ecs/ecs.h"
 
+#include <types/bound.h>
+
+namespace gfx
+{
 class StaticMeshComponent
 {
+  public:
 
-    void render()
+    static void add_systems(ecs::SystemFactory* factory);
+
+    Bound& get_bounds()
     {
-        // @TODO: draw mesh
+        return bounds;
     }
+
+  private:
+    Bound bounds;
 };
+} // namespace sm
 
 // @TODO : register component

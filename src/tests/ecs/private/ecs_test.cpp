@@ -14,21 +14,21 @@ int main()
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
     /*
-    ecs::ECS::get().register_component_type<MyComp>();
-    ecs::ECS::get().register_component_type<MyComp2>();
+    ecs::ECS::singleton().register_component_type<MyComp>();
+    ecs::ECS::singleton().register_component_type<MyComp2>();
 
     ecs::Actor act1;
     act1.add_component<MyComp>(10.f);
 
-    ecs::ECS::get().tick();
+    ecs::ECS::singleton().tick();
 
     LOG_INFO("test 1");
-    ecs::ECS::get().render(nullptr);
+    ecs::ECS::singleton().render(nullptr);
 
     LOG_INFO("test 2");
     ecs::Actor act2;
     act2.add_component<MyComp>(120.f);
-    ecs::ECS::get().render(nullptr);
+    ecs::ECS::singleton().render(nullptr);
 
     
     LOG_INFO("test 3");
@@ -39,12 +39,12 @@ int main()
     act3.add_component<MyComp>(220.f);
     act3.add_component<MyComp2>(240.f);
 
-    ecs::ECS::get().render(nullptr);
-    ecs::ECS::get().tick();
+    ecs::ECS::singleton().render(nullptr);
+    ecs::ECS::singleton().tick();
 
     act1.remove_component<MyComp>();
 
-    ecs::ECS::get().render(nullptr);
+    ecs::ECS::singleton().render(nullptr);
 
 
 

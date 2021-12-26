@@ -353,7 +353,7 @@ T* assertNotNull(T* t, Args&&... args) {
 
 template <typename T>
 inline T unaligned_load(void const* ptr) noexcept {
-    // using memcpy so we don't get into unaligned load problems.
+    // using memcpy so we don't singleton into unaligned load problems.
     // compiler should optimize this very well anyways.
     T t;
     std::memcpy(&t, ptr, sizeof(T));
@@ -1346,7 +1346,7 @@ private:
     // The upper 1-5 bits need to be a reasonable good hash, to save comparisons.
     template <typename HashKey>
     void keyToIdx(HashKey&& key, size_t* idx, InfoType* info) const {
-        // In addition to whatever hash is used, add another mul & shift so we get better hashing.
+        // In addition to whatever hash is used, add another mul & shift so we singleton better hashing.
         // This serves as a bad hash prevention, if the given data is
         // badly mixed.
         auto h = static_cast<uint64_t>(WHash::operator()(key));

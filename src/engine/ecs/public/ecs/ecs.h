@@ -1,11 +1,21 @@
 #pragma once
 #include "actor_meta_data.h"
 #include "component.h"
-#include "ecs/system.h"
+#include "ecs/SystemTick.h"
 #include "ecs_type.h"
 
+#include <cpputils/eventmanager.hpp>
 #include <cpputils/logger.hpp>
 #include <types/robin_hood_map.h>
+
+namespace gfx
+{
+class View;
+}
+
+DECLARE_DELEGATE_MULTICAST(OnTickDelegate);
+DECLARE_DELEGATE_MULTICAST(OnPreRenderDelegate, gfx::View*);
+DECLARE_DELEGATE_MULTICAST(OnRenderDelegate, gfx::View*);
 
 namespace ecs
 {
@@ -19,8 +29,9 @@ concept has_add_systems_function = requires(T& t)
 
 class ECS final
 {
+    friend ECS& singleton();
+
   public:
-    static ECS& get();
     ~ECS();
 
     template <class Component_T> bool is_component_type_registered()
@@ -60,14 +71,18 @@ class ECS final
         return &system_factory;
     }
 
-    void tick();
-    void pre_render();
-    void render(gfx::CommandBuffer* command_buffer);
-
     [[nodiscard]] size_t count_actors() const
     {
         return actor_registry.size();
     }
+
+    void tick();
+    void pre_render(gfx::View* view);
+    void render(gfx::View* view);
+
+    OnTickDelegate on_tick;
+    OnPreRenderDelegate on_pre_render;
+    OnRenderDelegate on_render;
 
   private:
     friend struct ActorVariant;
@@ -76,12 +91,14 @@ class ECS final
 
     robin_hood::unordered_map<ComponentTypeID, IComponent*> component_registry;
     robin_hood::unordered_map<ActorID, ActorMetaData>       actor_registry;
-    robin_hood::unordered_map<ActorID, uint32_t>       actor_links;
+    robin_hood::unordered_map<ActorID, uint32_t>            actor_links;
     std::vector<ActorVariant*>                              variant_registry;
 
     ActorID       last_actor_id = 0;
     SystemFactory system_factory;
 };
+
+ECS& singleton();
 
 template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_component(const ActorID& to_actor, CtorArgs_T&&... args)
 {

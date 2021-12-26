@@ -34,12 +34,21 @@ class Buffer
     }
     void set_data(void* data, size_t data_length, size_t offset = 0);
 
+    template<typename Lambda_T> void set_data(Lambda_T lambda)
+    {
+        lambda(get_ptr());
+        submit_data();
+    }
+
     template <typename T> void set_data(T& data)
     {
         set_data(&data, sizeof(T));
     }
 
   private:
+    void* get_ptr();
+    void  submit_data();
+
     void   create_buffer_internal(uint32_t buffer_size, EBufferUsage buffer_usage, EBufferAccess buffer_access);
     size_t buffer_size;
 
@@ -49,7 +58,7 @@ class Buffer
     using Memory_t = uint64_t;
 
     EBufferAccess buffer_access;
-    Buffer_t buffer_handle;
-    Memory_t buffer_memory;
+    Buffer_t      buffer_handle;
+    Memory_t      buffer_memory;
 };
 } // namespace gfx

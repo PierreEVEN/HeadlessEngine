@@ -1,5 +1,5 @@
 
-declare_module("graphics", {"application"}, {"cpputils"})
+declare_module("graphics", {"application", "types"}, {"cpputils", "glm"})
 
 target("graphics")
 	set_group("engine_new")

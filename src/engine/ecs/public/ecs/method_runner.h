@@ -11,7 +11,7 @@ template <typename... Args_T> class IMethodRunner
     virtual void execute(void* instances, size_t count, Args_T... args) = 0;
 };
 
-// TRunner : execute a given method on a vector of components
+// TRunner : tick a given method on a vector of components
 template <typename Component_T, typename... Args_T> class TMethodRunner final : public IMethodRunner<Args_T...>
 {
   public:

@@ -7,21 +7,24 @@
 
 namespace gfx
 {
-class CommandBuffer;
+class View;
 }
 
 namespace ecs
 {
 // Concept that test if given function is implemented
-template <typename T> concept has_pre_render_method = requires(T& t)
+template <typename T>
+concept has_pre_render_method = requires(T& t)
 {
     t.pre_render();
 };
-template <typename T> concept has_render_method = requires(T& t)
+template <typename T>
+concept has_render_method = requires(T& t)
 {
     t.render(nullptr);
 };
-template <typename T> concept has_tick_method = requires(T& t)
+template <typename T>
+concept has_tick_method = requires(T& t)
 {
     t.tick();
 };
@@ -45,9 +48,9 @@ class IComponent
     [[nodiscard]] virtual size_t type_size() const                                                               = 0;
 
     // Different runner for each component's method
-    IMethodRunner<>*                    pre_render_runner = nullptr;
-    IMethodRunner<gfx::CommandBuffer*>* render_runner     = nullptr;
-    IMethodRunner<>*                    tick_runner       = nullptr;
+    IMethodRunner<gfx::View*>* pre_render_runner = nullptr;
+    IMethodRunner<gfx::View*>* render_runner     = nullptr;
+    IMethodRunner<>*           tick_runner       = nullptr;
 };
 
 template <typename Component_T> class TComponent final : public IComponent
@@ -60,7 +63,7 @@ template <typename Component_T> class TComponent final : public IComponent
             pre_render_runner = new TMethodRunner<Component_T>(&Component_T::pre_render);
 
         if constexpr (has_render_method<Component_T>)
-            render_runner = new TMethodRunner<Component_T, gfx::CommandBuffer*>(&Component_T::render);
+            render_runner = new TMethodRunner<Component_T, gfx::View*>(&Component_T::render);
 
         if constexpr (has_tick_method<Component_T>)
             tick_runner = new TMethodRunner<Component_T>(&Component_T::tick);

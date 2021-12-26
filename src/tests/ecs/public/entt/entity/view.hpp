@@ -167,7 +167,7 @@ class basic_view;
  * Multi component views iterate over those entities that have at least all the
  * given components in their bags. During initialization, a multi component view
  * looks at the number of entities available for each component and uses the
- * smallest set in order to get a performance boost when iterate.
+ * smallest set in order to singleton a performance boost when iterate.
  *
  * @b Important
  *
@@ -512,7 +512,7 @@ private:
 /**
  * @brief Single component view specialization.
  *
- * Single component views are specialized in order to get a boost in terms of
+ * Single component views are specialized in order to singleton a boost in terms of
  * performance. This kind of views can access the underlying data structure
  * directly and avoid superfluous checks.
  *

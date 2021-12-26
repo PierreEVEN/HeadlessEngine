@@ -17,13 +17,12 @@ constexpr std::initializer_list<const char*> required_extensions = {
 };
 #else
 constexpr std::initializer_list<const char*> validation_layers   = {};
-constexpr std::initializer_list<const char*> required_extensions = {
-    VK_KHR_SURFACE_EXTENSION_NAME,
+constexpr std::initializer_list<const char*> required_extensions = {VK_KHR_SURFACE_EXTENSION_NAME,
 #if APP_USE_WIN32
-    "VK_KHR_win32_surface",
-#endif
-};
+                                                                    "VK_KHR_win32_surface",
 #endif
 
-constexpr std::initializer_list<const char*> device_extensions = {"VK_KHR_swapchain"};
+#endif
+
+constexpr std::initializer_list<const char*> device_extensions          = {"VK_KHR_swapchain"};
 } // namespace gfx::config

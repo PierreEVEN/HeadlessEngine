@@ -9,7 +9,7 @@ ActorVariant::ActorVariant(const std::vector<ComponentTypeID>& in_specification)
     components.resize(in_specification.size());
     for (size_t i = 0; i < in_specification.size(); ++i)
     {
-        IComponent* component = ECS::get().get_component_type(in_specification[i]);
+        IComponent* component = singleton().get_component_type(in_specification[i]);
         if (!component)
             LOG_FATAL("component with id %lu is not registered", in_specification[i])
 
@@ -43,7 +43,7 @@ void ActorVariant::remove_actor(ActorMetaData* actor)
 
     const auto last_ptr = linked_actors.end() - 1;
 
-    ECS::get().actor_registry[*last_ptr].data_index = removed_index;
+    singleton().actor_registry[*last_ptr].data_index = removed_index;
     linked_actors[removed_index]                    = *last_ptr;
     linked_actors.pop_back();
 

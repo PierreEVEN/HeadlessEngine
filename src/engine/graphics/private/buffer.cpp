@@ -7,9 +7,9 @@
 #if GFX_USE_VULKAN
 #include "vulkan/allocator.h"
 #include "vulkan/assertion.h"
-#include <vulkan/vulkan.hpp>
 #include "vulkan/device.h"
 #include <vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 #endif
 
 namespace gfx
@@ -52,7 +52,7 @@ void Buffer::set_data(void* data, size_t data_length, size_t offset)
     vmaGetAllocationInfo(vulkan::get_vma_allocator(), reinterpret_cast<VmaAllocation>(buffer_memory), &allocation_infos);
 
     void* dst_ptr;
-    VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, offset, data_length, NULL, (void**)(&dst_ptr)));
+    VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, offset, data_length, NULL, (void**)(&dst_ptr)), "failed to map memory");
     memcpy(dst_ptr, data, data_length);
     vkUnmapMemory(vulkan::get_device(), allocation_infos.deviceMemory);
 #else
@@ -60,10 +60,36 @@ void Buffer::set_data(void* data, size_t data_length, size_t offset)
 #endif
 }
 
+void* Buffer::get_ptr()
+{
+#if GFX_USE_VULKAN
+    VmaAllocationInfo allocation_infos;
+    vmaGetAllocationInfo(vulkan::get_vma_allocator(), reinterpret_cast<VmaAllocation>(buffer_memory), &allocation_infos);
+
+    void* dst_ptr;
+    VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, 0, buffer_size, NULL, (void**)(&dst_ptr)), "failed to map memory");
+    return dst_ptr;
+#else
+    return nullptr;
+#endif
+}
+
+void Buffer::submit_data()
+{
+#if GFX_USE_VULKAN
+    VmaAllocationInfo allocation_infos;
+    vmaGetAllocationInfo(vulkan::get_vma_allocator(), reinterpret_cast<VmaAllocation>(buffer_memory), &allocation_infos);
+
+    vkUnmapMemory(vulkan::get_device(), allocation_infos.deviceMemory);
+#else
+    (void)ptr;
+#endif
+}
+
 void Buffer::create_buffer_internal(uint32_t in_buffer_size, EBufferUsage buffer_usage, EBufferAccess in_buffer_access)
 {
     buffer_access = in_buffer_access;
-    buffer_size = in_buffer_size;
+    buffer_size   = in_buffer_size;
 
     if (buffer_size == 0)
     {
@@ -132,7 +158,7 @@ void Buffer::create_buffer_internal(uint32_t in_buffer_size, EBufferUsage buffer
         .pUserData      = nullptr,
     };
 
-    VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, reinterpret_cast<VkBuffer*>(&buffer_handle), reinterpret_cast<VmaAllocation*>(&buffer_memory), nullptr));
+    VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, reinterpret_cast<VkBuffer*>(&buffer_handle), reinterpret_cast<VmaAllocation*>(&buffer_memory), nullptr), "failed to create buffer");
 #else
     (void)buffer_usage;
 #endif

@@ -14,7 +14,7 @@ namespace entt {
  * @brief Types identifiers.
  *
  * Variable template used to generate identifiers at compile-time for the given
- * types. Use the `get` member function to know what's the identifier associated
+ * types. Use the `singleton` member function to know what's the identifier associated
  * to the specific type.
  *
  * @note

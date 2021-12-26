@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render_target.h"
 #include "application/window.h"
 
 namespace gfx
@@ -12,7 +13,7 @@ class Surface
     static Surface* create_surface(application::window::Window* container);
     virtual ~Surface() = default;
 
-    virtual void submit_command_buffer(const CommandBuffer* command_buffer) = 0;
+    virtual void display(RenderTarget& render_target) = 0;
 
   protected:
     Surface() = default;

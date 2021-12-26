@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ecs/system.h"
+#include "ecs/SystemTick.h"
 
 #define BENCH_ENTITIES 10000000
 

@@ -15,28 +15,21 @@ void create_entities()
     Profiler prof;
     actors.resize(BENCH_ENTITIES);
     for (int i = 0; i < BENCH_ENTITIES; ++i)
-    {
         actors[i].add_component<FirstComponent>(10.f);
-    }
     LOG_INFO("CREATE : %lf ms", prof.get_ms());
 }
 
 void iterate_entities()
 {
     Profiler prof1;
-    for (const auto& variant : ecs::ECS::get().get_variants())
-    {
+    for (const auto& variant : ecs::singleton().get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
-        {
-            const ecs::IComponent* component_type = variant->components[i].component_type;
-            if (component_type->tick_runner) // Only if the component implement the tick method
-                component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
-        }
-    }
+            if (variant->components[i].component_type->tick_runner) // Only if the component implement the tick method
+                variant->components[i].component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
     LOG_INFO("RUN SLOW : %lf ms", prof1.get_ms());
 
     Profiler prof2;
-    ecs::ECS::get().get_system_factory()->execute_tick();
+    ecs::singleton().get_system_factory()->execute_tick();
     LOG_INFO("RUN FAST : %lf ms", prof2.get_ms());
 }
 

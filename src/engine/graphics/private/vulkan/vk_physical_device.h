@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "unit.h"
+
 #define GET_VK_PHYSICAL_DEVICE() (get_physical_device<VulkanPhysicalDevice>()->get_handle())
 
 namespace gfx::vulkan
@@ -18,9 +20,10 @@ enum class EQueueFamilyType
 
 struct QueueInfo
 {
-    EQueueFamilyType queue_family  = EQueueFamilyType::UNKNOWN;
-    uint32_t         queue_index = 0;
-    VkQueue          queues        = VK_NULL_HANDLE;
+    EQueueFamilyType                queue_family = EQueueFamilyType::UNKNOWN;
+    uint32_t                        queue_index  = 0;
+    VkQueue                         queues       = VK_NULL_HANDLE;
+    SwapchainImageResource<VkFence> queue_submit_fence;
 };
 
 class VulkanPhysicalDevice : public PhysicalDevice
@@ -38,6 +41,8 @@ class VulkanPhysicalDevice : public PhysicalDevice
     [[nodiscard]] bool is_queue_family_supported(EQueueFamilyType queue_family) const;
 
     [[nodiscard]] QueueInfo get_queue_family(EQueueFamilyType queue_family, uint8_t queue_index = 0) const;
+
+    VkFence submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos);
 
   private:
     VkPhysicalDevice       physical_device;

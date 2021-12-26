@@ -24,11 +24,11 @@ template <typename... Component_T> struct TSystemIterator
     [[nodiscard]] type operator*()
     {
         return std::tuple_cat(std::make_tuple<ActorID*>(&actor_iterator[index]), std::apply(
-                                                                                    [ptr_index = index](Component_T*... from_ptr)
-                                                                                    {
-                                                                                        return std::forward_as_tuple(from_ptr[ptr_index]...);
-                                                                                    },
-                                                                                    storage));
+                                                                                     [ptr_index = index](Component_T*... from_ptr)
+                                                                                     {
+                                                                                         return std::forward_as_tuple(from_ptr[ptr_index]...);
+                                                                                     },
+                                                                                     storage));
     }
 
     template <typename... Other_T> [[nodiscard]] bool operator==(const TSystemIterator<Other_T...>& other) const
@@ -105,13 +105,27 @@ template <typename... Component_T> class TSystemIterable
 class ISystem
 {
   public:
-    virtual void                                       tick(ActorVariant* variant) = 0;
-    [[nodiscard]] virtual std::vector<ComponentTypeID> get_key() const             = 0;
+    virtual void tick([[maybe_unused]] ActorVariant* variant)
+    {
+    }
+    virtual void pre_render([[maybe_unused]] ActorVariant* variant, [[maybe_unused]] gfx::View* view)
+    {
+    }
+    virtual void render([[maybe_unused]] ActorVariant* variant, [[maybe_unused]] gfx::View* view)
+    {
+    }
+    [[nodiscard]] virtual std::vector<ComponentTypeID> get_key() const = 0;
 };
 
-template <typename... Component_T> class TSystem final : public ISystem
+template <typename... Component_T> class TSystemTick final : public ISystem
 {
   public:
+    using TickFunction = std::function<void(TSystemIterable<Component_T...>)>;
+
+    TSystemTick(TickFunction tick_function) : tick_func(std::move(tick_function))
+    {
+    }
+
     [[nodiscard]] std::vector<ComponentTypeID> get_key() const override
     {
         std::vector<ComponentTypeID> component_type = {{TComponent<Component_T>::get_type_id()...}};
@@ -125,11 +139,37 @@ template <typename... Component_T> class TSystem final : public ISystem
             tick_func(TSystemIterable<Component_T...>(variant));
     }
 
-    TSystem(std::function<void(TSystemIterable<Component_T...>)> tick_function) : tick_func(std::move(tick_function))
+    TickFunction tick_func;
+};
+template <typename... Component_T> class TSystemRender final : public ISystem
+{
+  public:
+    using RenderFunction = std::function<void(TSystemIterable<Component_T...>, gfx::View*)>;
+
+    TSystemRender(RenderFunction tick_function) : render_func(std::move(tick_function))
     {
     }
 
-    std::function<void(TSystemIterable<Component_T...>)> tick_func;
+    [[nodiscard]] std::vector<ComponentTypeID> get_key() const override
+    {
+        std::vector<ComponentTypeID> component_type = {{TComponent<Component_T>::get_type_id()...}};
+        std::ranges::sort(component_type);
+        return component_type;
+    }
+
+    void pre_render(ActorVariant* variant, gfx::View* view) override
+    {
+        if (render_func)
+            render_func(TSystemIterable<Component_T...>(variant), view);
+    }
+
+    void render(ActorVariant* variant, gfx::View* view) override
+    {
+        if (render_func)
+            render_func(TSystemIterable<Component_T...>(variant), view);
+    }
+
+    RenderFunction render_func;
 };
 
 class SystemFactory
@@ -137,20 +177,22 @@ class SystemFactory
   public:
     template <typename... Component_T, typename Lambda> void tick(Lambda callback)
     {
-        ticks.emplace_back(new TSystem<Component_T...>(callback));
+        ticks.emplace_back(new TSystemTick<Component_T...>(callback));
     }
 
     template <typename... Component_T, typename Lambda> void pre_render(Lambda callback)
     {
-        pre_renders.emplace_back(new TSystem<Component_T...>(callback));
+        pre_renders.emplace_back(new TSystemRender<Component_T...>(callback));
     }
 
     template <typename... Component_T, typename Lambda> void render(Lambda callback)
     {
-        renders.emplace_back(new TSystem<Component_T...>(callback));
+        renders.emplace_back(new TSystemRender<Component_T...>(callback));
     }
 
     void execute_tick() const;
+    void execute_pre_render(gfx::View* view) const;
+    void execute_render(gfx::View* view) const;
 
   private:
     std::vector<std::unique_ptr<ISystem>> ticks;

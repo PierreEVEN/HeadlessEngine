@@ -310,7 +310,7 @@ public:
     /**
      * @brief Returns the components assigned to the given entity.
      *
-     * Prefer this function instead of `registry::get` during iterations. It has
+     * Prefer this function instead of `registry::singleton` during iterations. It has
      * far better performance than its counterpart.
      *
      * @warning
@@ -750,7 +750,7 @@ public:
     /**
      * @brief Returns the components assigned to the given entity.
      *
-     * Prefer this function instead of `registry::get` during iterations. It has
+     * Prefer this function instead of `registry::singleton` during iterations. It has
      * far better performance than its counterpart.
      *
      * @warning

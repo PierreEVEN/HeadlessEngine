@@ -1,6 +1,10 @@
 #include "vk_physical_device.h"
 
+#include "assertion.h"
+#include "device.h"
+
 #include <cpputils/logger.hpp>
+#include <vulkan/allocator.h>
 
 namespace gfx::vulkan
 {
@@ -26,7 +30,7 @@ static EPhysicalDeviceType vulkan_device_type_to_engine_type(VkPhysicalDeviceTyp
     }
 }
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device)
+VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) : physical_device(device)
 {
     VkPhysicalDeviceProperties device_properties;
     VkPhysicalDeviceFeatures   device_features;
@@ -40,8 +44,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device)
     device_type    = vulkan_device_type_to_engine_type(device_properties.deviceType);
     device_name    = device_properties.deviceName;
 
-    physical_device = device;
-
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
 
@@ -51,26 +53,40 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device)
     uint32_t queue_index = 0;
     for (const auto& queue : queue_families)
     {
-        if (queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            graphic_queues.emplace_back(QueueInfo{
-                .queue_family  = EQueueFamilyType::GRAPHIC_QUEUE,
-                .queue_index = queue_index,
-                .queues        = VK_NULL_HANDLE,
-            });
-        if (queue.queueFlags & VK_QUEUE_COMPUTE_BIT)
-            compute_queues.emplace_back(QueueInfo{
-                .queue_family  = EQueueFamilyType::COMPUTE_QUEUE,
-                .queue_index = queue_index,
-                .queues        = VK_NULL_HANDLE,
-            });
-        if (queue.queueFlags & VK_QUEUE_TRANSFER_BIT)
-            transfer_queues.emplace_back(QueueInfo{
-                .queue_family  = EQueueFamilyType::TRANSFER_QUEUE,
-                .queue_index = queue_index,
-                .queues        = VK_NULL_HANDLE,
-            });
+        if (queue.queueFlags & (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT))
+        {
+            if (queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                graphic_queues.emplace_back(QueueInfo{
+                    .queue_family       = EQueueFamilyType::GRAPHIC_QUEUE,
+                    .queue_index        = queue_index,
+                    .queues             = VK_NULL_HANDLE,
+                    .queue_submit_fence = {},
+                });
+            if (queue.queueFlags & VK_QUEUE_COMPUTE_BIT)
+                compute_queues.emplace_back(QueueInfo{
+                    .queue_family       = EQueueFamilyType::COMPUTE_QUEUE,
+                    .queue_index        = queue_index,
+                    .queues             = VK_NULL_HANDLE,
+                    .queue_submit_fence = {},
+                });
+            if (queue.queueFlags & VK_QUEUE_TRANSFER_BIT)
+                transfer_queues.emplace_back(QueueInfo{
+                    .queue_family       = EQueueFamilyType::TRANSFER_QUEUE,
+                    .queue_index        = queue_index,
+                    .queues             = VK_NULL_HANDLE,
+                    .queue_submit_fence = {},
+                });
+        }
         queue_index++;
     }
+}
+
+VkFence VulkanPhysicalDevice::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos)
+{
+    const QueueInfo& queue_info = get_queue_family(queue_family, 0);
+    vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
+    vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence);
+    return *queue_info.queue_submit_fence;
 }
 
 VkPhysicalDevice get_physical_device()

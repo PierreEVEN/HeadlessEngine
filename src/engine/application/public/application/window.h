@@ -45,6 +45,15 @@ class Window
     using WindowHandle = uint64_t;
     virtual WindowHandle get_platform_window_handle() = 0;
 
+    [[nodiscard]] const uint32_t& width() const
+    {
+        return config.width;
+    }
+    [[nodiscard]] const uint32_t& height() const
+    {
+        return config.height;
+    }
+
   protected:
     static void  register_window(Window* new_window);
     static void  unregister_window(Window* destroyed_window);

@@ -25,7 +25,7 @@ Window_Win32::Window_Win32(const WindowConfig& config) : Window(config)
 
     ex_style |= WS_EX_LAYERED;
     ex_style |= WS_EX_ACCEPTFILES; // DRAG&DROP
-    ex_style |= WS_EX_APPWINDOW | WS_EX_TOPMOST;
+    ex_style |= WS_EX_APPWINDOW;
 
     RECT initial_area = {0, 0, static_cast<LONG>(config.width), static_cast<LONG>(config.height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));

@@ -4,6 +4,7 @@
 #include "vulkan/allocator.h"
 #include "vulkan/assertion.h"
 
+#include "config.h"
 #include <set>
 #include <vulkan/vulkan.hpp>
 
@@ -25,7 +26,6 @@ void create()
     std::set<int> queue_indices = {};
     for (const auto queue : queues)
         queue_indices.insert(queue->queue_index);
-
 
     for (const auto queue : queue_indices)
     {
@@ -53,15 +53,30 @@ void create()
         .pQueueCreateInfos       = queue_create_infos.data(),
         .enabledLayerCount       = 0,
         .ppEnabledLayerNames     = nullptr,
-        .enabledExtensionCount   = 0,
-        .ppEnabledExtensionNames = nullptr,
+        .enabledExtensionCount   = static_cast<uint32_t>(config::device_extensions.size()),
+        .ppEnabledExtensionNames = config::device_extensions.begin(),
         .pEnabledFeatures        = &device_features,
     };
 
     VK_CHECK(vkCreateDevice(GET_VK_PHYSICAL_DEVICE(), &create_infos, get_allocator(), &logical_device), "failed to create device");
 
+    std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
     for (const auto& queue : queues)
+    {
+        queue_fence_map[queue->queue_index] = {};
         vkGetDeviceQueue(logical_device, queue->queue_index, 0, &queue->queues);
+    }
+
+    VkFenceCreateInfo fence_infos{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    for (auto& [index, fence] : queue_fence_map)
+        for (auto& item : fence)
+            VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &item), "Failed to create fence");
+
+    for (const auto& queue : queues)
+        queue->queue_submit_fence = queue_fence_map[queue->queue_index];
 }
 void destroy()
 {
