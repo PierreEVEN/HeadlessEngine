@@ -12,6 +12,7 @@ enum class EBufferUsage
     GPU_MEMORY             = 0x00000003, // used as storage buffer
     UNIFORM_BUFFER         = 0x00000004, // used as uniform buffer
     INDIRECT_DRAW_ARGUMENT = 0x00000005, // used for indirect draw commands
+    TRANSFER_MEMORY        = 0x00000006, // used for indirect draw commands
 };
 
 enum class EBufferAccess
@@ -34,7 +35,7 @@ class Buffer
     }
     void set_data(void* data, size_t data_length, size_t offset = 0);
 
-    template<typename Lambda_T> void set_data(Lambda_T lambda)
+    template <typename Lambda_T> void set_data(Lambda_T lambda)
     {
         lambda(get_ptr());
         submit_data();

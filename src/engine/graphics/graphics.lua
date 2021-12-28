@@ -3,6 +3,7 @@ declare_module("graphics", {"application", "types"}, {"cpputils", "glm"})
 
 target("graphics")
 	set_group("engine_new")
+	add_headerfiles("private/vulkan/**.h")
 
 if GRAPHIC_BACKEND == "VULKAN" then
 	target("graphics")

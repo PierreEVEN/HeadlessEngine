@@ -1,5 +1,6 @@
 #include "application/application.h"
 #include "application/window.h"
+#include "gfx/texture.h"
 
 #include <gfx/gfx.h>
 
@@ -35,6 +36,15 @@ int main()
     std::unique_ptr<gfx::Buffer> indirect_buffer = std::make_unique<gfx::Buffer>("indirect_buffer", 64, gfx::EBufferUsage::INDIRECT_DRAW_ARGUMENT);
     indirect_buffer->set_data(data, sizeof(int32_t) * 16);
 
+    std::shared_ptr<gfx::Texture> texture = gfx::Texture::create(5, 5, gfx::TextureParameter{.format = gfx::EImageFormat::R_UNORM_8});
+
+    texture->set_pixels(std::vector<uint8_t>{
+        255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255,
+    });
+
+    /**
+     * 4° framegraph definition
+     */
     auto       post_process_resolve   = std::make_unique<gfx::FrameGraphResource>();
     const auto temporal_anti_aliasing = std::make_shared<gfx::FrameGraphResource>();
     const auto gbuffer_resolve        = std::make_shared<gfx::FrameGraphResource>();
@@ -46,13 +56,12 @@ int main()
     temporal_anti_aliasing->add_child(gbuffer_resolve);
     gbuffer_resolve->add_child(gbuffers);
 
-    
     const auto framegraph = std::shared_ptr<gfx::FrameGraph>();
     framegraph->set_root(std::move(post_process_resolve));
     framegraph->generate();
 
     /**
-     * 4° Application loop
+     * 5° Application loop
      */
     while (application::window::Window::get_window_count() > 0)
     {
@@ -67,8 +76,9 @@ int main()
     }
 
     /**
-     * 5° clean GPU data : //@TODO automatically free allocated resources
+     * 6° clean GPU data : //@TODO automatically free allocated resources
      */
+    texture            = nullptr;
     main_render_target = nullptr;
     main_view          = nullptr;
     gpu_buffer         = nullptr;

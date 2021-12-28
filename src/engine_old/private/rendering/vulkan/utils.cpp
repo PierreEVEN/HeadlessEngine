@@ -57,7 +57,6 @@ std::vector<const char*> get_required_extensions()
     return extensions;
 }
 
-
 VkSampleCountFlagBits get_max_usable_sample_count()
 {
     const VkPhysicalDevice     physical_device = Graphics::get()->get_physical_device();
@@ -155,11 +154,13 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter,
 
 VkCommandBuffer begin_single_time_commands()
 {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool        = command_pool::get();
-    allocInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo allocInfo{
+        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext              = nullptr,
+        .commandPool        = command_pool::get(),
+        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
 
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(Graphics::get()->get_logical_device(), &allocInfo, &commandBuffer);
@@ -277,4 +278,3 @@ SwapchainSupportDetails get_swapchain_support_details(VkSurfaceKHR surface, VkPh
 }
 
 } // namespace vulkan_utils
-

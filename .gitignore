@@ -47,6 +47,7 @@ third_party/deps
 build/
 vsoutputdir/
 vsxmake2019/
+vsxmake2022/
 
 # MacOS Cache
 .DS_Store
