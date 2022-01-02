@@ -57,7 +57,7 @@ Texture::Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_dep
 std::shared_ptr<Texture> Texture::create(const uint32_t width, uint32_t height, const uint32_t depth, const TextureParameter& parameters)
 {
 #if GFX_USE_VULKAN
-    return std::make_shared<vulkan::VkTexture>(width, height, depth, parameters);
+    return std::make_shared<vulkan::Texture_VK>(width, height, depth, parameters);
 #else
     return nullptr;
 #endif

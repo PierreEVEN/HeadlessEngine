@@ -1,8 +1,8 @@
 
-#include "one_time_command_buffer.h"
+#include "vulkan/vk_one_time_command_buffer.h"
 
-#include "command_pool.h"
-#include "device.h"
+#include "vulkan/vk_command_pool.h"
+#include "vulkan/vk_device.h"
 #include "vk_physical_device.h"
 
 namespace gfx::vulkan
@@ -38,7 +38,7 @@ OneTimeCommandBuffer::~OneTimeCommandBuffer()
         .pCommandBuffers    = &command_buffer,
     };
 
-    const auto fence = get_physical_device<VulkanPhysicalDevice>()->submit_queue(queue, submit_infos);
+    const auto fence = get_physical_device<PhysicalDevice_VK>()->submit_queue(queue, submit_infos);
     vkWaitForFences(get_device(), 1, &fence, VK_TRUE, UINT64_MAX);
     vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &command_buffer);
 }

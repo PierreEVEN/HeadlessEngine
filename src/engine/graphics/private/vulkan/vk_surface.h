@@ -5,7 +5,7 @@
 
 #include "gfx/surface.h"
 
-#include "unit.h"
+#include "vulkan/vk_unit.h"
 
 namespace gfx::vulkan
 {
@@ -47,13 +47,13 @@ class Surface_VK : public Surface
 
     struct ImageData
     {
-        VkFence         image_in_flight            = VK_NULL_HANDLE;
-        VkSemaphore     image_acquire_semaphore    = VK_NULL_HANDLE;
-        VkSemaphore     render_finished_semaphore = VK_NULL_HANDLE;
-        VkFence         in_flight_fence            = VK_NULL_HANDLE;
+        VkFence     image_in_flight           = VK_NULL_HANDLE;
+        VkSemaphore image_acquire_semaphore   = VK_NULL_HANDLE;
+        VkSemaphore render_finished_semaphore = VK_NULL_HANDLE;
+        VkFence     in_flight_fence           = VK_NULL_HANDLE;
     };
 
-    std::unique_ptr<CommandBuffer> main_command_buffer;
+    std::unique_ptr<CommandBuffer>    main_command_buffer;
     std::shared_ptr<Texture>          surface_texture;
     SwapchainImageResource<ImageData> swapchain_resources;
     application::window::Window*      window_container = nullptr;

@@ -1,10 +1,11 @@
 
 #include "vk_render_pass.h"
 
-#include "vulkan/allocator.h"
-#include "vulkan/assertion.h"
-#include "vulkan/device.h"
+#include "vk_helper.h"
+#include "vulkan/vk_allocator.h"
 #include "vulkan/vk_command_buffer.h"
+#include "vulkan/vk_device.h"
+#include "vulkan/vk_errors.h"
 #include "vulkan/vk_texture.h"
 #include <vulkan/vulkan.hpp>
 
@@ -12,6 +13,14 @@ namespace gfx::vulkan
 {
 RenderPass_VK::RenderPass_VK(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config) : RenderPass(framebuffer_width, framebuffer_height, frame_graph_config)
 {
+}
+
+RenderPass_VK::~RenderPass_VK()
+{
+    for (const auto& framebuffer : framebuffers)
+        vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
+
+    vkDestroyRenderPass(get_device(), render_pass, get_allocator());
 }
 
 void RenderPass_VK::begin(CommandBuffer* command_buffer)
@@ -22,18 +31,7 @@ void RenderPass_VK::begin(CommandBuffer* command_buffer)
 
     VkCommandBuffer& cmd = **cmd_buffer;
 
-#ifdef ENABLE_VALIDATION_LAYER
-    // add marker
-    const auto                       pfn_debug_marker_begin = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(vkGetDeviceProcAddr(get_device(), "vkCmdDebugMarkerBeginEXT"));
-    const std::string                begin_marker_name = "draw render pass [" + config.pass_name + "]";
-    const VkDebugMarkerMarkerInfoEXT begin_marker      = {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT, 
-        .pNext  = nullptr,                                   
-        .pMarkerName = begin_marker_name.c_str(),                
-        .color       = {0.5f, 1.0f, 0.5f, 1.0f},                
-    };
-    pfn_debug_marker_begin(cmd, &begin_marker);
-#endif
+    debug_add_marker("draw render pass [" + config.pass_name + "]", cmd, {0.5f, 1.0f, 0.5f, 1.0f});
 
     const VkRenderPassBeginInfo begin_infos = {
         .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -58,12 +56,7 @@ void RenderPass_VK::end(CommandBuffer* command_buffer)
     VkCommandBuffer&  cmd        = **cmd_buffer;
     vkCmdEndRenderPass(cmd);
 
-    
-#ifdef ENABLE_VALIDATION_LAYER
-    const auto                       pfn_debug_marker_end = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(vkGetDeviceProcAddr(get_device(), "vkCmdDebugMarkerEndEXT"));
-    pfn_debug_marker_end(cmd);
-#endif
-
+    debug_end_marker(cmd);
 #endif
 }
 
@@ -83,7 +76,7 @@ void RenderPass_VK::init()
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = VkTexture::vk_texture_format_to_engine(col_attachment.image_format),
+            .format         = Texture_VK::vk_texture_format_to_engine(col_attachment.image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = col_attachment.clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
@@ -108,7 +101,7 @@ void RenderPass_VK::init()
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = VkTexture::vk_texture_format_to_engine(config.depth_attachment->image_format),
+            .format         = Texture_VK::vk_texture_format_to_engine(config.depth_attachment->image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = config.depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
@@ -167,26 +160,14 @@ void RenderPass_VK::init()
 
     VK_CHECK(vkCreateRenderPass(get_device(), &render_pass_infos, get_allocator(), &render_pass), "Failed to create render pass");
 
-#ifdef ENABLE_VALIDATION_LAYER
-    // Set pass name
-    const auto                     pfn_set_object_name = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetDeviceProcAddr(get_device(), "vkDebugMarkerSetObjectNameEXT"));
-    std::string              object_name         = "render_pass_" + config.pass_name;
-    VkDebugMarkerObjectNameInfoEXT object_name_info    = {
-        .sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
-        .pNext       = nullptr,
-        .objectType  = VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-        .object      = reinterpret_cast<uint64_t>(render_pass),
-        .pObjectName = object_name.c_str(),
-    };
-    pfn_set_object_name(get_device(), &object_name_info);
-#endif
+    debug_set_object_name("render pass " + config.pass_name, render_pass);
 
     for (uint8_t i = 0; i < framebuffers.get_max_instance_count(); ++i)
     {
         std::vector<VkImageView> attachments(0);
         for (const auto& image : resource_render_target)
         {
-            const auto texture = dynamic_cast<vulkan::VkTexture*>(image.get());
+            const auto texture = dynamic_cast<vulkan::Texture_VK*>(image.get());
             attachments.emplace_back(texture->get_view()[i]);
         }
 
@@ -201,13 +182,7 @@ void RenderPass_VK::init()
         };
 
         VK_CHECK(vkCreateFramebuffer(get_device(), &framebuffer_infos, get_allocator(), &framebuffers[i]), "Failed to create framebuffer");
-#ifdef ENABLE_VALIDATION_LAYER
-        object_name                 = stringutils::format("framebuffer_%s_#%d", config.pass_name.c_str(), i);
-        object_name_info.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT;
-        object_name_info.object     = reinterpret_cast<uint64_t>(framebuffers[i]);
-        object_name_info.pObjectName = object_name.c_str();
-        pfn_set_object_name(get_device(), &object_name_info);
-#endif
+        debug_set_object_name(stringutils::format("render pass %s : framebuffer #%d", config.pass_name.c_str(), i), framebuffers[i]);
     }
 }
 } // namespace gfx::vulkan

@@ -4,18 +4,18 @@
 #include "vk_mem_alloc.h"
 
 #include "types/magic_enum.h"
-#include "unit.h"
+#include "vulkan/vk_unit.h"
 #include <cpputils/logger.hpp>
 #include <vulkan/vulkan.hpp>
 
 namespace gfx::vulkan
 {
-class VkTexture : public Texture
+class Texture_VK : public Texture
 {
-  public:
-    VkTexture(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters);
-    VkTexture(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images);
-    ~VkTexture();
+public:
+    Texture_VK(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters);
+    Texture_VK(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images);
+    virtual ~Texture_VK();
 
     void set_pixels(const std::vector<uint8_t>& data) override;
 
@@ -23,7 +23,7 @@ class VkTexture : public Texture
 
     [[nodiscard]] const SwapchainImageResource<VkImageView>& get_view() const
     {
-        return view;
+        return views;
     }
 
     static VkFormat vk_texture_format_to_engine(EImageFormat format)
@@ -72,7 +72,6 @@ class VkTexture : public Texture
             return VK_FORMAT_D24_UNORM_S8_UINT;
         }
         LOG_FATAL("images format %d : %s is not supported", format, magic_enum::enum_name(format).data());
-        return VK_FORMAT_UNDEFINED;
     }
 
     static EImageFormat engine_texture_format_from_vk(VkFormat format)
@@ -118,14 +117,13 @@ class VkTexture : public Texture
         }
     }
 
-  private:
-
+private:
     void create_views();
 
     const bool                            use_external_images;
     SwapchainImageResource<VkImageLayout> image_layout;
     SwapchainImageResource<VkImage>       images;
     SwapchainImageResource<VmaAllocation> allocation;
-    SwapchainImageResource<VkImageView>   view;
+    SwapchainImageResource<VkImageView>   views;
 };
 } // namespace gfx::vulkan

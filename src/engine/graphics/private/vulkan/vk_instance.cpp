@@ -1,9 +1,10 @@
 
+#include "vk_helper.h"
 #include "application/application.h"
-#include "assertion.h"
-#include "config.h"
-#include "validation_layers.h"
-#include "vulkan/allocator.h"
+#include "vulkan/vk_errors.h"
+#include "vulkan/vk_config.h"
+#include "vulkan/vk_validation_layers.h"
+#include "vulkan/vk_allocator.h"
 
 #include <cpputils/logger.hpp>
 

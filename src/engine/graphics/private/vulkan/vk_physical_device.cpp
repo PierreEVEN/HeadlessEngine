@@ -1,10 +1,8 @@
 #include "vk_physical_device.h"
 
-#include "assertion.h"
-#include "device.h"
-
+#include "vk_helper.h"
+#include "vulkan/vk_device.h"
 #include <cpputils/logger.hpp>
-#include <vulkan/allocator.h>
 
 namespace gfx::vulkan
 {
@@ -30,7 +28,7 @@ static EPhysicalDeviceType vulkan_device_type_to_engine_type(VkPhysicalDeviceTyp
     }
 }
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) : physical_device(device)
+PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(device)
 {
     VkPhysicalDeviceProperties device_properties;
     VkPhysicalDeviceFeatures   device_features;
@@ -43,7 +41,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) : physical_d
     device_id      = device_properties.deviceID;
     device_type    = vulkan_device_type_to_engine_type(device_properties.deviceType);
     device_name    = device_properties.deviceName;
-
+    
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
 
@@ -81,7 +79,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) : physical_d
     }
 }
 
-VkFence VulkanPhysicalDevice::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos)
+VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos)
 {
     const QueueInfo& queue_info = get_queue_family(queue_family, 0);
     vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
@@ -96,7 +94,7 @@ VkPhysicalDevice get_physical_device()
     return physical_device;
 }
 
-std::vector<QueueInfo*> VulkanPhysicalDevice::get_queues()
+std::vector<QueueInfo*> PhysicalDevice_VK::get_queues()
 {
     std::vector<QueueInfo*> queues;
 
@@ -110,7 +108,7 @@ std::vector<QueueInfo*> VulkanPhysicalDevice::get_queues()
     return queues;
 }
 
-bool VulkanPhysicalDevice::is_queue_family_supported(EQueueFamilyType queue_family) const
+bool PhysicalDevice_VK::is_queue_family_supported(EQueueFamilyType queue_family) const
 {
     switch (queue_family)
     {
@@ -126,7 +124,7 @@ bool VulkanPhysicalDevice::is_queue_family_supported(EQueueFamilyType queue_fami
     return false;
 }
 
-QueueInfo VulkanPhysicalDevice::get_queue_family(EQueueFamilyType queue_family, uint8_t queue_index) const
+QueueInfo PhysicalDevice_VK::get_queue_family(EQueueFamilyType queue_family, uint8_t queue_index) const
 {
     switch (queue_family)
     {

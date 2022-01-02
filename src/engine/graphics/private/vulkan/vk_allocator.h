@@ -9,7 +9,6 @@ namespace gfx::vulkan
     {
     void create();
     void destroy();
-
     }
 
 

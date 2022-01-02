@@ -2,7 +2,7 @@
 
 #if GFX_USE_VULKAN
 #include "vulkan/vk_physical_device.h"
-#include "vulkan/instance.h"
+#include "vulkan/vk_instance.h"
 #endif
 
 
@@ -24,7 +24,7 @@ void fetch_physical_devices()
     vkEnumeratePhysicalDevices(vulkan::get_instance(), &deviceCount, found_devices.data());
 
     for (const auto& device : found_devices)
-        devices.emplace_back(std::make_unique<vulkan::VulkanPhysicalDevice>(device));
+        devices.emplace_back(std::make_unique<vulkan::PhysicalDevice_VK>(device));
 #endif
 }
 

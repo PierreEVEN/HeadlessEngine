@@ -1,14 +1,15 @@
-#include "vulkan/device.h"
+#include "vulkan/vk_device.h"
+
+#include "vk_command_pool.h"
+#include "vk_helper.h"
+#include "vulkan/vk_allocator.h"
+#include "vulkan/vk_config.h"
+#include "vulkan/vk_errors.h"
 #include "vulkan/vk_physical_device.h"
-
-#include "vulkan/allocator.h"
-#include "vulkan/assertion.h"
-
-#include "config.h"
-#include <set>
-#include <vulkan/vulkan.hpp>
+#include "types/magic_enum.h"
 
 #include <cpputils/logger.hpp>
+#include <set>
 
 namespace gfx::vulkan
 {
@@ -21,7 +22,7 @@ void create()
 {
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos = {};
     float                                queue_priorities   = 1.0f;
-    const auto                           queues             = get_physical_device<VulkanPhysicalDevice>()->get_queues();
+    const auto                           queues             = get_physical_device<PhysicalDevice_VK>()->get_queues();
 
     std::set<int> queue_indices = {};
     for (const auto queue : queues)
@@ -59,6 +60,7 @@ void create()
     };
 
     VK_CHECK(vkCreateDevice(GET_VK_PHYSICAL_DEVICE(), &create_infos, get_allocator(), &logical_device), "failed to create device");
+    debug_set_object_name("primary device", logical_device);
 
     std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
     for (const auto& queue : queues)
@@ -72,14 +74,33 @@ void create()
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     for (auto& [index, fence] : queue_fence_map)
+    {
+        uint8_t i = 0;
         for (auto& item : fence)
+        {
             VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &item), "Failed to create fence");
+            debug_set_object_name(stringutils::format("fence queue submit : queue=%d #%d", index, i++), item);
+        }
+    }
 
     for (const auto& queue : queues)
         queue->queue_submit_fence = queue_fence_map[queue->queue_index];
 }
+
 void destroy()
 {
+    command_pool::destroy_pools();
+
+    const auto queues = get_physical_device<PhysicalDevice_VK>()->get_queues();
+
+    std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
+    for (const auto& queue : queues)
+        queue_fence_map[queue->queue_index] = queue->queue_submit_fence;
+    
+    for (auto& [index, fence] : queue_fence_map)
+        for (auto& item : fence)
+            vkDestroyFence(get_device(), item, get_allocator());
+
     vkDestroyDevice(logical_device, get_allocator());
 }
 } // namespace device

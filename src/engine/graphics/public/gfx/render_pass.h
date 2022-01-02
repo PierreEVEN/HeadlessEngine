@@ -34,6 +34,8 @@ class RenderPass
 {
   public:
     static std::shared_ptr<RenderPass> create(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config);
+    virtual ~RenderPass() = default;
+
 
     void add_child(const std::shared_ptr<RenderPass>& render_pass);
 

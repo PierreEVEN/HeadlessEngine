@@ -2,7 +2,8 @@
 
 #include "gfx/command_buffer.h"
 
-#include "unit.h"
+#include "vulkan/vk_unit.h"
+
 #include "vulkan/vulkan.hpp"
 
 namespace gfx::vulkan
@@ -11,7 +12,7 @@ namespace gfx::vulkan
 class CommandBuffer_VK : public CommandBuffer
 {
   public:
-    CommandBuffer_VK();
+    CommandBuffer_VK(const std::string& name);
     virtual ~CommandBuffer_VK() override;
 
     void draw_mesh(Mesh* in_buffer, MaterialInterface* in_material, RenderLayer render_layer) override;

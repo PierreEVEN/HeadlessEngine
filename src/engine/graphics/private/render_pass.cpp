@@ -1,5 +1,5 @@
 
-#include "gfx/framegraph/framegraph_resource.h"
+#include "gfx/render_pass.h"
 
 #include <cpputils/logger.hpp>
 

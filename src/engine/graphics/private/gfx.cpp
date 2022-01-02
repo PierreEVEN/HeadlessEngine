@@ -1,13 +1,15 @@
 #include "gfx/gfx.h"
 
+
 #include <cpputils/logger.hpp>
 
 #if GFX_USE_VULKAN
-#include "vulkan/allocator.h"
-#include "vulkan/device.h"
+#include "vulkan/vk_command_pool.h"
+#include "vulkan/vk_allocator.h"
+#include "vulkan/vk_device.h"
 #include "vulkan/vk_physical_device.h"
-#include "vulkan/instance.h"
-#include "vulkan/unit.h"
+#include "vulkan/vk_instance.h"
+#include "vulkan/vk_unit.h"
 #endif
 
 namespace gfx

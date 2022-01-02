@@ -5,9 +5,9 @@
 #include <cpputils/logger.hpp>
 
 #if GFX_USE_VULKAN
-#include "vulkan/allocator.h"
-#include "vulkan/assertion.h"
-#include "vulkan/device.h"
+#include "vulkan/vk_allocator.h"
+#include "vulkan/vk_errors.h"
+#include "vulkan/vk_device.h"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 #endif

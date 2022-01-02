@@ -247,7 +247,7 @@ template <typename BinaryPredicate>
 constexpr bool cmp_equal(string_view lhs, string_view rhs, BinaryPredicate&& p) noexcept(std::is_nothrow_invocable_r_v<bool, BinaryPredicate, char, char>) {
 #if defined(_MSC_VER) && _MSC_VER < 1920 && !defined(__clang__)
   // https://developercommunity.visualstudio.com/content/problem/360432/vs20178-regression-c-failed-in-test.html
-  // https://developercommunity.visualstudio.com/content/problem/232218/c-constexpr-string-view.html
+  // https://developercommunity.visualstudio.com/content/problem/232218/c-constexpr-string-views.html
   constexpr bool workaround = true;
 #else
   constexpr bool workaround = false;

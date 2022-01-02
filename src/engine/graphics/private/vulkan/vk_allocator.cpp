@@ -1,11 +1,10 @@
 #pragma once
 
-#include "assertion.h"
-#include "device.h"
-#include "vk_physical_device.h"
-#include "vulkan/instance.h"
+#include "vulkan/vk_errors.h"
+#include "vulkan/vk_device.h"
+#include "vulkan/vk_physical_device.h"
+#include "vulkan/vk_instance.h"
 
-#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
 #define VMA_IMPLEMENTATION

@@ -39,7 +39,6 @@ class Window
     virtual void update()                                   = 0;
 
     static uint32_t get_window_count();
-
     static Window*    get_window(uint32_t index);
     
     using WindowHandle = uint64_t;
@@ -52,6 +51,10 @@ class Window
     [[nodiscard]] const uint32_t& height() const
     {
         return config.height;
+    }
+    [[nodiscard]] const std::string& name() const
+    {
+        return config.name;
     }
 
   protected:

@@ -4,9 +4,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "unit.h"
+#include "vulkan/vk_unit.h"
 
-#define GET_VK_PHYSICAL_DEVICE() (get_physical_device<VulkanPhysicalDevice>()->get_handle())
+#define GET_VK_PHYSICAL_DEVICE() (get_physical_device<PhysicalDevice_VK>()->get_handle())
 
 namespace gfx::vulkan
 {
@@ -26,10 +26,10 @@ struct QueueInfo
     SwapchainImageResource<VkFence> queue_submit_fence;
 };
 
-class VulkanPhysicalDevice : public PhysicalDevice
+class PhysicalDevice_VK : public PhysicalDevice
 {
   public:
-    VulkanPhysicalDevice(VkPhysicalDevice device);
+    PhysicalDevice_VK(VkPhysicalDevice device);
 
     [[nodiscard]] VkPhysicalDevice get_handle() const
     {

@@ -16,7 +16,7 @@ Surface* Surface::create_surface(application::window::Window* container)
 
     const std::vector resolve_attachment = {RenderPassConfig::Attachment{
         .attachment_name = "color",
-        .image_format    = vulkan::VkTexture::engine_texture_format_from_vk(surface->get_surface_format().format),
+        .image_format    = vulkan::Texture_VK::engine_texture_format_from_vk(surface->get_surface_format().format),
     }};
 
     surface->main_render_pass = std::make_unique<vulkan::RenderPass_VK>(container->width(), container->height(),

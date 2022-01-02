@@ -11,30 +11,23 @@ class CommandPool final
 {
   public:
     CommandPool();
-    void destroy();
+    void destroy() const;
 
     [[nodiscard]] VkCommandPool& get();
-
-    explicit operator bool();
-
+    
   private:
-    bool            is_created  = false;
-    VkCommandPool   commandPool = VK_NULL_HANDLE;
-    std::thread::id pool_thread_id;
+    VkCommandPool   command_pool = VK_NULL_HANDLE;
 };
 
 class Container final
 {
   public:
     Container() = default;
-    ~Container() = default;
+    ~Container();
 
     [[nodiscard]] VkCommandPool& get();
 
   private:
-    CommandPool* command_pools      = nullptr;
-    size_t       command_pool_count = 0;
-
     robin_hood::unordered_map<std::thread::id, CommandPool> pools;
 };
 

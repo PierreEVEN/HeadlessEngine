@@ -1,7 +1,7 @@
 #pragma once
 
 #include "application/window.h"
-#include "framegraph/framegraph_resource.h"
+#include "gfx/render_pass.h"
 
 namespace gfx
 {

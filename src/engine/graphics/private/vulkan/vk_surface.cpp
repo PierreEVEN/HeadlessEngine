@@ -1,18 +1,19 @@
 
 #include "vk_surface.h"
 
-#include "allocator.h"
 #include "application/application.h"
-#include "command_pool.h"
-#include "device.h"
 #include "gfx/physical_device.h"
-#include "instance.h"
-#include "vk_command_buffer.h"
-#include "vk_physical_device.h"
-#include "vk_texture.h"
+#include "vk_helper.h"
+#include "vulkan/vk_allocator.h"
+#include "vulkan/vk_command_buffer.h"
+#include "vulkan/vk_command_pool.h"
+#include "vulkan/vk_device.h"
+#include "vulkan/vk_instance.h"
+#include "vulkan/vk_physical_device.h"
+#include "vulkan/vk_texture.h"
 
-#include "vulkan/assertion.h"
-#include "vulkan/unit.h"
+#include "vulkan/vk_errors.h"
+#include "vulkan/vk_unit.h"
 
 namespace gfx::vulkan
 {
@@ -31,6 +32,7 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     };
 
     vkCreateWin32SurfaceKHR(get_instance(), &create_infos, get_allocator(), &surface);
+    debug_set_object_name(stringutils::format("surface %s (win32)", window_container->name().c_str()), surface);
 #endif
 
     /**
@@ -149,22 +151,36 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
+    uint8_t resource_index = 0;
     for (auto& resource : swapchain_resources)
     {
         VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.image_acquire_semaphore), "Failed to create images acquire semaphore");
         VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.render_finished_semaphore), "Failed to create draw_pass finnished semaphore");
         VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &resource.in_flight_fence), "Failed to create fence");
+        debug_set_object_name(stringutils::format("surface %s : semaphore image acquire #%d", window_container->name().c_str(), resource_index), resource.image_acquire_semaphore);
+        debug_set_object_name(stringutils::format("surface %s : semaphore render finished #%d", window_container->name().c_str(), resource_index), resource.render_finished_semaphore);
+        debug_set_object_name(stringutils::format("surface %s : fence image in flight #%d", window_container->name().c_str(), resource_index), resource.in_flight_fence);
+
         resource.image_in_flight = VK_NULL_HANDLE;
+        ++resource_index;
     }
 
-    main_command_buffer = std::make_unique<CommandBuffer_VK>();
+    main_command_buffer = std::make_unique<CommandBuffer_VK>("render_surface_" + window_container->name());
 
     recreate_swapchain();
 }
 
 Surface_VK::~Surface_VK()
 {
+    vkDeviceWaitIdle(get_device());
+    vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
     vkDestroySurfaceKHR(get_instance(), surface, get_allocator());
+    for (const auto& elem : swapchain_resources)
+    {
+        vkDestroySemaphore(get_device(), elem.image_acquire_semaphore, get_allocator());
+        vkDestroySemaphore(get_device(), elem.render_finished_semaphore, get_allocator());
+        vkDestroyFence(get_device(), elem.in_flight_fence, get_allocator());
+    }
 }
 
 void Surface_VK::render()
@@ -182,7 +198,6 @@ void Surface_VK::render()
     uint32_t       image_index;
     const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
     set_frame(static_cast<uint8_t>(image_index));
-
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -231,8 +246,8 @@ void Surface_VK::render()
         .signalSemaphoreCount = 1,
         .pSignalSemaphores    = &swapchain_resources->render_finished_semaphore,
     };
-    swapchain_resources->image_in_flight = get_physical_device<VulkanPhysicalDevice>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
-    
+    swapchain_resources->image_in_flight = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
+
     /**
      * Present to swapchain
      */
@@ -290,26 +305,29 @@ void Surface_VK::recreate_swapchain()
 
     VK_CHECK(vkCreateSwapchainKHR(get_device(), &create_info, get_allocator(), &swapchain), "Failed to create swap chain");
 
-    uint32_t             swapchain_image_count;
-    std::vector<VkImage> swapchain_images(get_image_count());
+    debug_set_object_name(stringutils::format("surface %s : swapchain", window_container->name().c_str()), swapchain);
+
+    uint32_t             swapchain_image_count = get_image_count();
+    std::vector<VkImage> swapchain_images(get_image_count(), VK_NULL_HANDLE);
     vkGetSwapchainImagesKHR(get_device(), swapchain, &swapchain_image_count, swapchain_images.data());
 
     SwapchainImageResource<VkImage> images{};
     for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
     {
         images[i] = swapchain_images[i];
+        debug_set_object_name(stringutils::format("surface %s : swapchain image #%d", window_container->name().c_str(), i), images[i]);
     }
-    surface_texture = std::make_shared<VkTexture>(window_container->width(), window_container->height(), 1,
-                                                  TextureParameter{
-                                                      .format                 = VkTexture::engine_texture_format_from_vk(get_surface_format().format),
-                                                      .image_type             = EImageType::Texture_2D,
-                                                      .transfer_capabilities  = ETextureTransferCapabilities::None,
-                                                      .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
-                                                      .gpu_read_capabilities  = ETextureGPUReadCapabilities::None,
-                                                      .mip_level              = 1,
-                                                      .read_only              = false,
-                                                  },
-                                                  images);
+    surface_texture = std::make_shared<Texture_VK>(window_container->width(), window_container->height(), 1,
+                                                   TextureParameter{
+                                                       .format                 = Texture_VK::engine_texture_format_from_vk(get_surface_format().format),
+                                                       .image_type             = EImageType::Texture_2D,
+                                                       .transfer_capabilities  = ETextureTransferCapabilities::None,
+                                                       .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
+                                                       .gpu_read_capabilities  = ETextureGPUReadCapabilities::None,
+                                                       .mip_level              = 1,
+                                                       .read_only              = false,
+                                                   },
+                                                   images);
 }
 
 } // namespace gfx::vulkan
