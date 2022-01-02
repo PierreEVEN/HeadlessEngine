@@ -1,5 +1,5 @@
 
-declare_module("graphics", {"application", "types"}, {"cpputils", "glm"})
+declare_module("graphics", {"application", "types", "shader_builder"}, {"cpputils", "glm"})
 
 target("graphics")
 	set_group("engine_new")

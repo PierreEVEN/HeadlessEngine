@@ -1,3 +1,4 @@
+#include "shader_builder_test.h"
 #include "application/application.h"
 #include "application/window.h"
 #include "gfx/texture.h"
@@ -61,6 +62,8 @@ void create_frame_graph(gfx::Surface* surface)
 int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
+
+    shader_builder::test();
 
     /**
      * 1° initialize the application and the gfx backend
