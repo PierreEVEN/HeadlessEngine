@@ -12,6 +12,8 @@ namespace gfx::vulkan
 
 static VkInstance vulkan_instance = VK_NULL_HANDLE;
 
+static VkDebugUtilsMessengerEXT debug_messenger;
+
 namespace instance
 {
 
@@ -52,10 +54,29 @@ void create()
 #endif
 
     VK_CHECK(vkCreateInstance(&vkInstanceCreateInfo, get_allocator(), &vulkan_instance), "Failed to create vulkan instance");
+
+#ifdef ENABLE_VALIDATION_LAYER
+    if (const auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vulkan_instance, "vkCreateDebugUtilsMessengerEXT")); func != nullptr)
+    {
+        if (func(vulkan_instance, &validation_layer_create_infos, nullptr, &debug_messenger) != VK_SUCCESS)
+        {
+            LOG_FATAL("Failed to create debug messenger");
+        }
+    }
+    else
+    {
+        LOG_FATAL("Cannot create debug messenger : cannot find required extension");
+    }
+#endif
 }
 
 void destroy()
 {
+#ifdef ENABLE_VALIDATION_LAYER
+    if (const auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vulkan_instance, "vkDestroyDebugUtilsMessengerEXT")))
+        func(vulkan_instance, debug_messenger, get_allocator());
+#endif
+
     vkDestroyInstance(vulkan_instance, get_allocator());
 }
 } // namespace instance

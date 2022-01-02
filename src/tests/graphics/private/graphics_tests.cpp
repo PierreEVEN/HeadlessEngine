@@ -1,10 +1,62 @@
 #include "application/application.h"
 #include "application/window.h"
 #include "gfx/texture.h"
+#include "gfx/view.h"
 
 #include <gfx/gfx.h>
 
 #include <cpputils/logger.hpp>
+
+void create_frame_graph(gfx::Surface* surface)
+{
+    const auto temporal_anti_aliasing = gfx::RenderPass::create(256, 256,
+                                                                gfx::RenderPassConfig{
+                                                                    .pass_name = "temporal anti aliasing",
+                                                                    .color_attachments =
+                                                                        std::vector<gfx::RenderPassConfig::Attachment>{
+                                                                            {
+                                                                                .attachment_name = "color",
+                                                                            },
+                                                                        },
+                                                                });
+    temporal_anti_aliasing->generate_framebuffer_images();
+
+    const auto gbuffer_resolve = gfx::RenderPass::create(256, 256,
+                                                         gfx::RenderPassConfig{
+                                                             .pass_name = "gbuffer resolve",
+                                                             .color_attachments =
+                                                                 std::vector<gfx::RenderPassConfig::Attachment>{
+                                                                     {
+                                                                         .attachment_name = "color",
+                                                                     },
+                                                                 },
+                                                         });
+    gbuffer_resolve->generate_framebuffer_images();
+
+    const auto gbuffers = gfx::RenderPass::create(256, 256,
+                                                  gfx::RenderPassConfig{.pass_name = "gbuffers",
+                                                                        .color_attachments =
+                                                                            std::vector<gfx::RenderPassConfig::Attachment>{
+                                                                                {
+                                                                                    .attachment_name = "albedo",
+                                                                                },
+                                                                                {
+                                                                                    .attachment_name = "normal",
+                                                                                },
+                                                                                {
+                                                                                    .attachment_name = "velocity",
+                                                                                },
+                                                                            },
+                                                                        .depth_attachment = gfx::RenderPassConfig::Attachment{
+                                                                            .attachment_name = "depth",
+                                                                            .image_format    = gfx::EImageFormat::DEPTH_32_FLOAT,
+                                                                        }});
+    gbuffers->generate_framebuffer_images();
+
+    surface->add_child(temporal_anti_aliasing);
+    temporal_anti_aliasing->add_child(gbuffer_resolve);
+    gbuffer_resolve->add_child(gbuffers);
+}
 
 int main()
 {
@@ -22,8 +74,7 @@ int main()
     auto* window_1  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
     auto  surface_1 = std::unique_ptr<gfx::Surface>(gfx::Surface::create_surface(window_1));
 
-    std::unique_ptr<gfx::RenderTarget> main_render_target = std::make_unique<gfx::RenderTarget>();
-    std::unique_ptr<gfx::View>         main_view          = std::make_unique<gfx::View>();
+    std::unique_ptr<gfx::View> main_view = std::make_unique<gfx::View>();
 
     /**
      * 3° Load some data on the GPU
@@ -45,20 +96,7 @@ int main()
     /**
      * 4° framegraph definition
      */
-    auto       post_process_resolve   = std::make_unique<gfx::FrameGraphResource>();
-    const auto temporal_anti_aliasing = std::make_shared<gfx::FrameGraphResource>();
-    const auto gbuffer_resolve        = std::make_shared<gfx::FrameGraphResource>();
-    const auto gbuffers               = std::make_shared<gfx::FrameGraphResource>();
-    const auto mini_map               = std::make_shared<gfx::FrameGraphResource>();
-
-    post_process_resolve->add_child(temporal_anti_aliasing);
-    post_process_resolve->add_child(mini_map);
-    temporal_anti_aliasing->add_child(gbuffer_resolve);
-    gbuffer_resolve->add_child(gbuffers);
-
-    const auto framegraph = std::shared_ptr<gfx::FrameGraph>();
-    framegraph->set_root(std::move(post_process_resolve));
-    framegraph->generate();
+    create_frame_graph(surface_1.get());
 
     /**
      * 5° Application loop
@@ -68,9 +106,7 @@ int main()
         gfx::next_frame();
         for (uint32_t i = 0; i < application::window::Window::get_window_count(); ++i)
         {
-            main_render_target->update(*main_view);
-            surface_1->display(*main_render_target);
-
+            surface_1->render();
             application::window::Window::get_window(i)->update();
         }
     }
@@ -78,12 +114,11 @@ int main()
     /**
      * 6° clean GPU data : //@TODO automatically free allocated resources
      */
-    texture            = nullptr;
-    main_render_target = nullptr;
-    main_view          = nullptr;
-    gpu_buffer         = nullptr;
-    indirect_buffer    = nullptr;
-    surface_1          = nullptr;
+    texture         = nullptr;
+    main_view       = nullptr;
+    gpu_buffer      = nullptr;
+    indirect_buffer = nullptr;
+    surface_1       = nullptr;
 
     // Destroy graphic backend and close application
     gfx::destroy();

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "render_target.h"
 #include "application/window.h"
+#include "framegraph/framegraph_resource.h"
 
 namespace gfx
 {
@@ -13,11 +13,18 @@ class Surface
     static Surface* create_surface(application::window::Window* container);
     virtual ~Surface() = default;
 
-    virtual void display(RenderTarget& render_target) = 0;
+    [[nodiscard]] virtual application::window::Window* get_container() const = 0;
+    virtual void                                       render()              = 0;
+
+    void add_child(const std::shared_ptr<RenderPass>& render_pass) const
+    {
+        main_render_pass->add_child(render_pass);
+    }
 
   protected:
+      
     Surface() = default;
 
-  private:
+    std::unique_ptr<RenderPass> main_render_pass;
 };
 } // namespace gfx

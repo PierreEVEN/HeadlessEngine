@@ -12,6 +12,8 @@ namespace gfx
 {
 Texture::Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : image_parameters(parameters)
 {
+    if (parameters.format == EImageFormat::UNDEFINED)
+        LOG_FATAL("buffer format is undefined");
 
     switch (image_parameters.image_type)
     {

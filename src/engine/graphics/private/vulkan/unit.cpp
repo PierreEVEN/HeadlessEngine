@@ -16,9 +16,9 @@ uint8_t get_image_count()
     return render_image_count;
 }
 
-void next_frame()
+void set_frame(uint8_t new_image_index)
 {
-    image_index = (image_index + 1) % render_image_count;
+    image_index = new_image_index;
 }
 
 uint8_t get_image_index()

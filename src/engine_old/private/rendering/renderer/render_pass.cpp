@@ -134,7 +134,7 @@ void RenderPass::create_render_pass()
         .dependencyCount = static_cast<uint32_t>(dependencies.size()),
         .pDependencies   = dependencies.data(),
     };
-
+        
     VK_ENSURE(vkCreateRenderPass(Graphics::get()->get_logical_device(), &render_pass_infos, vulkan_common::allocation_callback, &render_pass), "Failed to create render pass");
 }
 

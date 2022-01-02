@@ -28,9 +28,6 @@ void init()
 
 void next_frame()
 {
-#if GFX_USE_VULKAN
-    vulkan::next_frame();
-#endif
 }
 
 void destroy()

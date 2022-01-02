@@ -9,13 +9,29 @@
 
 namespace gfx::vulkan
 {
+
 class Surface_VK : public Surface
 {
   public:
     Surface_VK(application::window::Window* container);
     virtual ~Surface_VK();
 
-    void display(RenderTarget& render_target) override;
+    void render() override;
+
+    application::window::Window* get_container() const override
+    {
+        return window_container;
+    }
+
+    VkSurfaceFormatKHR get_surface_format() const
+    {
+        return surface_format;
+    }
+
+    std::shared_ptr<Texture> get_surface_render_texture() const
+    {
+        return surface_texture;
+    }
 
   private:
     VkSurfaceKHR   surface   = VK_NULL_HANDLE;
@@ -31,13 +47,14 @@ class Surface_VK : public Surface
 
     struct ImageData
     {
-        VkCommandBuffer command_buffer             = VK_NULL_HANDLE;
         VkFence         image_in_flight            = VK_NULL_HANDLE;
         VkSemaphore     image_acquire_semaphore    = VK_NULL_HANDLE;
-        VkSemaphore     render_finnished_semaphore = VK_NULL_HANDLE;
+        VkSemaphore     render_finished_semaphore = VK_NULL_HANDLE;
         VkFence         in_flight_fence            = VK_NULL_HANDLE;
     };
 
+    std::unique_ptr<CommandBuffer> main_command_buffer;
+    std::shared_ptr<Texture>          surface_texture;
     SwapchainImageResource<ImageData> swapchain_resources;
     application::window::Window*      window_container = nullptr;
 };
