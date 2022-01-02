@@ -1,0 +1,53 @@
+#pragma shader_version 1.5
+
+
+head 
+{	
+	shader_model 	= 6.0;
+	vertex_entry 	= vertex.main;
+	fragment_entry  = fragment.main;
+	
+	Texture my_property 	= "toto";
+	float my_property2 		= 5.4f;
+	float4 my_property3 	= float4(5, 8, 6, 7);
+};
+
+stage fragment
+[
+	void main() 
+	{
+	
+	
+	}
+]
+
+pass g_buffer
+{
+	stage vertex
+	[
+		#include "path/toto.hlsl"
+
+		void main() 
+		{
+			ma_func_toto();		
+		}
+	]
+};
+
+pass g_buffer_resolve
+{
+	head 
+	{
+		vertex.VsMain;
+	}
+	stage vertex
+	[
+		#include "toto.hlsl"
+
+
+		void VsMain() 
+		{
+			ma_func_toto();		
+		}
+	]
+};
