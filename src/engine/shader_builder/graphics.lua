@@ -1,5 +1,5 @@
 
-declare_module("shader_builder", {"types"}, {"cpputils", "glm", "directxshadercompiler", "spirv-tools", "spirv-reflect"})
+declare_module("shader_builder", {"types"}, {"cpputils", "glm", "glslang", "spirv-tools", "spirv-reflect"})
 
 if GRAPHIC_BACKEND == "VULKAN" then
 	target("graphics")
