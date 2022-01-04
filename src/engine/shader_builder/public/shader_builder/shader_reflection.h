@@ -3,10 +3,9 @@
 
 namespace shader_builder
 {
-class ShaderReflector
+class ShaderReflection
 {
 public:
-    ShaderReflector(const ShaderCompiler& compiler);
 private:
 };
 }

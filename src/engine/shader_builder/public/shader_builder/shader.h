@@ -13,7 +13,7 @@ class Shader
     explicit Shader(const std::string& source_data);
 
   private:
-    std::unique_ptr<ShaderReflector> shader_reflector;
+    std::unique_ptr<ShaderReflection> shader_reflector;
 };
 
 } // namespace shader_builder

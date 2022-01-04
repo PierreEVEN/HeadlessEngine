@@ -1,0 +1,11 @@
+#pragma once
+
+struct UBO
+{
+	float4x4 projection;
+	float4x4 model;
+	float4x4 view;
+	float4 instancePos[3];
+};
+
+cbuffer ubo : register(b0) { UBO ubo; }

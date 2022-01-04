@@ -1,12 +1,6 @@
 
-#include "shader_parser.h"
+#include "shader_builder/shader_parser.h"
 
 namespace shader_builder
 {
-ShaderCompiler::ShaderCompiler(const std::string& shader_text)
-{
-
-
-
-}
 }

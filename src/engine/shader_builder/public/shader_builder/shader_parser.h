@@ -3,13 +3,10 @@
 
 namespace shader_builder
 {
-class ShaderCompiler
+class ShaderParser
 {
 public:
-    ShaderCompiler(const std::string& shader_text);
-
 private:
-
-
+    
 };
 }
