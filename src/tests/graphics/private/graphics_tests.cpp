@@ -2,8 +2,7 @@
 #include "application/window.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
-#include "shader_builder/parser/parser.h"
-#include "shader_builder/shader_builder.h"
+#include "shader_builder/compiler.h"
 
 #include <gfx/gfx.h>
 
@@ -64,40 +63,9 @@ int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
-    std::ifstream str;
-    str.open("data/shaders/demo.shb");
-    std::string line;
-    std::string global;
-    while (str)
-    {
-        std::getline(str, line);
-        global += line + "\n";
-    }
-
-    shader_builder::get()->add_include_dir("test");
-
-    const auto result = shader_builder::parser::parse_shader(global);
-
-    for (const auto& pragma : result.properties)
-        LOG_DEBUG("pragma directive : (%s=%s)", pragma.first.c_str(), pragma.second.c_str());
-
-    for (const auto& pragma : result.default_values)
-        LOG_DEBUG("default_value : (%s=%s)", pragma.first.c_str(), pragma.second.c_str());
-
-    for (auto& pass : result.passes)
-    {
-        for (const auto& vs : pass.second.vertex_chunks)
-        {
-            LOG_DEBUG("VERTEX : PASS (%s) %s::[%d]\n%s", pass.first.c_str(), vs.file.c_str(), vs.line_start, vs.content.c_str());
-        }
-        for (const auto& fs : pass.second.fragment_chunks)
-        {
-            LOG_DEBUG("FRAGMENT : PASS (%s) %s::[%d]\n%s", pass.first.c_str(), fs.file.c_str(), fs.line_start, fs.content.c_str());
-        }
-    }
+    auto result = shader_builder::compile_shader("data/shaders/demo.shb");
 
 
-    str.close();
     /**
      * 1° initialize the application and the gfx backend
      */

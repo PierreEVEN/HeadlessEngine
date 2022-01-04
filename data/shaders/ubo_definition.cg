@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UBO_DEFINITION_H_
+#define UBO_DEFINITION_H_
 
 struct UBO
 {
@@ -9,3 +10,6 @@ struct UBO
 };
 
 cbuffer ubo : register(b0) { UBO ubo; }
+
+
+#endif // UBO_DEFINITION_H_
