@@ -9,9 +9,22 @@
 
 namespace gfx
 {
+
+static std::unordered_map<std::string, std::unique_ptr<RenderPass>> render_passes;
+
+
+
 RenderPass::RenderPass(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config)
     : width(framebuffer_width), height(framebuffer_height), config(frame_graph_config)
 {
+}
+
+RenderPass* get_render_pass(const std::string& render_pass_name)
+{
+    const auto& it = render_passes.find(render_pass_name);
+    if (it != render_passes.end())
+        return it->second.get();
+    return nullptr;
 }
 
 std::shared_ptr<RenderPass> RenderPass::create(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config)

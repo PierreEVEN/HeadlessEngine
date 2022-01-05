@@ -16,9 +16,10 @@ void CustomIncluder::add_include_path(const std::filesystem::path& include_path)
     include_paths.emplace_back(include_path);
 }
 
-glslang::TShader::Includer::IncludeResult* CustomIncluder::includeSystem(const char* headerName, const char* includerName, size_t inclusionDepth)
+glslang::TShader::Includer::IncludeResult* CustomIncluder::includeSystem([[maybe_unused]] const char* headerName, [[maybe_unused]] const char* includerName, [[maybe_unused]] size_t inclusionDepth)
 {
-    LOG_WARNING("try include system %s : %s : %d", headerName, includerName, inclusionDepth);
+    //LOG_WARNING("try include system %s : %s : %d", headerName, includerName, inclusionDepth);
+    // System include is not handled
     return nullptr;
 }
 

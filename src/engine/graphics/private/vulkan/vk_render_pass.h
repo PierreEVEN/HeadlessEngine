@@ -23,6 +23,12 @@ class RenderPass_VK : public RenderPass
 
     void begin(CommandBuffer* command_buffer);
     void end(CommandBuffer* command_buffer);
+
+    [[nodiscard]]VkRenderPass get() const
+    {
+        return render_pass;
+    }
+
 protected:
     void init() override;
 

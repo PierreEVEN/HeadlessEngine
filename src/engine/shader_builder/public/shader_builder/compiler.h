@@ -1,16 +1,10 @@
 #pragma once
-#include <string>
+#include "shader_builder/shader_types.h"
 
-#include "operation.h"
+#include <filesystem>
 
 namespace shader_builder
 {
-struct CompilationResult
-{
-    OperationStatus status;
-
-};
-
-CompilationResult compile_shader(const std::string& file_path);
-
-}
+CompilationResult compile_shader(const std::filesystem::path& file_path);
+bool print_compilation_results(const CompilationResult& results);
+} // namespace shader_builder

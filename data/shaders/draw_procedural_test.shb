@@ -1,0 +1,35 @@
+
+global(gbuffer)
+[
+	struct VsToFsStruct
+	{
+		[[vk::location(0)]] float4 Pos 			: POSITION0;
+	};
+]
+
+vertex(gbuffer)
+[
+	struct VSInput
+	{
+	};
+
+	VsToFsStruct main(VSInput input, uint InstanceIndex : SV_InstanceID)
+	{
+		VsToFsStruct output = (VsToFsStruct)0;
+		return output;
+	}
+];
+
+fragment(gbuffer) 
+[
+	struct FSOutput
+	{
+		float4 Color 		: SV_TARGET0;
+	};
+	
+	FSOutput main(VsToFsStruct input)
+	{
+		FSOutput output = (FSOutput)0;
+		return output;
+	}
+];

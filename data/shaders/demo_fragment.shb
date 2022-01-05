@@ -6,7 +6,7 @@ SamplerState samplerColor : register(s1);
 Texture2D textureNormalMap : register(t2);
 SamplerState samplerNormalMap : register(s2);
 
-FSOutput main(VSOutput input)
+FSOutput main(VsToFsStruct input)
 {
 	FSOutput output = (FSOutput)0;
 	output.Position = float4(input.WorldPos, 1.0);

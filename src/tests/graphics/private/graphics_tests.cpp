@@ -2,6 +2,7 @@
 #include "application/window.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
+#include "gfx/materials/master_material.h"
 #include "shader_builder/compiler.h"
 
 #include <gfx/gfx.h>
@@ -50,7 +51,7 @@ void create_frame_graph(gfx::Surface* surface)
                                                                             },
                                                                         .depth_attachment = gfx::RenderPassConfig::Attachment{
                                                                             .attachment_name = "depth",
-                                                                            .image_format    = gfx::EImageFormat::DEPTH_32_FLOAT,
+                                                                            .image_format    = ETypeFormat::D32_SFLOAT,
                                                                         }});
     gbuffers->generate_framebuffer_images();
 
@@ -63,9 +64,8 @@ int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
-    auto result = shader_builder::compile_shader("data/shaders/demo.shb");
-
-
+    auto master = gfx::MasterMaterial::create("data/shaders/demo.shb");
+    
     /**
      * 1° initialize the application and the gfx backend
      */
@@ -91,7 +91,7 @@ int main()
     std::unique_ptr<gfx::Buffer> indirect_buffer = std::make_unique<gfx::Buffer>("indirect_buffer", 64, gfx::EBufferUsage::INDIRECT_DRAW_ARGUMENT);
     indirect_buffer->set_data(data, sizeof(int32_t) * 16);
 
-    std::shared_ptr<gfx::Texture> texture = gfx::Texture::create(5, 5, gfx::TextureParameter{.format = gfx::EImageFormat::R_UNORM_8});
+    std::shared_ptr<gfx::Texture> texture = gfx::Texture::create(5, 5, gfx::TextureParameter{.format = ETypeFormat::R8_UNORM});
 
     texture->set_pixels(std::vector<uint8_t>{
         255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255,

@@ -7,25 +7,29 @@ namespace shader_builder
 
 struct OperationError
 {
-    uint32_t    column = 0;
-    uint32_t    line   = 0;
+    int32_t    column = 0;
+    int32_t     line   = 0;
     std::string error_message;
 };
 
 class OperationStatus
 {
   public:
-    OperationStatus() : is_success(true)
-    {
-    }
+
     void add_error(const OperationError& error)
     {
         errors.emplace_back(error);
     }
 
+    void append(const OperationStatus& other)
+    {
+        for (const auto& er : other.get_errors())
+            errors.emplace_back(er);
+    }
+    
     operator bool() const
     {
-        return is_success;
+        return errors.empty();
     }
 
     [[nodiscard]] const std::vector<OperationError>& get_errors() const
@@ -35,7 +39,6 @@ class OperationStatus
 
   private:
     std::vector<OperationError> errors;
-    bool                  is_success;
 };
 
 } // namespace shader_builder

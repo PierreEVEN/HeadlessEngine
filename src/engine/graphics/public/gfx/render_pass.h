@@ -20,7 +20,7 @@ struct RenderPassConfig
     struct Attachment
     {
         std::string               attachment_name = "none";
-        EImageFormat              image_format    = EImageFormat::RGBA_UNORM_8;
+        ETypeFormat               image_format    = ETypeFormat::R8G8B8A8_UNORM;
         bool                      shader_readable = true;
         std::optional<ClearValue> clear_value;
     };
@@ -62,6 +62,11 @@ class RenderPass
     void set_framebuffer_images(const std::vector<std::shared_ptr<Texture>>& images);
     void generate_framebuffer_images();
 
+    [[nodiscard]] const RenderPassConfig& get_config() const
+    {
+        return config;
+    }
+
   protected:
     RenderPass(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config);
 
@@ -76,11 +81,13 @@ class RenderPass
     std::vector<std::shared_ptr<Texture>> resource_render_target;
 
   private:
-
     std::vector<RenderPass*>                 parents;
     std::vector<std::shared_ptr<RenderPass>> children;
     std::vector<Texture*>                    available_images;
 
     bool present_pass;
 };
+
+RenderPass* get_render_pass(const std::string& render_pass_name);
+
 } // namespace gfx

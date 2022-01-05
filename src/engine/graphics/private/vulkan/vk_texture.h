@@ -26,95 +26,14 @@ public:
         return views;
     }
 
-    static VkFormat vk_texture_format_to_engine(EImageFormat format)
+    static VkFormat vk_texture_format_to_engine(ETypeFormat format)
     {
-        switch (format)
-        {
-        case EImageFormat::R_UNORM_8:
-            return VK_FORMAT_R8_UNORM;
-        case EImageFormat::RG_UNORM_8:
-            return VK_FORMAT_R8G8_UNORM;
-        case EImageFormat::RGB_UNORM_8:
-            return VK_FORMAT_R8G8B8_UNORM;
-        case EImageFormat::RGBA_UNORM_8:
-            return VK_FORMAT_R8G8B8A8_UNORM;
-        case EImageFormat::R_SRGB_8:
-            return VK_FORMAT_R8_SRGB;
-        case EImageFormat::RG_SRGB_8:
-            return VK_FORMAT_R8G8_SRGB;
-        case EImageFormat::RGB_SRGB_8:
-            return VK_FORMAT_R8G8B8_SRGB;
-        case EImageFormat::RGBA_SRGB_8:
-            return VK_FORMAT_R8G8B8A8_SRGB;
-        case EImageFormat::R_FLOAT_16:
-            return VK_FORMAT_R16_SFLOAT;
-        case EImageFormat::RG_FLOAT_16:
-            return VK_FORMAT_R16G16_SFLOAT;
-        case EImageFormat::RGB_FLOAT_16:
-            return VK_FORMAT_R16G16B16_SFLOAT;
-        case EImageFormat::RGBA_FLOAT_16:
-            return VK_FORMAT_R16G16B16A16_SFLOAT;
-        case EImageFormat::R_FLOAT_32:
-            return VK_FORMAT_R32_SFLOAT;
-        case EImageFormat::RG_FLOAT_32:
-            return VK_FORMAT_R32G32_SFLOAT;
-        case EImageFormat::RGB_FLOAT_32:
-            return VK_FORMAT_R32G32B32_SFLOAT;
-        case EImageFormat::RGBA_FLOAT_32:
-            return VK_FORMAT_R32G32B32A32_SFLOAT;
-        case EImageFormat::BGRA_UNORM_8:
-            return VK_FORMAT_B8G8R8A8_UNORM;
-        case EImageFormat::DEPTH_32_FLOAT:
-            return VK_FORMAT_D32_SFLOAT;
-        case EImageFormat::DEPTH_32_STENCIL_8_FLOAT:
-            return VK_FORMAT_D32_SFLOAT_S8_UINT;
-        case EImageFormat::DEPTH_24_STENCIL_8_UNORM:
-            return VK_FORMAT_D24_UNORM_S8_UINT;
-        }
-        LOG_FATAL("images format %d : %s is not supported", format, magic_enum::enum_name(format).data());
+        return static_cast<VkFormat>(format);
     }
 
-    static EImageFormat engine_texture_format_from_vk(VkFormat format)
+    static ETypeFormat engine_texture_format_from_vk(VkFormat format)
     {
-        switch (format)
-        {
-        case VK_FORMAT_R8_UNORM:
-            return EImageFormat::R_UNORM_8;
-        case VK_FORMAT_R8G8_UNORM:
-            return EImageFormat::RG_UNORM_8;
-        case VK_FORMAT_R8G8B8_UNORM:
-            return EImageFormat::RGB_UNORM_8;
-        case VK_FORMAT_R8G8B8A8_UNORM:
-            return EImageFormat::RGBA_UNORM_8;
-        case VK_FORMAT_R8_SRGB:
-            return EImageFormat::R_SRGB_8;
-        case VK_FORMAT_R8G8_SRGB:
-            return EImageFormat::RG_SRGB_8;
-        case VK_FORMAT_R8G8B8_SRGB:
-            return EImageFormat::RGB_SRGB_8;
-        case VK_FORMAT_R8G8B8A8_SRGB:
-            return EImageFormat::RGBA_SRGB_8;
-        case VK_FORMAT_R16_SFLOAT:
-            return EImageFormat::R_FLOAT_16;
-        case VK_FORMAT_R16G16_SFLOAT:
-            return EImageFormat::RG_FLOAT_16;
-        case VK_FORMAT_R16G16B16_SFLOAT:
-            return EImageFormat::RGB_FLOAT_16;
-        case VK_FORMAT_R16G16B16A16_SFLOAT:
-            return EImageFormat::RGBA_FLOAT_16;
-        case VK_FORMAT_R32_SFLOAT:
-            return EImageFormat::R_FLOAT_32;
-        case VK_FORMAT_R32G32_SFLOAT:
-            return EImageFormat::RG_FLOAT_32;
-        case VK_FORMAT_R32G32B32_SFLOAT:
-            return EImageFormat::RGB_FLOAT_32;
-        case VK_FORMAT_R32G32B32A32_SFLOAT:
-            return EImageFormat::RGBA_FLOAT_32;
-        case VK_FORMAT_B8G8R8A8_UNORM:
-            return EImageFormat::BGRA_UNORM_8;
-        default:
-            LOG_FATAL("unsupported format : %d", format);
-        }
+        return static_cast<ETypeFormat>(format);
     }
 
 private:

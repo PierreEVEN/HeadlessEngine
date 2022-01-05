@@ -144,24 +144,24 @@ static std::string get_next_definition(ShaderFileIterator& it)
 
 bool property_trim_func(char chr)
 {
-    return chr == ';' || chr == '=' || chr == '\t' || chr == '\n' || chr == '\r' || chr == ' ' || chr == '\'' || chr == '"' || chr == ',';
+    return chr == ';' || chr == '=' || chr == '\t' || chr == '\n' || chr == '\r' || chr == ' ' || chr == '\'' || chr == '"' || chr == ',' || chr == '(' || chr == ')';
 }
-static Chunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path& shader_file)
+static ParsedChunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path& shader_file)
 {
     int64_t indentation = 0;
-    int64_t started     = false;
-    Chunk   chunk;
+    int64_t found_body     = false;
+    ParsedChunk   chunk;
     bool    is_init = false;
 
-    while (it && (!started || indentation > 0))
+    while (it && (!found_body || indentation > 0))
     {
         skip_commentaries(it);
 
         if (it == '=' && it + 1 == '>')
         {
             it += 2;
-            started          = true;
-            std::string file = stringutils::trim(get_line(it), property_trim_func);
+            found_body                               = true;
+            std::string                    file   = stringutils::trim(get_line(it), property_trim_func);
             CustomIncluder::IncludeResult* result = get()->get_includer()->includeLocal(file.c_str(), shader_file.string().c_str(), 0);
             if (result && result->headerData)
             {
@@ -169,11 +169,16 @@ static Chunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path&
                 chunk.content    = result->headerData;
                 chunk.file       = result->headerName;
                 get()->get_includer()->releaseInclude(result);
+                found_body = true;
             }
             else
             {
                 get()->get_includer()->releaseInclude(result);
-                LOG_ERROR("failed to resolve include %s", file.c_str());
+                chunk.result.add_error({
+                    .column        = -1,
+                    .line          = -1,
+                    .error_message = "failed to resolve include [" + file + "]",
+                });
             }
             continue;
         }
@@ -183,7 +188,7 @@ static Chunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path&
             if (indentation != 0)
                 chunk.content += '[';
             indentation++;
-            started = true;
+            found_body = true;
         }
         else if (it == ']')
         {
@@ -193,9 +198,14 @@ static Chunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path&
         }
         else
         {
-            if (!started && !is_void(*it))
+            if (!found_body && !is_void(*it))
             {
                 LOG_ERROR("expected \n[\ngot\n%s", get_line(it).c_str());
+                chunk.result.add_error({
+                    .column        = -1,
+                    .line          = static_cast<int>(it.get_line()),
+                    .error_message = "expected \n[\ngot\n" + get_line(it),
+                });
                 break;
             }
 
@@ -211,7 +221,17 @@ static Chunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path&
         ++it;
     }
     if (indentation != 0)
-        LOG_ERROR("chunk doesn't end correctly :\n%s", chunk.content.c_str());
+        chunk.result.add_error({
+            .column        = -1,
+            .line          = static_cast<int>(it.get_line()),
+            .error_message = "chunk doesn't end correctly :\n" + chunk.content,
+        });
+    if (!found_body)
+        chunk.result.add_error({
+            .column        = -1,
+            .line          = static_cast<int>(it.get_line()),
+            .error_message = "failed to find chunk body",
+        });
     return chunk;
 }
 
@@ -241,11 +261,11 @@ std::vector<std::string> parse_chunk_head(const std::string& chunk_head)
     return passes;
 }
 
-Result parser::parse_shader(const std::filesystem::path& file_path)
+ParserResult parser::parse_shader(const std::filesystem::path& file_path)
 {
-    Result result;
+    ParserResult result;
 
-    std::vector<Chunk> globals;
+    std::vector<ParsedChunk> globals;
 
     std::string shader_code;
     std::string line;
@@ -279,38 +299,56 @@ Result parser::parse_shader(const std::filesystem::path& file_path)
 
         if (find_string(it, "head"))
         {
-            Chunk head_code = get_next_chunk(it, file_path);
-            for (const auto& field : parse_head(head_code.content))
-                result.default_values.insert(field);
+            ParsedChunk head_code = get_next_chunk(it, file_path);
+            if (!head_code.result)
+                result.status.append(head_code.result);
+            else
+                for (const auto& field : parse_head(head_code.content))
+                    result.default_values.insert(field);
         }
 
         if (find_string(it, "global"))
         {
             std::string global_args = get_next_definition(it);
-            Chunk       global_code = get_next_chunk(it, file_path);
-            if (global_code.file.empty())
-                global_code.file = file_path.string();
-            globals.emplace_back(global_code);
+            ParsedChunk       global_code = get_next_chunk(it, file_path);
+            if (!global_code.result)
+                result.status.append(global_code.result);
+            else
+            {
+                if (global_code.file.empty())
+                    global_code.file = file_path.string();
+                globals.emplace_back(global_code);
+            }
         }
 
         if (find_string(it, "vertex"))
         {
             std::string vertex_args = get_next_definition(it);
-            Chunk       vertex_code = get_next_chunk(it, file_path);
-            if (vertex_code.file.empty())
-                vertex_code.file = file_path.string();
-            for (const auto& pass : parse_chunk_head(vertex_args))
-                result.passes[pass].vertex_chunks.emplace_back(vertex_code);
+            ParsedChunk       vertex_code = get_next_chunk(it, file_path);
+            if (!vertex_code.result)
+                result.status.append(vertex_code.result);
+            else
+            {
+                if (vertex_code.file.empty())
+                    vertex_code.file = file_path.string();
+                for (const auto& pass : parse_chunk_head(vertex_args))
+                    result.passes[pass].vertex_chunks.emplace_back(vertex_code);
+            }
         }
 
         if (find_string(it, "fragment"))
         {
             std::string fragment_args = get_next_definition(it);
-            Chunk       fragment_code = get_next_chunk(it, file_path);
-            if (fragment_code.file.empty())
-                fragment_code.file = file_path.string();
-            for (const auto& pass : parse_chunk_head(fragment_args))
-                result.passes[pass].fragment_chunks.emplace_back(fragment_code);
+            ParsedChunk       fragment_code = get_next_chunk(it, file_path);
+            if (!fragment_code.result)
+                result.status.append(fragment_code.result);
+            else
+            {
+                if (fragment_code.file.empty())
+                    fragment_code.file = file_path.string();
+                for (const auto& pass : parse_chunk_head(fragment_args))
+                    result.passes[pass].fragment_chunks.emplace_back(fragment_code);
+            }
         }
         ++it;
     }

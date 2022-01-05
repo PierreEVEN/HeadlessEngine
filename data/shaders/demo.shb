@@ -1,9 +1,18 @@
-#pragma shader_version 1.0
+#pragma shader_version 	1.0
+#pragma shader_language 	HLSL
+
+#pragma cull 				BACK
+#pragma front 			COUNTER_CLOCKWISE
+#pragma topology			TRIANGLE
+#pragma polygon 			FILL
+#pragma line_width 		1.0
+#pragma depth_test 		true
+#pragma alpha_mode		OPAQUE
 
 head 
 [
 	textureColor 		= "default_texture"; // azfazfaz 
-	textureNormalMap 	= "default_normal_map"; 
+	textureNormalMap 	= "default_normal_map";
 ];
 
 global(gbuffer, g_buffer_resolve)
@@ -17,19 +26,19 @@ global(gbuffer, g_buffer_resolve)
 		[[vk::location(4)]] float3 Tangent 	: TEXCOORD1;
 	};
 
-	struct VSOutput
+	struct VsToFsStruct
 	{
-		[[vk::location(0)]] float4 Pos 		: POSITION0;
-		[[vk::location(0)]] float3 Normal 	: NORMAL0;
-		[[vk::location(1)]] float2 UV 		: TEXCOORD0;
-		[[vk::location(2)]] float3 Color 	: COLOR0;
-		[[vk::location(3)]] float3 WorldPos 	: POSITION0;
-		[[vk::location(4)]] float3 Tangent 	: TEXCOORD1;
+		[[vk::location(0)]] float4 Pos 			: POSITION0;
+		[[vk::location(1)]] float3 Normal 	 	: NORMAL0;
+		[[vk::location(2)]] float2 UV 		 	: TEXCOORD0;
+		[[vk::location(3)]] float3 Color 	 	: COLOR0;
+		[[vk::location(4)]] float3 WorldPos 	: POSITION1;
+		[[vk::location(5)]] float3 Tangent 	 	: TEXCOORD1;
 	};
 
 	struct FSOutput
 	{
-		float4 Position 	: SV_TARGET0;
+		float4 Position 		: SV_TARGET0;
 		float4 Normal 		: SV_TARGET1;
 		float4 Albedo 		: SV_TARGET2;
 	};
@@ -39,9 +48,9 @@ vertex(gbuffer)
 [
 	#include "ubo_definition.cg"
 
-	VSOutput main(VSInput input, uint InstanceIndex : SV_InstanceID)
+	VsToFsStruct main(VSInput input, uint InstanceIndex : SV_InstanceID)
 	{
-		VSOutput output = (VSOutput)0;
+		VsToFsStruct output = (VsToFsStruct)0;
 		float4 tmpPos = input.Pos + ubo.instancePos[InstanceIndex];
 
 		output.Pos = mul(ubo.projection, mul(ubo.view, mul(ubo.model, tmpPos)));
@@ -54,7 +63,7 @@ vertex(gbuffer)
 		// Normal in world space
 		output.Normal = normalize(input.Normal);
 		output.Tangent = normalize(input.Tangent);
-
+		
 		// Currently just vertex color
 		output.Color = input.Color;
 		return output;

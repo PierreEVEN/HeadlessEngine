@@ -26,7 +26,7 @@ RenderPass_VK::~RenderPass_VK()
 void RenderPass_VK::begin(CommandBuffer* command_buffer)
 {
 #if GFX_USE_VULKAN
-
+    command_buffer->render_pass  = config.pass_name;
     CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
 
     VkCommandBuffer& cmd = **cmd_buffer;
@@ -70,7 +70,7 @@ void RenderPass_VK::init()
     // add color color_attachments
     for (const auto& col_attachment : config.color_attachments)
     {
-        if (col_attachment.image_format == EImageFormat::UNDEFINED)
+        if (col_attachment.image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
 
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
@@ -95,7 +95,7 @@ void RenderPass_VK::init()
     // add depth attachment
     if (config.depth_attachment)
     {
-        if (config.depth_attachment->image_format == EImageFormat::UNDEFINED)
+        if (config.depth_attachment->image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
 
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());

@@ -5,48 +5,10 @@
 #include <optional>
 #include <vector>
 
+#include "types/type_format.h"
+
 namespace gfx
 {
-
-enum class EImageFormat
-{
-    UNDEFINED,
-    CHANNEL_R                = 0x00000001,
-    CHANNEL_G                = 0x0000002,
-    CHANNEL_B                = 0x0000004,
-    CHANNEL_A                = 0x0000008,
-    PRECISION_8              = 0x0000010,
-    PRECISION_16             = 0x0000020,
-    PRECISION_32             = 0x0000040,
-    PRECISION_64             = 0x0000080,
-    MODE_UNORM               = 0x0000100,
-    MODE_SRGB                = 0x0000200,
-    MODE_FLOAT               = 0x0000400,
-    BGRA_UNORM_8             = 0x0001000,
-    DEPTH_32_FLOAT           = 0x0002000,
-    DEPTH_32_STENCIL_8_FLOAT = 0x0004000,
-    DEPTH_24_STENCIL_8_UNORM = 0x0008000,
-    CHANNEL_RG               = CHANNEL_R | CHANNEL_G,
-    CHANNEL_RGB              = CHANNEL_R | CHANNEL_G | CHANNEL_B,
-    CHANNEL_RGBA             = CHANNEL_R | CHANNEL_G | CHANNEL_B | CHANNEL_A,
-    R_UNORM_8                = MODE_UNORM | PRECISION_8 | CHANNEL_R,
-    RG_UNORM_8               = MODE_UNORM | PRECISION_8 | CHANNEL_RG,
-    RGB_UNORM_8              = MODE_UNORM | PRECISION_8 | CHANNEL_RGB,
-    RGBA_UNORM_8             = MODE_UNORM | PRECISION_8 | CHANNEL_RGBA,
-    R_SRGB_8                 = MODE_SRGB | PRECISION_8 | CHANNEL_R,
-    RG_SRGB_8                = MODE_SRGB | PRECISION_8 | CHANNEL_RG,
-    RGB_SRGB_8               = MODE_SRGB | PRECISION_8 | CHANNEL_RGB,
-    RGBA_SRGB_8              = MODE_SRGB | PRECISION_8 | CHANNEL_RGBA,
-    R_FLOAT_16               = MODE_FLOAT | PRECISION_16 | CHANNEL_R,
-    RG_FLOAT_16              = MODE_FLOAT | PRECISION_16 | CHANNEL_RG,
-    RGB_FLOAT_16             = MODE_FLOAT | PRECISION_16 | CHANNEL_RGB,
-    RGBA_FLOAT_16            = MODE_FLOAT | PRECISION_16 | CHANNEL_RGBA,
-    R_FLOAT_32               = MODE_FLOAT | PRECISION_32 | CHANNEL_R,
-    RG_FLOAT_32              = MODE_FLOAT | PRECISION_32 | CHANNEL_RG,
-    RGB_FLOAT_32             = MODE_FLOAT | PRECISION_32 | CHANNEL_RGB,
-    RGBA_FLOAT_32            = MODE_FLOAT | PRECISION_32 | CHANNEL_RGBA,
-};
-
 enum class EImageType
 {
     Texture_1D,
@@ -78,7 +40,7 @@ enum class ETextureGPUReadCapabilities
 
 struct TextureParameter
 {
-    EImageFormat                 format                 = EImageFormat::RGBA_UNORM_8;
+    ETypeFormat                  format                 = ETypeFormat::R8G8B8A8_UNORM;
     EImageType                   image_type             = EImageType::Texture_2D;
     ETextureTransferCapabilities transfer_capabilities  = ETextureTransferCapabilities::CopyDestination;
     ETextureGPUWriteCapabilities gpu_write_capabilities = ETextureGPUWriteCapabilities::None;
@@ -103,9 +65,9 @@ class Texture
     [[nodiscard]] uint8_t  get_byte_per_pixel();
     [[nodiscard]] uint32_t get_data_size();
 
-    static bool is_depth_format(EImageFormat format)
+    static bool is_depth_format(ETypeFormat format)
     {
-        return format == EImageFormat::DEPTH_24_STENCIL_8_UNORM || format == EImageFormat::DEPTH_32_FLOAT || format == EImageFormat::DEPTH_32_STENCIL_8_FLOAT;
+        return format == ETypeFormat::D24_UNORM_S8_UINT || format == ETypeFormat::D32_SFLOAT || format == ETypeFormat::D32_SFLOAT_S8_UINT;
     }
     
   protected:
