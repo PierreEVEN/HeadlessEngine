@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace gfx
@@ -26,10 +27,15 @@ enum class EBufferAccess
 class Buffer
 {
   public:
-    Buffer(const std::string& buffer_name, uint32_t size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT);
+    using Buffer_t = uint64_t;
+    using Memory_t = uint64_t;
+
+    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT);
+    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t buffer_size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT);
+
     virtual ~Buffer();
 
-    [[nodiscard]] size_t get_size() const
+    [[nodiscard]] const size_t& get_size() const
     {
         return buffer_size;
     }
@@ -46,6 +52,14 @@ class Buffer
         set_data(&data, sizeof(T));
     }
 
+    const Buffer_t& get_handle() const
+    {
+        return buffer_handle;
+    }
+
+  protected:
+    Buffer(const std::string& buffer_name, uint32_t size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT) //@TODO;
+
   private:
     void* get_ptr();
     void  submit_data();
@@ -55,8 +69,6 @@ class Buffer
 
     std::string buffer_name;
 
-    using Buffer_t = uint64_t;
-    using Memory_t = uint64_t;
 
     EBufferAccess buffer_access;
     Buffer_t      buffer_handle;

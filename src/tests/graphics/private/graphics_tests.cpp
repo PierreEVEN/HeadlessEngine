@@ -1,71 +1,20 @@
 #include "application/application.h"
 #include "application/window.h"
+#include "gfx/materials/master_material.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
-#include "gfx/materials/master_material.h"
 #include "shader_builder/compiler.h"
 
 #include <gfx/gfx.h>
 
 #include <cpputils/logger.hpp>
 
-void create_frame_graph(gfx::Surface* surface)
-{
-    const auto temporal_anti_aliasing = gfx::RenderPass::create(256, 256,
-                                                                gfx::RenderPassConfig{
-                                                                    .pass_name = "temporal anti aliasing",
-                                                                    .color_attachments =
-                                                                        std::vector<gfx::RenderPassConfig::Attachment>{
-                                                                            {
-                                                                                .attachment_name = "color",
-                                                                            },
-                                                                        },
-                                                                });
-    temporal_anti_aliasing->generate_framebuffer_images();
-
-    const auto gbuffer_resolve = gfx::RenderPass::create(256, 256,
-                                                         gfx::RenderPassConfig{
-                                                             .pass_name = "gbuffer resolve",
-                                                             .color_attachments =
-                                                                 std::vector<gfx::RenderPassConfig::Attachment>{
-                                                                     {
-                                                                         .attachment_name = "color",
-                                                                     },
-                                                                 },
-                                                         });
-    gbuffer_resolve->generate_framebuffer_images();
-
-    const auto gbuffers = gfx::RenderPass::create(256, 256,
-                                                  gfx::RenderPassConfig{.pass_name = "gbuffers",
-                                                                        .color_attachments =
-                                                                            std::vector<gfx::RenderPassConfig::Attachment>{
-                                                                                {
-                                                                                    .attachment_name = "albedo",
-                                                                                },
-                                                                                {
-                                                                                    .attachment_name = "normal",
-                                                                                },
-                                                                                {
-                                                                                    .attachment_name = "velocity",
-                                                                                },
-                                                                            },
-                                                                        .depth_attachment = gfx::RenderPassConfig::Attachment{
-                                                                            .attachment_name = "depth",
-                                                                            .image_format    = ETypeFormat::D32_SFLOAT,
-                                                                        }});
-    gbuffers->generate_framebuffer_images();
-
-    surface->add_child(temporal_anti_aliasing);
-    temporal_anti_aliasing->add_child(gbuffer_resolve);
-    gbuffer_resolve->add_child(gbuffers);
-}
-
 int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
-    auto master = gfx::MasterMaterial::create("data/shaders/demo.shb");
-    
+    auto master = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
+
     /**
      * 1° initialize the application and the gfx backend
      */
@@ -73,7 +22,7 @@ int main()
     gfx::init();
 
     /**
-     * 2° create some windows with surfaces (surfaces are layers that allow rendering images from the gfx backend onto application window)
+     * 2° declare some windows with surfaces (surfaces are layers that allow rendering images from the gfx backend onto application window)
      */
     auto* window_1  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
     auto  surface_1 = std::unique_ptr<gfx::Surface>(gfx::Surface::create_surface(window_1));
@@ -81,26 +30,54 @@ int main()
     std::unique_ptr<gfx::View> main_view = std::make_unique<gfx::View>();
 
     /**
-     * 3° Load some data on the GPU
+     * 3° render pass definition
      */
-    int32_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-
-    std::unique_ptr<gfx::Buffer> gpu_buffer = std::make_unique<gfx::Buffer>("gpu_buffer", 64, gfx::EBufferUsage::GPU_MEMORY);
-    gpu_buffer->set_data(data, sizeof(int32_t) * 16);
-
-    std::unique_ptr<gfx::Buffer> indirect_buffer = std::make_unique<gfx::Buffer>("indirect_buffer", 64, gfx::EBufferUsage::INDIRECT_DRAW_ARGUMENT);
-    indirect_buffer->set_data(data, sizeof(int32_t) * 16);
-
-    std::shared_ptr<gfx::Texture> texture = gfx::Texture::create(5, 5, gfx::TextureParameter{.format = ETypeFormat::R8_UNORM});
-
-    texture->set_pixels(std::vector<uint8_t>{
-        255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255,
+    gfx::RenderPass::declare(gfx::RenderPass::Config{
+        .pass_name = "temporal anti aliasing",
+        .color_attachments =
+            std::vector<gfx::RenderPass::Config::Attachment>{
+                {
+                    .attachment_name = "color",
+                },
+            },
     });
 
+    gfx::RenderPass::declare(gfx::RenderPass::Config{
+        .pass_name = "gbuffer_resolve",
+        .color_attachments =
+            std::vector<gfx::RenderPass::Config::Attachment>{
+                {
+                    .attachment_name = "color",
+                },
+            },
+    });
+
+    gfx::RenderPass::declare(gfx::RenderPass::Config{.pass_name = "gbuffer",
+                                                     .color_attachments =
+                                                         std::vector<gfx::RenderPass::Config::Attachment>{
+                                                             {
+                                                                 .attachment_name = "albedo",
+                                                             },
+                                                             {
+                                                                 .attachment_name = "normal",
+                                                             },
+                                                             {
+                                                                 .attachment_name = "velocity",
+                                                             },
+                                                         },
+                                                     .depth_attachment = gfx::RenderPass::Config::Attachment{
+                                                         .attachment_name = "depth",
+                                                         .image_format    = ETypeFormat::D32_SFLOAT,
+                                                     }});
+
     /**
-     * 4° framegraph definition
+     * 4° frame graph construction
      */
-    create_frame_graph(surface_1.get());
+    auto g_buffer_graph_pass   = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPass::find("gbuffer"));
+    auto g_buffer_resolve_pass = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPass::find("gbuffer_resolve"));
+    g_buffer_resolve_pass->link_dependency(g_buffer_graph_pass);
+    surface_1->link_dependency(g_buffer_resolve_pass);
+    surface_1->build_framegraph();
 
     /**
      * 5° Application loop
@@ -118,11 +95,11 @@ int main()
     /**
      * 6° clean GPU data : //@TODO automatically free allocated resources
      */
-    texture         = nullptr;
-    main_view       = nullptr;
-    gpu_buffer      = nullptr;
-    indirect_buffer = nullptr;
-    surface_1       = nullptr;
+    surface_1             = nullptr;
+    g_buffer_graph_pass   = nullptr;
+    g_buffer_resolve_pass = nullptr;
+    main_view             = nullptr;
+    gfx::RenderPass::destroy_passes();
 
     // Destroy graphic backend and close application
     gfx::destroy();

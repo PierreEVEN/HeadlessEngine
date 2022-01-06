@@ -9,7 +9,7 @@ namespace gfx
 class MaterialInstance
 {
   public:
-    std::shared_ptr<MaterialInstance> create(const std::shared_ptr<MasterMaterial>& base);
+    static std::shared_ptr<MaterialInstance> create(const std::shared_ptr<MasterMaterial>& base);
 
     [[nodiscard]] const std::shared_ptr<MasterMaterial>& get_base() const
     {

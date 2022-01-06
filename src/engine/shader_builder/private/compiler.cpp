@@ -105,10 +105,22 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
         LOG_WARNING("var is null");
         return {};
     }
-    auto name_split = stringutils::split(variable->name, {'.'});
-    const auto type = get_type(variable->type_description);
-    uint32_t   offset = current_offset;
+    auto       name_split = stringutils::split(variable->name, {'.'});
+    const auto type       = get_type(variable->type_description);
+    uint32_t   offset     = current_offset;
     current_offset += type.type_size;
+
+    /*
+    LOG_WARNING("%s : %d,  %s", variable->name, variable->location, variable->semantic);
+    for (int i = 0; i < 32; ++i)
+    {
+        if (variable->decoration_flags & 1 << i)
+        {
+            LOG_DEBUG("semantic : %s", magic_enum::enum_name(static_cast<SpvReflectDecorationFlagBits>(1 << i)).data());
+        }
+    }
+    */
+
     return Property{
         .name     = name_split.size() == 2 ? name_split[1] : name_split[0],
         .type     = type,
@@ -131,11 +143,27 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
         return result;
     }
     uint32_t offset = 0;
+    result.input_size = 0;
+    result.output_size = 0;
     for (uint32_t i = 0; i < shader_module.input_variable_count; ++i)
-        result.inputs.emplace_back(reflect_property(shader_module.input_variables[i], offset));
+    {
+        if (!(shader_module.input_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN))
+        {
+            auto property = reflect_property(shader_module.input_variables[i], offset);
+            result.inputs.emplace_back(property);
+            result.input_size += property.type.type_size;
+        }
+    }
     offset = 0;
     for (uint32_t i = 0; i < shader_module.output_variable_count; ++i)
-        result.outputs.emplace_back(reflect_property(shader_module.output_variables[i], offset));
+    {
+        if (!(shader_module.output_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN))
+        {
+            auto property = reflect_property(shader_module.output_variables[i], offset);
+            result.outputs.emplace_back(property);
+            result.output_size += property.type.type_size;
+        }
+    }
 
     return result;
 }

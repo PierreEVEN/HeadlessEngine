@@ -2,31 +2,31 @@
 
 #include "operation.h"
 
-#include <unordered_map>
 #include <types/type_format.h>
+#include <unordered_map>
 
 namespace shader_builder
 {
 struct TypeInfo
 {
-    std::string           type_name;
-    void*                 type_id;
-    size_t                type_size;
-    ETypeFormat           format;
+    std::string type_name;
+    void*       type_id;
+    size_t      type_size;
+    ETypeFormat format;
 };
 
 struct Property
 {
-    std::string         name;
-    TypeInfo            type;
-    uint32_t            offset;
-    uint32_t            location;
+    std::string name;
+    TypeInfo    type;
+    uint32_t    offset   = 0;
+    uint32_t    location = 0;
 };
 
 struct Uniform
 {
     std::string name;
-    void*       type_id;
+    void*       type_id    = nullptr;
     int         size       = 0;
     int         num_member = 0;
 };

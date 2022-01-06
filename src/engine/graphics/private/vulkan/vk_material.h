@@ -7,10 +7,11 @@
 namespace gfx::vulkan
 {
 
-class MasterMaterial_VK : public MasterMaterial
+class MasterMaterial_VK final : public MasterMaterial
 {
   public:
     MasterMaterial_VK() = default;
+    ~MasterMaterial_VK() override;
 
     struct MaterialPassData
     {

@@ -2,9 +2,11 @@
 
 #include "gfx/buffer.h"
 
+
 #include <cpputils/logger.hpp>
 
 #if GFX_USE_VULKAN
+#include "vulkan/vk_buffer.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_device.h"
@@ -18,6 +20,22 @@ namespace gfx
 Buffer::Buffer(const std::string& buffer_name, uint32_t size, EBufferUsage usage, EBufferAccess in_buffer_access) : buffer_name(buffer_name)
 {
     create_buffer_internal(size, usage, in_buffer_access);
+}
+
+std::shared_ptr<Buffer> Buffer::create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access)
+{
+    return create(buffer_name, element_count * stride, usage, buffer_access);
+}
+
+std::shared_ptr<Buffer> Buffer::create(const std::string& buffer_name, uint32_t buffer_size, EBufferUsage usage, EBufferAccess buffer_access)
+{
+#if GFX_USE_VULKAN
+    return std::make_shared<vulkan::Buffer_VK>(buffer_name, buffer_size, usage, buffer_access);
+
+
+#else
+    return nullptr;
+#endif
 }
 
 Buffer::~Buffer()

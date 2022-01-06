@@ -67,15 +67,12 @@ static VkCullModeFlags vk_cull_mode(shader_builder::ECulling culling)
         LOG_FATAL("missing case");
     }
 }
-static VkFormat vk_format()
-{
-}
 
 void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& compilation_results)
 {
     for (auto& pass : compilation_results.passes)
     {
-        if (!get_render_pass(pass.first))
+        if (!RenderPass::find(pass.first))
             continue;
 
         MaterialPassData pass_data;
@@ -108,6 +105,11 @@ void MasterMaterial_VK::clear()
         vkDestroyShaderModule(get_device(), pass.second.fragment_module, get_allocator());
     }
     per_pass_data.clear();
+}
+
+MasterMaterial_VK::~MasterMaterial_VK()
+{
+    clear();
 }
 
 void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult& compilation_results)
@@ -237,7 +239,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         };
 
         std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment;
-        for (const auto& attachment : get_render_pass(pass.first)->get_config().color_attachments)
+        for (const auto& attachment : RenderPass::find(pass.first)->get_config().color_attachments)
         {
             color_blend_attachment.emplace_back(VkPipelineColorBlendAttachmentState{
                 .blendEnable         = compilation_results.properties.alpha_mode == shader_builder::EAlphaMode::Opaque ? VK_FALSE : VK_TRUE,
@@ -280,7 +282,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .pColorBlendState    = &color_blending,
             .pDynamicState       = &dynamic_states,
             .layout              = pass.second.layout,
-            .renderPass          = dynamic_cast<RenderPass_VK*>(get_render_pass(pass.first))->get(),
+            .renderPass          = dynamic_cast<RenderPass_VK*>(RenderPass::find(pass.first))->get(),
             .subpass             = 0,
             .basePipelineHandle  = VK_NULL_HANDLE,
             .basePipelineIndex   = -1,

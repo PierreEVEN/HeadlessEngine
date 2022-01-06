@@ -483,7 +483,7 @@ private:
         *x = mListForFree;
         mListForFree = data;
 
-        // create linked list for newly allocated data
+        // declare linked list for newly allocated data
         auto* const headT =
             reinterpret_cast_no_cast_align_warning<T*>(reinterpret_cast<char*>(ptr) + ALIGNMENT);
 
@@ -1584,7 +1584,7 @@ public:
         , DataPool(static_cast<const DataPool&>(o)) {
         ROBIN_HOOD_TRACE(this)
         if (!o.empty()) {
-            // not empty: create an exact copy. it is also possible to just iterate through all
+            // not empty: declare an exact copy. it is also possible to just iterate through all
             // elements and insert them, but copying is probably faster.
 
             auto const numElementsWithBuffer = calcNumElementsWithBuffer(o.mMask + 1);
@@ -2343,7 +2343,7 @@ private:
 
     // Finds key, and if not already present prepares a spot where to pot the key & value.
     // This potentially shifts nodes out of the way, updates mInfo and number of inserted
-    // elements, so the only operation left to do is create/assign a new node at that spot.
+    // elements, so the only operation left to do is declare/assign a new node at that spot.
     template <typename OtherKey>
     std::pair<size_t, InsertionState> insertKeyPrepareEmptySpot(OtherKey&& key) {
         for (int i = 0; i < 256; ++i) {

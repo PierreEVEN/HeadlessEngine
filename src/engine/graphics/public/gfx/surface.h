@@ -1,7 +1,7 @@
 #pragma once
 
+#include "gfx/render_pass_instance.h"
 #include "application/window.h"
-#include "gfx/render_pass.h"
 
 namespace gfx
 {
@@ -16,15 +16,17 @@ class Surface
     [[nodiscard]] virtual application::window::Window* get_container() const = 0;
     virtual void                                       render()              = 0;
 
-    void add_child(const std::shared_ptr<RenderPass>& render_pass) const
+    void link_dependency(const std::shared_ptr<RenderPassInstance>& render_pass) const
     {
-        main_render_pass->add_child(render_pass);
+        main_render_pass->link_dependency(render_pass);
     }
+
+    void build_framegraph();
 
   protected:
       
     Surface() = default;
 
-    std::unique_ptr<RenderPass> main_render_pass;
+    std::shared_ptr<RenderPassInstance> main_render_pass;
 };
 } // namespace gfx

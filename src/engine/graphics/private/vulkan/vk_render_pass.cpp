@@ -3,7 +3,6 @@
 
 #include "vk_helper.h"
 #include "vulkan/vk_allocator.h"
-#include "vulkan/vk_command_buffer.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_texture.h"
@@ -11,56 +10,7 @@
 
 namespace gfx::vulkan
 {
-RenderPass_VK::RenderPass_VK(uint32_t framebuffer_width, uint32_t framebuffer_height, const RenderPassConfig& frame_graph_config) : RenderPass(framebuffer_width, framebuffer_height, frame_graph_config)
-{
-}
-
-RenderPass_VK::~RenderPass_VK()
-{
-    for (const auto& framebuffer : framebuffers)
-        vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
-
-    vkDestroyRenderPass(get_device(), render_pass, get_allocator());
-}
-
-void RenderPass_VK::begin(CommandBuffer* command_buffer)
-{
-#if GFX_USE_VULKAN
-    command_buffer->render_pass  = config.pass_name;
-    CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
-
-    VkCommandBuffer& cmd = **cmd_buffer;
-
-    debug_add_marker("draw render pass [" + config.pass_name + "]", cmd, {0.5f, 1.0f, 0.5f, 1.0f});
-
-    const VkRenderPassBeginInfo begin_infos = {
-        .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass  = render_pass,
-        .framebuffer = *framebuffers,
-        .renderArea =
-            {
-                .offset = {0, 0},
-                .extent = {width, height},
-            },
-        //.clearValueCount = static_cast<uint32_t>(clear_values.size()),
-        //.pClearValues    = clear_values.data(),
-    };
-    vkCmdBeginRenderPass(cmd, &begin_infos, VK_SUBPASS_CONTENTS_INLINE);
-#endif
-}
-
-void RenderPass_VK::end(CommandBuffer* command_buffer)
-{
-#if GFX_USE_VULKAN
-    CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
-    VkCommandBuffer&  cmd        = **cmd_buffer;
-    vkCmdEndRenderPass(cmd);
-
-    debug_end_marker(cmd);
-#endif
-}
-
-void RenderPass_VK::init()
+RenderPass_VK::RenderPass_VK(const Config& frame_graph_config) : RenderPass(frame_graph_config)
 {
     std::vector<VkAttachmentDescription> attachment_descriptions;
     std::vector<VkAttachmentReference>   color_attachment_references;
@@ -68,7 +18,7 @@ void RenderPass_VK::init()
     std::optional<VkAttachmentReference> color_attachment_resolve_reference;
 
     // add color color_attachments
-    for (const auto& col_attachment : config.color_attachments)
+    for (const auto& col_attachment : get_config().color_attachments)
     {
         if (col_attachment.image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
@@ -83,7 +33,7 @@ void RenderPass_VK::init()
             .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout    = is_present_pass ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .finalLayout    = is_present_pass() ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
 
         color_attachment_references.emplace_back(VkAttachmentReference{
@@ -93,17 +43,17 @@ void RenderPass_VK::init()
     }
 
     // add depth attachment
-    if (config.depth_attachment)
+    if (get_config().depth_attachment)
     {
-        if (config.depth_attachment->image_format == ETypeFormat::UNDEFINED)
+        if (get_config().depth_attachment->image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
 
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = Texture_VK::vk_texture_format_to_engine(config.depth_attachment->image_format),
+            .format         = Texture_VK::vk_texture_format_to_engine(get_config().depth_attachment->image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp         = config.depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .loadOp         = get_config().depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -159,30 +109,11 @@ void RenderPass_VK::init()
     };
 
     VK_CHECK(vkCreateRenderPass(get_device(), &render_pass_infos, get_allocator(), &render_pass), "Failed to create render pass");
+    debug_set_object_name("render pass " + get_config().pass_name, render_pass);
+}
 
-    debug_set_object_name("render pass " + config.pass_name, render_pass);
-
-    for (uint8_t i = 0; i < framebuffers.get_max_instance_count(); ++i)
-    {
-        std::vector<VkImageView> attachments(0);
-        for (const auto& image : resource_render_target)
-        {
-            const auto texture = dynamic_cast<vulkan::Texture_VK*>(image.get());
-            attachments.emplace_back(texture->get_view()[i]);
-        }
-
-        const VkFramebufferCreateInfo framebuffer_infos{
-            .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass      = render_pass,
-            .attachmentCount = static_cast<uint32_t>(attachments.size()),
-            .pAttachments    = attachments.data(),
-            .width           = width,
-            .height          = height,
-            .layers          = 1,
-        };
-
-        VK_CHECK(vkCreateFramebuffer(get_device(), &framebuffer_infos, get_allocator(), &framebuffers[i]), "Failed to create framebuffer");
-        debug_set_object_name(stringutils::format("render pass %s : framebuffer #%d", config.pass_name.c_str(), i), framebuffers[i]);
-    }
+RenderPass_VK::~RenderPass_VK()
+{
+    vkDestroyRenderPass(get_device(), render_pass, get_allocator());
 }
 } // namespace gfx::vulkan
