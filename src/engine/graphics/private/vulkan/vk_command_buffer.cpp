@@ -1,6 +1,7 @@
 
 #include "vk_command_buffer.h"
 
+#include "vk_buffer.h"
 #include "vk_helper.h"
 #include "vk_material.h"
 #include "gfx/buffer.h"
@@ -68,16 +69,15 @@ void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
     
     if (!pipeline)
         return;
-    
+
     if (base->get_properties().line_width != 1.0f)
         vkCmdSetLineWidth(*command_buffer, base->get_properties().line_width);
 
     vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
-    
-    vkCmdBindVertexBuffers(*command_buffer, 0, 1, &reinterpret_cast<const VkBuffer&>(in_buffer->get_vertex_buffer()->get_handle()), &in_buffer->get_vertex_buffer()->get_size());
-    vkCmdBindIndexBuffer(*command_buffer, reinterpret_cast<VkBuffer>(in_buffer->get_index_buffer()->get_handle()), 0, VK_INDEX_TYPE_UINT32);
-    
-    vkCmdDrawIndexed(*command_buffer, vertex_count, 1, 0, 0, 0);
+
+    dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(*command_buffer);
+    dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(*command_buffer);    
+    vkCmdDrawIndexed(*command_buffer, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
 }
 
 void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material)

@@ -1,5 +1,5 @@
 
-global(gbuffer, gbuffer_resolve)
+global(gbuffer)
 [
 	int _Subdivision = 4;
 	int _Width = 1;
@@ -10,19 +10,18 @@ global(gbuffer, gbuffer_resolve)
 	};
 ]
 
-vertex(gbuffer, gbuffer_resolve)
+vertex(gbuffer)
 [
-	VsToFsStruct main(uint vertex_id : SV_VertexID) // SV_InstanceID
+	struct VsInput 
+	{
+		float3 pos : POSITION0;
+	};
+
+	VsToFsStruct main(VsInput input) // SV_InstanceID
 	{
 		VsToFsStruct output = (VsToFsStruct)0;
 		
-		uint quadId = 0;//vertex_id / 6;
-		uint vertId = 0;//vertex_id % 6;
-
-		float posX = (quadId % _Subdivision) * _Width + (vertId == 2 || vertId == 4 || vertId == 5 ? _Width : 0);
-		float posY = (quadId / _Subdivision) * _Width + (vertId == 1 || vertId == 2 || vertId == 4 ? _Width : 0);
-
-		output.Pos = float4(posX, 0, posY, 1);
+		//output.Pos = float4(input.pos, 0);
 
 		return output;
 	}
@@ -43,21 +42,6 @@ fragment(gbuffer)
 		output.Color1 = float4(1, 0, 0, 1);
 		output.Color2 = float4(0, 1, 0, 1);
 		output.Color3 = float4(0, 0, 1, 1);
-		return output;
-	}
-];
-
-fragment(gbuffer_resolve) 
-[
-	struct FSOutput
-	{
-		float4 Color1 		: SV_TARGET0;
-	};
-	
-	FSOutput main(VsToFsStruct input)
-	{
-		FSOutput output = (FSOutput)0;
-		output.Color1 = float4(1, 0, 0, 1);
 		return output;
 	}
 ];

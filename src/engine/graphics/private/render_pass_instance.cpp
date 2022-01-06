@@ -2,6 +2,7 @@
 
 #include "gfx/materials/master_material.h"
 #include "gfx/materials/material_instance.h"
+#include "gfx/mesh.h"
 
 #if GFX_USE_VULKAN
 #include "vulkan/vk_render_pass_instance.h"
@@ -36,24 +37,24 @@ RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, RenderPa
             if (Texture::is_depth_format(attachment.image_format))
                 LOG_FATAL("Cannot use depth format on color attachments");
             framebuffers_images.emplace_back(Texture::create(width, height, 1,
-                                                      TextureParameter{
-                                                          .format                 = attachment.image_format,
-                                                          .transfer_capabilities  = ETextureTransferCapabilities::None,
-                                                          .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
-                                                          .mip_level              = 1,
-                                                      }));
+                                                             TextureParameter{
+                                                                 .format                 = attachment.image_format,
+                                                                 .transfer_capabilities  = ETextureTransferCapabilities::None,
+                                                                 .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
+                                                                 .mip_level              = 1,
+                                                             }));
         }
         if (render_pass_base->get_config().depth_attachment)
         {
             if (!Texture::is_depth_format(render_pass_base->get_config().depth_attachment->image_format))
                 LOG_FATAL("Depth attachment require a depth format");
             framebuffers_images.emplace_back(Texture::create(width, height, 1,
-                                                      TextureParameter{
-                                                          .format                 = render_pass_base->get_config().depth_attachment->image_format,
-                                                          .transfer_capabilities  = ETextureTransferCapabilities::None,
-                                                          .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
-                                                          .mip_level              = 1,
-                                                      }));
+                                                             TextureParameter{
+                                                                 .format                 = render_pass_base->get_config().depth_attachment->image_format,
+                                                                 .transfer_capabilities  = ETextureTransferCapabilities::None,
+                                                                 .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
+                                                                 .mip_level              = 1,
+                                                             }));
         }
     }
 }
@@ -82,8 +83,8 @@ void RenderPassInstance::link_dependency(const std::shared_ptr<RenderPassInstanc
     children.emplace_back(render_pass);
 }
 
-std::shared_ptr<MaterialInstance> glob_mat = nullptr;
-;
+std::shared_ptr<MaterialInstance> glob_mat  = nullptr;
+std::shared_ptr<Mesh>             glob_mesh = nullptr;
 
 void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
 {
@@ -98,9 +99,26 @@ void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
     {
         const auto mat = MasterMaterial::create("data/shaders/draw_procedural_test.shb");
         glob_mat       = MaterialInstance::create(mat);
+
+        auto vertices = std::vector{Mesh::Vertex{
+                                        .pos = glm::vec3(0, 0, 0),
+                                    },
+                                    Mesh::Vertex{
+                                        .pos = glm::vec3(1, 0, 0),
+                                    },
+                                    Mesh::Vertex{
+                                        .pos = glm::vec3(1, 1, 0),
+                                    },
+                                    Mesh::Vertex{
+                                        .pos = glm::vec3(0, 1, 0),
+                                    }};
+        auto indices  = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
+        glob_mesh     = std::make_shared<Mesh>("test_mesh", vertices, indices);
     }
 
-    command_buffer->draw_procedural(glob_mat.get(), 100, 0, 10, 0);
+    // command_buffer->draw_procedural(glob_mat.get(), 100, 0, 10, 0);
+
+    command_buffer->draw_mesh(glob_mesh.get(), glob_mat.get());
 
     end(command_buffer);
 }

@@ -27,19 +27,16 @@ enum class EBufferAccess
 class Buffer
 {
   public:
-    using Buffer_t = uint64_t;
-    using Memory_t = uint64_t;
-
     static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT);
     static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t buffer_size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT);
 
     virtual ~Buffer();
 
-    [[nodiscard]] const size_t& get_size() const
+    [[nodiscard]] size_t get_size() const
     {
-        return buffer_size;
+        return stride * element_count;
     }
-    void set_data(void* data, size_t data_length, size_t offset = 0);
+    virtual void set_data(void* data, size_t data_length, size_t offset = 0) = 0;
 
     template <typename Lambda_T> void set_data(Lambda_T lambda)
     {
@@ -52,26 +49,25 @@ class Buffer
         set_data(&data, sizeof(T));
     }
 
-    const Buffer_t& get_handle() const
+    [[nodiscard]] uint32_t count() const
     {
-        return buffer_handle;
+        return element_count;
     }
 
+    [[nodiscard]] uint32_t get_stride() const
+    {
+        return stride;
+    }
   protected:
-    Buffer(const std::string& buffer_name, uint32_t size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT) //@TODO;
+    Buffer(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access = EBufferAccess::DEFAULT);
 
-  private:
-    void* get_ptr();
-    void  submit_data();
+    virtual void* get_ptr()     = 0;
+    virtual void  submit_data() = 0;
 
-    void   create_buffer_internal(uint32_t buffer_size, EBufferUsage buffer_usage, EBufferAccess buffer_access);
-    size_t buffer_size;
-
-    std::string buffer_name;
-
-
+    uint32_t      stride;
+    uint32_t      element_count;
+    std::string   buffer_name;
     EBufferAccess buffer_access;
-    Buffer_t      buffer_handle;
-    Memory_t      buffer_memory;
+    EBufferUsage  usage;
 };
 } // namespace gfx
