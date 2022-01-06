@@ -100,6 +100,7 @@ void Buffer_VK::submit_data()
 }
 Buffer_VK::~Buffer_VK()
 {
+    vkDeviceWaitIdle(get_device());
     vmaDestroyBuffer(get_vma_allocator(), buffer, memory);
 }
 

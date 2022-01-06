@@ -1,6 +1,8 @@
 #include "application/application.h"
 #include "application/window.h"
 #include "gfx/materials/master_material.h"
+#include "gfx/materials/material_instance.h"
+#include "gfx/mesh.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
 #include "shader_builder/compiler.h"
@@ -79,6 +81,28 @@ int main()
     surface_1->link_dependency(g_buffer_resolve_pass);
     surface_1->build_framegraph();
 
+    auto glob_mat     = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
+    auto mat_instance = gfx::MaterialInstance::create(glob_mat);
+    auto vertices     = std::vector{gfx::Mesh::Vertex{
+                                    .pos = glm::vec3(0, 0, 0),
+                                },
+                                gfx::Mesh::Vertex{
+                                    .pos = glm::vec3(1, 0, 0),
+                                },
+                                gfx::Mesh::Vertex{
+                                    .pos = glm::vec3(1, 1, 0),
+                                },
+                                gfx::Mesh::Vertex{
+                                    .pos = glm::vec3(0, 1, 0),
+                                }};
+    auto indices      = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
+    auto glob_mesh    = std::make_shared<gfx::Mesh>("test_mesh", vertices, indices);
+    g_buffer_graph_pass->on_draw(
+        [&](gfx::CommandBuffer* command_buffer)
+        {
+            command_buffer->draw_mesh(glob_mesh.get(), mat_instance.get());
+        });
+
     /**
      * 5° Application loop
      */
@@ -95,6 +119,9 @@ int main()
     /**
      * 6° clean GPU data : //@TODO automatically free allocated resources
      */
+    glob_mesh             = nullptr;
+    mat_instance          = nullptr;
+    glob_mat              = nullptr;
     surface_1             = nullptr;
     g_buffer_graph_pass   = nullptr;
     g_buffer_resolve_pass = nullptr;

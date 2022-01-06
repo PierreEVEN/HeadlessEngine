@@ -19,8 +19,6 @@ static VkPolygonMode vk_polygon_mode(shader_builder::EPolygonMode polygon_mode)
         return VK_POLYGON_MODE_LINE;
     case shader_builder::EPolygonMode::Fill:
         return VK_POLYGON_MODE_FILL;
-    default:
-        LOG_FATAL("missing case");
     }
 }
 static VkPrimitiveTopology vk_topology(shader_builder::ETopology topology)
@@ -33,8 +31,6 @@ static VkPrimitiveTopology vk_topology(shader_builder::ETopology topology)
         return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     case shader_builder::ETopology::Triangles:
         return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    default:
-        LOG_FATAL("missing case");
     }
 }
 
@@ -46,8 +42,6 @@ static VkFrontFace vk_front_face(shader_builder::EFrontFace front_face)
         return VK_FRONT_FACE_CLOCKWISE;
     case shader_builder::EFrontFace::CounterClockwise:
         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    default:
-        LOG_FATAL("missing case");
     }
 }
 
@@ -63,8 +57,6 @@ static VkCullModeFlags vk_cull_mode(shader_builder::ECulling culling)
         return VK_CULL_MODE_BACK_BIT;
     case shader_builder::ECulling::Both:
         return VK_CULL_MODE_FRONT_AND_BACK;
-    default:
-        LOG_FATAL("missing case");
     }
 }
 
@@ -97,12 +89,14 @@ void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& 
 
 void MasterMaterial_VK::clear()
 {
-    for (const auto& pass : per_pass_data)
+    for (auto& pass : per_pass_data)
     {
         vkDestroyPipeline(get_device(), pass.second.pipeline, get_allocator());
         vkDestroyPipelineLayout(get_device(), pass.second.layout, get_allocator());
         vkDestroyShaderModule(get_device(), pass.second.vertex_module, get_allocator());
         vkDestroyShaderModule(get_device(), pass.second.fragment_module, get_allocator());
+        for (const auto& desc_set_layout : pass.second.descriptor_set_layout)
+            vkDestroyDescriptorSetLayout(get_device(), desc_set_layout, get_allocator());
     }
     per_pass_data.clear();
 }

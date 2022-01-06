@@ -83,9 +83,6 @@ void RenderPassInstance::link_dependency(const std::shared_ptr<RenderPassInstanc
     children.emplace_back(render_pass);
 }
 
-std::shared_ptr<MaterialInstance> glob_mat  = nullptr;
-std::shared_ptr<Mesh>             glob_mesh = nullptr;
-
 void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
 {
     for (const auto& child : children)
@@ -95,30 +92,8 @@ void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
 
     begin(command_buffer);
 
-    if (!glob_mat)
-    {
-        const auto mat = MasterMaterial::create("data/shaders/draw_procedural_test.shb");
-        glob_mat       = MaterialInstance::create(mat);
-
-        auto vertices = std::vector{Mesh::Vertex{
-                                        .pos = glm::vec3(0, 0, 0),
-                                    },
-                                    Mesh::Vertex{
-                                        .pos = glm::vec3(1, 0, 0),
-                                    },
-                                    Mesh::Vertex{
-                                        .pos = glm::vec3(1, 1, 0),
-                                    },
-                                    Mesh::Vertex{
-                                        .pos = glm::vec3(0, 1, 0),
-                                    }};
-        auto indices  = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
-        glob_mesh     = std::make_shared<Mesh>("test_mesh", vertices, indices);
-    }
-
-    // command_buffer->draw_procedural(glob_mat.get(), 100, 0, 10, 0);
-
-    command_buffer->draw_mesh(glob_mesh.get(), glob_mat.get());
+    if (draw_interface)
+        draw_interface->draw(command_buffer);
 
     end(command_buffer);
 }

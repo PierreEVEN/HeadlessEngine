@@ -6,6 +6,26 @@
 
 namespace gfx
 {
+class IDrawInterface
+{
+  public:
+    virtual void draw(CommandBuffer*) = 0;
+};
+
+template <typename Lambda_T> class TDrawInterface : public IDrawInterface
+{
+  public:
+    TDrawInterface(const Lambda_T& lambda) : lambda_func(lambda)
+    {
+    }
+    void draw(CommandBuffer* cmd) override
+    {
+        lambda_func(cmd);
+    }
+
+  private:
+    Lambda_T lambda_func;
+};
 class RenderPassInstance
 {
   public:
@@ -34,6 +54,12 @@ class RenderPassInstance
         return render_pass_base;
     }
 
+    template <typename Lambda_T> 
+    void on_draw(const Lambda_T& lambda)
+    {
+        draw_interface = std::make_unique<TDrawInterface<Lambda_T>>(lambda);
+    }
+
   protected:
     RenderPassInstance(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
     virtual void begin(CommandBuffer* command_buffer) = 0;
@@ -42,6 +68,8 @@ class RenderPassInstance
     std::vector<std::shared_ptr<Texture>> framebuffers_images;
 
   private:
+    std::unique_ptr<IDrawInterface> draw_interface;
+
     RenderPass*                                      render_pass_base;
     uint32_t                                         framebuffer_width;
     uint32_t                                         framebuffer_height;
