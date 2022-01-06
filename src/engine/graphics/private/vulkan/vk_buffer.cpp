@@ -123,8 +123,7 @@ void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
         LOG_ERROR("trying to set buffer data of size %lu, with data of size %lu and offset %lu", get_size(), data_length, offset);
         return;
     }
-
-#if GFX_USE_VULKAN
+    
     VmaAllocationInfo allocation_infos;
     vmaGetAllocationInfo(vulkan::get_vma_allocator(), memory, &allocation_infos);
 
@@ -132,9 +131,6 @@ void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
     VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, offset, data_length, NULL, (void**)(&dst_ptr)), "failed to map memory");
     memcpy(dst_ptr, data, data_length);
     vkUnmapMemory(vulkan::get_device(), allocation_infos.deviceMemory);
-#else
-    (void)data;
-#endif
 }
 
 void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)

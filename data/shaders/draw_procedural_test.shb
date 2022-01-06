@@ -12,6 +12,15 @@ global(gbuffer)
 
 vertex(gbuffer)
 [
+	struct ViewData
+	{
+		float4x4 projection;
+		float4x4 model;
+		float4x4 view;
+	};
+
+	cbuffer view_data : register(b0) { ViewData view_data; }
+
 	struct VsInput 
 	{
 		float3 pos : POSITION0;

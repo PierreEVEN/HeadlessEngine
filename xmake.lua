@@ -77,3 +77,4 @@ if DEBUG then
 	print("################ building modules ################")
 end
 includes("src/**.lua");
+includes("data/**.lua");
