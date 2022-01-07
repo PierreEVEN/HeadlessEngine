@@ -7,6 +7,26 @@ namespace gfx
 {
 class CommandBuffer;
 
+class ISurfaceDrawInterface
+{
+  public:
+    virtual void draw(CommandBuffer*) = 0;
+};
+
+template <typename Lambda_T> class TSurfaceDrawInterface : public ISurfaceDrawInterface
+{
+  public:
+    TSurfaceDrawInterface(const Lambda_T& lambda) : lambda_func(lambda)
+    {
+    }
+    void draw(CommandBuffer* cmd) override
+    {
+        lambda_func(cmd);
+    }
+
+  private:
+    Lambda_T lambda_func;
+};
 class Surface
 {
   public:
@@ -23,9 +43,15 @@ class Surface
 
     void build_framegraph();
 
+    template <typename Lambda_T> void on_draw(const Lambda_T& lambda)
+    {
+        draw_interface = std::make_unique<TSurfaceDrawInterface<Lambda_T>>(lambda);
+    }
   protected:
       
     Surface() = default;
+
+    std::unique_ptr<ISurfaceDrawInterface> draw_interface;
 
     std::shared_ptr<RenderPassInstance> main_render_pass;
 };

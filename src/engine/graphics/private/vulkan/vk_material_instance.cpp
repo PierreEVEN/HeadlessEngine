@@ -2,6 +2,8 @@
 
 #include "vk_device.h"
 #include "vk_material.h"
+#include "vk_render_pass.h"
+#include "gfx/render_pass.h"
 
 namespace gfx::vulkan
 {
@@ -19,15 +21,14 @@ void MaterialInstance_VK::build_descriptor_sets()
         auto desc_set_layouts = vk_base->get_descriptor_set_layout(it.id());
         for (uint8_t image_index = 0; image_index < desc_set_layouts.get_max_instance_count(); ++image_index)
         {
-            LOG_ERROR("todo");
-            const VkDescriptorSetAllocateInfo descriptor_info{
+            VkDescriptorSetAllocateInfo descriptor_info{
                 .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
                 .pNext              = nullptr,
-                .descriptorPool     = 0,  //@TODO
+                .descriptorPool     =VK_NULL_HANDLE,
                 .descriptorSetCount = 1,
                 .pSetLayouts        = &desc_set_layouts[image_index],
             };
-
+            dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool().alloc_memory(descriptor_info);
             auto desc_sets = descriptor_sets.init(it.id());
             vkAllocateDescriptorSets(get_device(), &descriptor_info, &desc_sets[image_index]);
         }

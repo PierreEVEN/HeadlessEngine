@@ -1,5 +1,6 @@
 #pragma
 
+#include "vk_descriptor_pool.h"
 #include "gfx/render_pass.h"
 
 #include <vulkan/vulkan.hpp>
@@ -23,8 +24,14 @@ class RenderPass_VK final : public RenderPass
         return render_pass;
     }
 
+    DescriptorPool_VK& get_descriptor_pool()
+    {
+        return descriptor_pool;
+    }
+
   protected:
   private:
+    DescriptorPool_VK descriptor_pool;
     VkRenderPass render_pass;
 };
 } // namespace gfx::vulkan

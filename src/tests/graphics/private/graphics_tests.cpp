@@ -5,11 +5,29 @@
 #include "gfx/mesh.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
-#include "shader_builder/compiler.h"
 
 #include <gfx/gfx.h>
 
 #include <cpputils/logger.hpp>
+
+/***
+ * ###########  SURFACE
+ *
+ * render() {
+ *  // on_render.execute();
+ *
+ *  ecs.pre_render();
+ *  ecs.render();
+ * }
+ *
+ *
+ */
+
+
+
+
+
+
 
 int main()
 {
@@ -32,25 +50,6 @@ int main()
     /**
      * 3° render pass definition
      */
-    gfx::RenderPass::declare(gfx::RenderPass::Config{
-        .pass_name = "temporal anti aliasing",
-        .color_attachments =
-            std::vector<gfx::RenderPass::Config::Attachment>{
-                {
-                    .attachment_name = "color",
-                },
-            },
-    });
-
-    gfx::RenderPass::declare(gfx::RenderPass::Config{
-        .pass_name = "gbuffer_resolve",
-        .color_attachments =
-            std::vector<gfx::RenderPass::Config::Attachment>{
-                {
-                    .attachment_name = "color",
-                },
-            },
-    });
 
     gfx::RenderPass::declare(gfx::RenderPass::Config{.pass_name = "gbuffer",
                                                      .color_attachments =
@@ -73,10 +72,8 @@ int main()
     /**
      * 4° frame graph construction
      */
-    auto g_buffer_graph_pass   = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPassID::get("gbuffer"));
-    auto g_buffer_resolve_pass = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPassID::get("gbuffer_resolve"));
-    g_buffer_resolve_pass->link_dependency(g_buffer_graph_pass);
-    surface_1->link_dependency(g_buffer_resolve_pass);
+    auto g_buffer_graph_pass = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPassID::get("gbuffer"));
+    surface_1->link_dependency(g_buffer_graph_pass);
     surface_1->build_framegraph();
 
     auto glob_mat     = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
@@ -95,7 +92,8 @@ int main()
                                 }};
     auto indices      = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
     auto glob_mesh    = std::make_shared<gfx::Mesh>("test_mesh", vertices, indices);
-    g_buffer_graph_pass->on_draw(
+
+    surface_1->on_draw(
         [&](gfx::CommandBuffer* command_buffer)
         {
             command_buffer->draw_mesh(glob_mesh.get(), mat_instance.get());
@@ -117,13 +115,12 @@ int main()
     /**
      * 6° clean GPU data : //@TODO automatically free allocated resources
      */
-    glob_mesh             = nullptr;
-    mat_instance          = nullptr;
-    glob_mat              = nullptr;
-    surface_1             = nullptr;
-    g_buffer_graph_pass   = nullptr;
-    g_buffer_resolve_pass = nullptr;
-    main_view             = nullptr;
+    glob_mesh           = nullptr;
+    mat_instance        = nullptr;
+    glob_mat            = nullptr;
+    surface_1           = nullptr;
+    g_buffer_graph_pass = nullptr;
+    main_view           = nullptr;
     gfx::RenderPass::destroy_passes();
 
     // Destroy graphic backend and close application
