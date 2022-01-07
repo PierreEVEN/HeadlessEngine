@@ -19,6 +19,8 @@ static VkPolygonMode vk_polygon_mode(shader_builder::EPolygonMode polygon_mode)
         return VK_POLYGON_MODE_LINE;
     case shader_builder::EPolygonMode::Fill:
         return VK_POLYGON_MODE_FILL;
+    default:
+        LOG_FATAL("unhandled case");
     }
 }
 static VkPrimitiveTopology vk_topology(shader_builder::ETopology topology)
@@ -31,6 +33,8 @@ static VkPrimitiveTopology vk_topology(shader_builder::ETopology topology)
         return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     case shader_builder::ETopology::Triangles:
         return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    default:
+        LOG_FATAL("unhandled case");
     }
 }
 
@@ -42,6 +46,8 @@ static VkFrontFace vk_front_face(shader_builder::EFrontFace front_face)
         return VK_FRONT_FACE_CLOCKWISE;
     case shader_builder::EFrontFace::CounterClockwise:
         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    default:
+        LOG_FATAL("unhandled case");
     }
 }
 
@@ -57,50 +63,9 @@ static VkCullModeFlags vk_cull_mode(shader_builder::ECulling culling)
         return VK_CULL_MODE_BACK_BIT;
     case shader_builder::ECulling::Both:
         return VK_CULL_MODE_FRONT_AND_BACK;
+    default:
+        LOG_FATAL("unhandled case");
     }
-}
-
-void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& compilation_results)
-{
-    for (auto& pass : compilation_results.passes)
-    {
-        const RenderPassID pass_id = RenderPassID::get(pass.first);
-
-        if (!pass_id)
-            continue;
-
-        MaterialPassData pass_data;
-
-        VkShaderModuleCreateInfo vertex_create_infos{
-            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = pass.second.vertex.spirv.size() * sizeof(uint32_t),
-            .pCode    = pass.second.vertex.spirv.data(),
-        };
-        VK_CHECK(vkCreateShaderModule(get_device(), &vertex_create_infos, get_allocator(), &pass_data.vertex_module), "failed to create vertex shader module");
-
-        VkShaderModuleCreateInfo fragment_create_infos{
-            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = pass.second.fragment.spirv.size() * sizeof(uint32_t),
-            .pCode    = pass.second.fragment.spirv.data(),
-        };
-        VK_CHECK(vkCreateShaderModule(get_device(), &fragment_create_infos, get_allocator(), &pass_data.fragment_module), "failed to create fragment shader module");
-
-        per_pass_data[pass_id] = pass_data;
-    }
-}
-
-void MasterMaterial_VK::clear()
-{
-    for (auto& pass : per_pass_data)
-    {
-        vkDestroyPipeline(get_device(), pass.pipeline, get_allocator());
-        vkDestroyPipelineLayout(get_device(), pass.layout, get_allocator());
-        vkDestroyShaderModule(get_device(), pass.vertex_module, get_allocator());
-        vkDestroyShaderModule(get_device(), pass.fragment_module, get_allocator());
-        for (const auto& desc_set_layout : pass.descriptor_set_layout)
-            vkDestroyDescriptorSetLayout(get_device(), desc_set_layout, get_allocator());
-    }
-    per_pass_data.clear();
 }
 
 MasterMaterial_VK::~MasterMaterial_VK()
@@ -134,9 +99,53 @@ static VkDescriptorType vk_descriptor_type(shader_builder::EBindingType type)
         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     case shader_builder::EBindingType::INPUT_ATTACHMENT:
         return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-        break;
+    default:;
         LOG_FATAL("unhandled case");
     }
+}
+
+void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& compilation_results)
+{
+    for (auto& pass : compilation_results.passes)
+    {
+        const RenderPassID pass_id = RenderPassID::get(pass.first);
+
+        if (!pass_id)
+            continue;
+
+        MaterialPassData& pass_data = per_pass_data.init(pass_id);
+
+        VkShaderModuleCreateInfo vertex_create_infos{
+            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = pass.second.vertex.spirv.size() * sizeof(uint32_t),
+            .pCode    = pass.second.vertex.spirv.data(),
+        };
+        VK_CHECK(vkCreateShaderModule(get_device(), &vertex_create_infos, get_allocator(), &pass_data.vertex_module), "failed to create vertex shader module");
+
+        VkShaderModuleCreateInfo fragment_create_infos{
+            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = pass.second.fragment.spirv.size() * sizeof(uint32_t),
+            .pCode    = pass.second.fragment.spirv.data(),
+        };
+        VK_CHECK(vkCreateShaderModule(get_device(), &fragment_create_infos, get_allocator(), &pass_data.fragment_module), "failed to create fragment shader module");
+
+        pass_data.descriptor_set_layout = SwapchainImageResource<VkDescriptorSetLayout>();
+    }
+}
+
+void MasterMaterial_VK::clear()
+{
+    auto pass_data = per_pass_data.begin();
+    for (; pass_data != per_pass_data.end(); ++pass_data)
+    {
+        vkDestroyPipeline(get_device(), pass_data->pipeline, get_allocator());
+        vkDestroyPipelineLayout(get_device(), pass_data->layout, get_allocator());
+        vkDestroyShaderModule(get_device(), pass_data->vertex_module, get_allocator());
+        vkDestroyShaderModule(get_device(), pass_data->fragment_module, get_allocator());
+        for (const auto& desc_set_layout : pass_data->descriptor_set_layout)
+            vkDestroyDescriptorSetLayout(get_device(), desc_set_layout, get_allocator());
+    }
+    per_pass_data.clear();
 }
 
 void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult& compilation_results)
@@ -145,16 +154,15 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
 
     clear();
     create_modules(compilation_results);
-    
-    for (auto& pass_data : per_pass_data)
+
+    auto pass_data = per_pass_data.begin();
+    for (; pass_data != per_pass_data.end(); ++pass_data)
     {
-        MaterialPassData&                 pass                    = pass_data.second;
-        const shader_builder::PassResult& pass_compilation_result = compilation_results.passes.find(RenderPassID::get(pass_data)->second;
-        const RenderPass_VK*              render_pass             = dynamic_cast<RenderPass_VK*>(RenderPass::find(pass_data));
+        const RenderPass_VK* render_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(pass_data.id()));
 
         std::vector<VkDescriptorSetLayoutBinding> pipeline_bindings = {};
 
-        for (const auto& binding : pass_compilation_result.vertex.reflection.bindings)
+        for (const auto& binding : get_vertex_reflection(pass_data.id()).bindings)
         {
             pipeline_bindings.emplace_back(VkDescriptorSetLayoutBinding{
                 .binding            = binding.binding,
@@ -165,7 +173,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             });
         }
 
-        for (const auto& binding : pass_compilation_result.fragment.reflection.bindings)
+        for (const auto& binding : get_fragment_reflection(pass_data.id()).bindings)
         {
             pipeline_bindings.emplace_back(VkDescriptorSetLayoutBinding{
                 .binding            = binding.binding,
@@ -176,10 +184,12 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             });
         }
 
-        for (auto& desc : pass.descriptor_set_layout)
+        for (auto& desc : pass_data->descriptor_set_layout)
         {
             VkDescriptorSetLayoutCreateInfo layout_infos{
                 .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                .pNext        = nullptr,
+                .flags        = 0,
                 .bindingCount = static_cast<uint32_t>(pipeline_bindings.size()),
                 .pBindings    = pipeline_bindings.data(),
             };
@@ -190,35 +200,35 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             {
                 .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 .stage  = VK_SHADER_STAGE_VERTEX_BIT,
-                .module = pass.vertex_module,
+                .module = pass_data->vertex_module,
                 .pName  = "main",
             },
             {
                 .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
-                .module = pass.fragment_module,
+                .module = pass_data->fragment_module,
                 .pName  = "main",
             },
         };
 
         VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount         = static_cast<uint32_t>(pass.descriptor_set_layout.get_max_instance_count()),
-            .pSetLayouts            = &pass.descriptor_set_layout[0],
+            .setLayoutCount         = static_cast<uint32_t>(pass_data->descriptor_set_layout.get_max_instance_count()),
+            .pSetLayouts            = &pass_data->descriptor_set_layout[0],
             .pushConstantRangeCount = 0,
             .pPushConstantRanges    = nullptr,
         };
-        VK_CHECK(vkCreatePipelineLayout(get_device(), &pipeline_layout_infos, nullptr, &pass.layout), "Failed to create pipeline layout");
+        VK_CHECK(vkCreatePipelineLayout(get_device(), &pipeline_layout_infos, nullptr, &pass_data->layout), "Failed to create pipeline layout");
 
         VkVertexInputBindingDescription bindingDescription{
             .binding   = 0,
-            .stride    = pass_compilation_result.vertex.reflection.input_size,
+            .stride    = get_vertex_reflection(pass_data.id()).input_size,
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attribute_description;
 
-        for (const auto& input_property : pass_compilation_result.vertex.reflection.inputs)
+        for (const auto& input_property : get_vertex_reflection(pass_data.id()).inputs)
         {
             vertex_attribute_description.emplace_back(VkVertexInputAttributeDescription{
                 .location = input_property.location,
@@ -283,7 +293,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         };
 
         std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment;
-        for (const auto& attachment : render_pass->get_config().color_attachments)
+        for ([[maybe_unused]] const auto& attachment : render_pass->get_config().color_attachments)
         {
             color_blend_attachment.emplace_back(VkPipelineColorBlendAttachmentState{
                 .blendEnable         = compilation_results.properties.alpha_mode == shader_builder::EAlphaMode::Opaque ? VK_FALSE : VK_TRUE,
@@ -325,14 +335,14 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .pDepthStencilState  = &depth_stencil,
             .pColorBlendState    = &color_blending,
             .pDynamicState       = &dynamic_states,
-            .layout              = pass.layout,
+            .layout              = pass_data->layout,
             .renderPass          = render_pass->get(),
             .subpass             = 0,
             .basePipelineHandle  = VK_NULL_HANDLE,
             .basePipelineIndex   = -1,
         };
 
-        VK_CHECK(vkCreateGraphicsPipelines(get_device(), VK_NULL_HANDLE, 1, &pipelineInfo, get_allocator(), &pass.pipeline), "Failed to create material graphic pipeline");
+        VK_CHECK(vkCreateGraphicsPipelines(get_device(), VK_NULL_HANDLE, 1, &pipelineInfo, get_allocator(), &pass_data->pipeline), "Failed to create material graphic pipeline");
     }
 }
 } // namespace gfx::vulkan

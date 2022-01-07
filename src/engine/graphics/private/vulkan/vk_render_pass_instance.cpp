@@ -10,7 +10,8 @@
 
 namespace gfx::vulkan
 {
-RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images) : RenderPassInstance(width, height, base, images)
+RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
+    : RenderPassInstance(width, height, base, images)
 {
     resize(width, height);
 }

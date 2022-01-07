@@ -29,7 +29,7 @@ template <typename Lambda_T> class TDrawInterface : public IDrawInterface
 class RenderPassInstance
 {
   public:
-    static std::shared_ptr<RenderPassInstance> create(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images = {});
+    static std::shared_ptr<RenderPassInstance> create(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images = {});
 
     virtual ~RenderPassInstance() = default;
 
@@ -61,7 +61,7 @@ class RenderPassInstance
     }
 
   protected:
-    RenderPassInstance(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
+    RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
     virtual void begin(CommandBuffer* command_buffer) = 0;
     virtual void end(CommandBuffer* command_buffer)   = 0;
 

@@ -16,6 +16,7 @@ struct ClearValue
 
 class RenderPass
 {
+    friend class Surface;
   public:
     struct Config
     {
@@ -32,7 +33,10 @@ class RenderPass
         std::optional<Attachment> depth_attachment;
     };
 
-    static RenderPass* declare(const Config& frame_graph_config, bool present_pass = false);
+    static RenderPass* declare(const Config& frame_graph_config)
+    {
+        return declare_internal(frame_graph_config, false);
+    }
     static RenderPass* find(const RenderPassID& render_pass_name);
     static void        destroy_passes();
     virtual ~RenderPass() = default;
@@ -56,6 +60,7 @@ class RenderPass
     RenderPass(const Config& frame_graph_config);
 
   private:
+    static RenderPass* declare_internal(const Config& frame_graph_config, bool present_pass);
     RenderPassID render_pass_id;
     const Config config;
     bool         present_pass;

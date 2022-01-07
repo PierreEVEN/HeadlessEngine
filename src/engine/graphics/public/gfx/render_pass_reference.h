@@ -1,9 +1,12 @@
 #pragma once
+#include <cpputils/logger.hpp>
 #include <string>
 
 #ifndef MAX_RENDER_PASS
-#define MAX_RENDER_PASS 32
+#define MAX_RENDER_PASS 16
 #endif
+
+static_assert(MAX_RENDER_PASS <= 64, "max render pass count exceeded 64");
 
 namespace gfx
 {
@@ -12,30 +15,25 @@ class RenderPassID
 {
     friend class RenderPass;
 
+    template <typename Data_T> friend class RenderPassData;
+
   public:
     static RenderPassID get(const std::string& pass_name);
+    static bool         exists(const std::string& pass_name);
 
-    bool operator==(const RenderPassID& other) const
-    {
-        return other.id == id && other.is_valid && is_valid;
-    }
+    bool operator==(const RenderPassID& other) const;
+    bool operator!=(const RenderPassID& other) const;
+         operator bool() const;
 
-    operator bool() const
-    {
-        return is_valid;
-    }
-
-    static bool is_valid_index(uint8_t index);
+    [[nodiscard]] std::string name() const;
+    [[nodiscard]] uint8_t     get_internal_num() const;
 
   private:
     static RenderPassID declare(const std::string& pass_name);
-
-    RenderPassID(uint8_t new_id, bool valid) : is_valid(valid), id(new_id)
+    explicit RenderPassID(uint8_t new_id) : internal_id(new_id)
     {
     }
-
-    bool    is_valid;
-    uint8_t id;
+    uint8_t internal_id;
 };
 
 template <typename Data_T> class RenderPassData
@@ -44,7 +42,7 @@ template <typename Data_T> class RenderPassData
     class Iterator
     {
       public:
-        Iterator(Data_T* in_data, uint8_t in_index) : data(in_data), index(in_index)
+        Iterator(Data_T* in_data, uint8_t in_index, uint64_t& in_valid_map) : index(in_index), valid_map(in_valid_map), data(in_data)
         {
         }
 
@@ -58,32 +56,100 @@ template <typename Data_T> class RenderPassData
             do
             {
                 index++;
-            } while (!RenderPassID::is_valid_index(index) && index != MAX_RENDER_PASS);
+            } while (!(valid_map & 1LL << index) && index != MAX_RENDER_PASS);
         }
 
-        std::pair<uint8_t, Data_T>& operator*()
+        Data_T& operator*()
         {
-            return {index, data[index]};
+            return data[index];
         }
 
-        const std::pair<uint8_t, Data_T>& operator*() const
+        const Data_T& operator*() const
         {
-            return {index, data[index]};
+            return data[index];
         }
 
-      private:
-        Data_T* data;
+        Data_T* operator->()
+        {
+            return &data[index];
+        }
+
+        const Data_T* operator->() const
+        {
+            return &data[index];
+        }
+
+        [[nodiscard]] RenderPassID id() const
+        {
+            return RenderPassID(index);
+        }
+
         uint8_t index;
+        Data_T* data;
+      private:
+        uint64_t& valid_map;
     };
 
     Iterator begin()
     {
-        return Iterator(data, 0);
+        uint8_t start = 0;
+        while (!contains(RenderPassID(start)) && start != MAX_RENDER_PASS)
+            start++;
+        return Iterator(data, start, valid_pass_bitmap);
     }
 
     Iterator end()
     {
-        return Iterator(nullptr, MAX_RENDER_PASS);
+        return Iterator(data + MAX_RENDER_PASS, MAX_RENDER_PASS, valid_pass_bitmap);
+    }
+
+    [[nodiscard]] bool contains(const RenderPassID& id) const
+    {
+        return valid_pass_bitmap & 1LL << id.get_internal_num();
+    }
+
+    RenderPassData& operator=(const RenderPassData& other) = delete;
+
+    Data_T& operator[](const RenderPassID& id)
+    {
+        if (!contains(id))
+            LOG_FATAL("render pass %s is not valid in the current context. Please init it first", id.name().c_str());
+        return data[id.get_internal_num()];
+    }
+
+    const Data_T& operator[](const RenderPassID& id) const
+    {
+        if (!contains(id))
+            LOG_FATAL("render pass %s is not valid in the current context. Please init it first", id.name().c_str());
+        return data[id.get_internal_num()];
+    }
+
+    template <typename... Args_T> Data_T& init(const RenderPassID& id, Args_T&&... args)
+    {
+        if (!id)
+            LOG_FATAL("render pass %s is not valid.", id.name().c_str());
+
+        if (contains(id))
+            destroy(id);
+
+        new (data + id.get_internal_num()) Data_T(std::forward<Args_T>(args)...);
+        valid_pass_bitmap |= 1LL << id.get_internal_num();
+        return data[id.get_internal_num()];
+    }
+
+    void destroy(const RenderPassID& id)
+    {
+        data[id.get_internal_num()].~Data_T();
+        valid_pass_bitmap &= ~(1LL << id.get_internal_num());
+    }
+
+    void clear()
+    {
+        for (uint8_t i = 0; i < MAX_RENDER_PASS; ++i)
+            if (contains(RenderPassID(i)))
+                destroy(RenderPassID(i));
+        valid_pass_bitmap = 0;
+        memset(data, 0, sizeof(Data_T) * MAX_RENDER_PASS);
     }
 
     RenderPassData()
@@ -91,22 +157,8 @@ template <typename Data_T> class RenderPassData
         clear();
     }
 
-    Data_T& operator[](const RenderPassID& id)
-    {
-        return data[id];
-    }
-
-    const Data_T& operator[](const RenderPassID& id) const
-    {
-        return data[id];
-    }
-
-    void clear()
-    {
-        memset(data, 0, sizeof(Data_T) * MAX_RENDER_PASS);
-    }
-
   private:
-    Data_T data[MAX_RENDER_PASS];
+    Data_T   data[MAX_RENDER_PASS];
+    uint64_t valid_pass_bitmap = 0;
 };
 } // namespace gfx

@@ -15,11 +15,11 @@ class MasterMaterial_VK final : public MasterMaterial
 
     struct MaterialPassData
     {
+        SwapchainImageResource<VkDescriptorSetLayout> descriptor_set_layout;
         VkPipeline                                    pipeline        = VK_NULL_HANDLE;
         VkPipelineLayout                              layout          = VK_NULL_HANDLE;
         VkShaderModule                                vertex_module   = VK_NULL_HANDLE;
         VkShaderModule                                fragment_module = VK_NULL_HANDLE;
-        SwapchainImageResource<VkDescriptorSetLayout> descriptor_set_layout;
     };
 
     void rebuild_material(const shader_builder::CompilationResult& compilation_results) override;
@@ -36,6 +36,11 @@ class MasterMaterial_VK final : public MasterMaterial
         if (!render_pass)
             return nullptr;
         return &per_pass_data[render_pass].pipeline;
+    }
+
+    const SwapchainImageResource<VkDescriptorSetLayout>& get_descriptor_set_layout(const RenderPassID& render_pass)&
+    {
+        return per_pass_data[render_pass].descriptor_set_layout;
     }
 
   private:

@@ -114,7 +114,7 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
         return &operator[](GetMaxImageLambda_T::get_current_image());
     }
 
-    [[nodiscard]] uint8_t get_max_instance_count()
+    [[nodiscard]] uint8_t get_max_instance_count() const
     {
         if (is_static())
             return 1;

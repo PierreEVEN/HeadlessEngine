@@ -27,14 +27,20 @@ void RenderPass::destroy_passes()
 {
 }
 
-RenderPass* RenderPass::declare(const Config& frame_graph_config, bool present_pass)
+RenderPass* RenderPass::declare_internal(const Config& frame_graph_config, bool present_pass)
 {
 #if GFX_USE_VULKAN
-    const auto pass_id     = RenderPassID::declare(frame_graph_config.pass_name);
-    render_passes[pass_id] = new vulkan::RenderPass_VK(frame_graph_config);
-    return render_passes[pass_id];
-#endif
+    const auto render_pass    = new vulkan::RenderPass_VK(frame_graph_config);
+    render_pass->present_pass = present_pass;
+
+    const auto   pass_id  = RenderPassID::get(frame_graph_config.pass_name);
+    RenderPass*& pass_ptr = render_passes.init(pass_id);
+    pass_ptr              = render_pass;
+
+    return pass_ptr;
+#else
     return nullptr;
+#endif
 }
 
 } // namespace gfx

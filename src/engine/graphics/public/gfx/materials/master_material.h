@@ -1,8 +1,8 @@
 #pragma once
 
+#include "gfx/render_pass_reference.h"
 #include <filesystem>
 #include <shader_builder/compiler.h>
-#include "gfx/render_pass_reference.h"
 
 namespace gfx
 {
@@ -21,8 +21,8 @@ class MasterMaterial
         {
             if (const auto pass_id = RenderPassID::get(pass.first))
             {
-                vertex_reflection[pass_id] = pass.second.vertex.reflection;
-                fragment_reflection[pass_id] = pass.second.fragment.reflection;
+                vertex_reflection.init(pass_id)   = pass.second.vertex.reflection;
+                fragment_reflection.init(pass_id) = pass.second.fragment.reflection;
             }
         }
     }
@@ -31,6 +31,16 @@ class MasterMaterial
     {
         return shader_properties;
     }
+
+    [[nodiscard]] RenderPassData<shader_builder::ReflectionResult>& get_vertex_reflections()
+    {
+        return vertex_reflection;
+    }
+    [[nodiscard]] RenderPassData<shader_builder::ReflectionResult>& get_fragment_reflections()
+    {
+        return fragment_reflection;
+    }
+
     [[nodiscard]] const shader_builder::ReflectionResult& get_vertex_reflection(const RenderPassID& render_pass_id) const
     {
         return vertex_reflection[render_pass_id];
@@ -44,7 +54,7 @@ class MasterMaterial
     MasterMaterial() = default;
 
   private:
-    shader_builder::ShaderProperties shader_properties;
+    shader_builder::ShaderProperties                 shader_properties;
     RenderPassData<shader_builder::ReflectionResult> vertex_reflection;
     RenderPassData<shader_builder::ReflectionResult> fragment_reflection;
 };

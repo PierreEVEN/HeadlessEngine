@@ -15,8 +15,6 @@ int main()
 {
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
-    auto master = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
-
     /**
      * 1° initialize the application and the gfx backend
      */
@@ -75,8 +73,8 @@ int main()
     /**
      * 4° frame graph construction
      */
-    auto g_buffer_graph_pass   = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPass::find("gbuffer"));
-    auto g_buffer_resolve_pass = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPass::find("gbuffer_resolve"));
+    auto g_buffer_graph_pass   = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPassID::get("gbuffer"));
+    auto g_buffer_resolve_pass = gfx::RenderPassInstance::create(surface_1->get_container()->width(), surface_1->get_container()->width(), gfx::RenderPassID::get("gbuffer_resolve"));
     g_buffer_resolve_pass->link_dependency(g_buffer_graph_pass);
     surface_1->link_dependency(g_buffer_resolve_pass);
     surface_1->build_framegraph();

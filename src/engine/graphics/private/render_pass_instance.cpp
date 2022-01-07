@@ -11,7 +11,7 @@
 namespace gfx
 {
 
-std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
+std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
 {
 #if GFX_USE_VULKAN
     return std::make_shared<vulkan::RenderPassInstance_VK>(width, height, base, images);
@@ -20,11 +20,15 @@ std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, u
 #endif
 }
 
-RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, RenderPass* base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
-    : render_pass_base(base), framebuffer_width(width), framebuffer_height(height)
+RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
+    :framebuffer_width(width), framebuffer_height(height)
 {
+    if (!base)
+        LOG_FATAL("there is no render pass named %s", base.name().c_str());
+
+    render_pass_base = RenderPass::find(base);
     if (!render_pass_base)
-        LOG_FATAL("render pass base is null");
+        LOG_FATAL("base render pass is null");
 
     if (images)
     {

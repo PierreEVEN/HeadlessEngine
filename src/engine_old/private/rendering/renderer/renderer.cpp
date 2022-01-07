@@ -128,21 +128,6 @@ void Renderer::render_frame(SwapchainFrame& swapchain_frame)
     }
 }
 
-RenderPass* Renderer::get_render_pass(const std::string& pass_name)
-{
-    auto pass_descriptions = renderer_configuration.get_pass_descriptions();
-    for (size_t i = 0; i < pass_descriptions.size(); ++i)
-    {
-        if (pass_descriptions[i].pass_name == pass_name)
-        {
-            if (render_passes.size() <= i)
-                LOG_FATAL("render pass %s (#%d) is null", pass_name.c_str(), i);
-            return render_passes[i].get();
-        }
-    }
-    LOG_FATAL("there is no render pass named %s", pass_name.c_str());
-    return nullptr;
-}
 
 void Renderer::set_render_pass_description(const RendererConfiguration& in_renderer_configuration)
 {

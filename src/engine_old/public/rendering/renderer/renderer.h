@@ -49,7 +49,6 @@ class Renderer
     void init_or_resize(VkExtent2D in_render_resolution);
     void render_frame(SwapchainFrame& swapchain_frame);
 
-    RenderPass*                       get_render_pass(const std::string& pass_name);
     [[nodiscard]] RenderPassSettings* get_render_pass_configuration(const std::string& pass_name)
     {
         return renderer_configuration.get_render_pass(pass_name);

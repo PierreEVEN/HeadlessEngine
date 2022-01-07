@@ -1,12 +1,13 @@
 #include "gfx/render_pass_reference.h"
 
-#include <unordered_map>
 #include <cpputils/logger.hpp>
+#include <unordered_map>
 
 namespace gfx
 {
 
 static std::unordered_map<std::string, uint8_t> pass_id_map;
+uint64_t                                        valid_pass_id_bitmap = 0;
 
 RenderPassID RenderPassID::get(const std::string& pass_name)
 {
@@ -14,30 +15,45 @@ RenderPassID RenderPassID::get(const std::string& pass_name)
 
     if (id == pass_id_map.end())
     {
-        LOG_ERROR("there is no render pass named %s", pass_name.c_str());
-        return RenderPassID(0, false);
+        LOG_FATAL("there is no render pass named %s", pass_name.c_str());
+        return RenderPassID(UINT8_MAX);
     }
-    return RenderPassID(id->second, true);
+    return RenderPassID(id->second);
 }
 
-bool RenderPassID::is_valid_index(uint8_t index)
+bool RenderPassID::exists(const std::string& pass_name)
 {
-    for (const auto& pass : pass_id_map)
-    {
-        if (index == pass.second)
-            return true;
-    }
-    return false;
+    return pass_id_map.contains(pass_name);
 }
 
-std::string RenderPassID::get_name() const
+bool RenderPassID::operator==(const RenderPassID& other) const
 {
-    for (const auto& pass : pass_id_map)
+    return other.internal_id == internal_id && other.operator bool() && operator bool();
+}
+
+bool RenderPassID::operator!=(const RenderPassID& other) const
+{
+    return operator==(other);
+}
+
+RenderPassID::operator bool() const
+{
+    return valid_pass_id_bitmap & 1LL << internal_id;
+}
+
+std::string RenderPassID::name() const
+{
+    for (const auto& it : pass_id_map)
     {
-        if (id == pass.second)
-            return pass.first;
+        if (it.second == internal_id)
+            return it.first;
     }
-    LOG_FATAL("integrity error");
+    return "";
+}
+
+uint8_t RenderPassID::get_internal_num() const
+{
+    return internal_id;
 }
 
 RenderPassID RenderPassID::declare(const std::string& pass_name)
@@ -45,26 +61,16 @@ RenderPassID RenderPassID::declare(const std::string& pass_name)
     if (pass_id_map.contains(pass_name))
         LOG_FATAL("a render pass named %s already exists", pass_name.c_str());
 
-    uint8_t pass_id = 0;
-    for (uint8_t i = 0; i < MAX_RENDER_PASS; ++i)
+    for (uint8_t pass_id = 0; pass_id < MAX_RENDER_PASS; ++pass_id)
     {
-        bool already_exists = false;
-        for (const auto& pass : pass_id_map)
+        if (!(valid_pass_id_bitmap & 1LL << pass_id))
         {
-            if (pass.second == pass_id)
-            {
-                already_exists = true;
-                pass_id++;
-                break;
-            }
-        }
-        if (!already_exists)
-        {
+            valid_pass_id_bitmap |= 1LL << pass_id;
             pass_id_map[pass_name] = pass_id;
-            return RenderPassID(pass_id, true);
+            return RenderPassID(pass_id);
         }
     }
     LOG_ERROR("reached the max allowed pass count. Use MAX_RENDER_PASS to avoid this limit");
-    return RenderPassID(0, false);
+    return RenderPassID(UINT8_MAX);
 }
-}
+} // namespace gfx
