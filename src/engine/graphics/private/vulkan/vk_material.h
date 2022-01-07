@@ -24,26 +24,24 @@ class MasterMaterial_VK final : public MasterMaterial
 
     void rebuild_material(const shader_builder::CompilationResult& compilation_results) override;
 
-    const VkPipelineLayout* get_pipeline_layout(const std::string& render_pass) const
+    [[nodiscard]] const VkPipelineLayout* get_pipeline_layout(const RenderPassID& render_pass) const
     {
-        const auto it = per_pass_data.find(render_pass);
-        if (it == per_pass_data.end())
+        if (!render_pass)
             return nullptr;
-        return &it->second.layout;
+        return &per_pass_data[render_pass].layout;
     }
 
-    const VkPipeline* get_pipeline(const std::string& render_pass) const
+    [[nodiscard]] const VkPipeline* get_pipeline(const RenderPassID& render_pass) const
     {
-        const auto it = per_pass_data.find(render_pass);
-        if (it == per_pass_data.end())
+        if (!render_pass)
             return nullptr;
-        return &it->second.pipeline;
+        return &per_pass_data[render_pass].pipeline;
     }
 
   private:
     void create_modules(const shader_builder::CompilationResult& compilation_results);
 
-    void                                              clear();
-    std::unordered_map<std::string, MaterialPassData> per_pass_data;
+    void                             clear();
+    RenderPassData<MaterialPassData> per_pass_data;
 };
 } // namespace gfx::vulkan

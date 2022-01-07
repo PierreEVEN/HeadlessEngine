@@ -129,6 +129,37 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
     };
 }
 
+EBindingType make_descriptor_type(SpvReflectDescriptorType spv_type)
+{
+    switch (spv_type)
+    {
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+        return EBindingType::SAMPLER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        return EBindingType::COMBINED_IMAGE_SAMPLER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        return EBindingType::SAMPLED_IMAGE;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        return EBindingType::STORAGE_IMAGE;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        return EBindingType::UNIFORM_TEXEL_BUFFER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        return EBindingType::STORAGE_TEXEL_BUFFER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        return EBindingType::UNIFORM_BUFFER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        return EBindingType::STORAGE_BUFFER;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        return EBindingType::UNIFORM_BUFFER_DYNAMIC;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        return EBindingType::STORAGE_BUFFER_DYNAMIC;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+        return EBindingType::INPUT_ATTACHMENT;
+    default:
+        LOG_FATAL("unhandled descriptor type");
+    }
+}
+
 ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
 {
     ReflectionResult       result;
@@ -142,8 +173,8 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
         });
         return result;
     }
-    uint32_t offset = 0;
-    result.input_size = 0;
+    uint32_t offset    = 0;
+    result.input_size  = 0;
     result.output_size = 0;
     for (uint32_t i = 0; i < shader_module.input_variable_count; ++i)
     {
@@ -163,6 +194,17 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
             result.outputs.emplace_back(property);
             result.output_size += property.type.type_size;
         }
+    }
+
+    for (uint32_t i = 0; i < shader_module.descriptor_binding_count; ++i)
+    {
+        const auto& binding = shader_module.descriptor_bindings[i];
+
+        result.bindings.emplace_back(BindingDescriptor{
+            .name            = binding.name,
+            .descriptor_type = make_descriptor_type(binding.descriptor_type),
+            .binding         = binding.binding,
+        });
     }
 
     return result;

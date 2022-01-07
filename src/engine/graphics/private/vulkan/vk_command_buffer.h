@@ -28,6 +28,7 @@ class CommandBuffer_VK : public CommandBuffer
 
 private:
     SwapchainImageResource<VkCommandBuffer> command_buffer;
+  void                                    bind_material(VkCommandBuffer command_buffer, MaterialInstance* in_material);
 };
 
 } // namespace gfx::vulkan

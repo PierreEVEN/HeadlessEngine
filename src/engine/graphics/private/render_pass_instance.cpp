@@ -90,6 +90,7 @@ void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
         child->draw_pass(command_buffer);
     }
 
+    command_buffer->render_pass = &get_base()->get_id();
     begin(command_buffer);
 
     if (draw_interface)

@@ -37,44 +37,35 @@ CommandBuffer_VK::~CommandBuffer_VK()
         vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &buffer);
 }
 
-void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)
-{
-    MasterMaterial_VK* base = dynamic_cast<MasterMaterial_VK*>(in_material->get_base().get());
 
-    const auto* pipeline_layout = base->get_pipeline_layout(render_pass);
-    const auto* pipeline = base->get_pipeline(render_pass);
-    
+void CommandBuffer_VK::bind_material(VkCommandBuffer command_buffer, MaterialInstance* in_material)
+{
+    const auto base = dynamic_cast<MasterMaterial_VK*>(in_material->get_base().get());
+
+    const auto* pipeline_layout = base->get_pipeline_layout(*render_pass);
+    const auto* pipeline        = base->get_pipeline(*render_pass);
+
     if (!pipeline_layout)
         return;
-    
+
     if (!pipeline)
         return;
-    
-    if (base->get_properties().line_width != 1.0f)
-        vkCmdSetLineWidth(*command_buffer, base->get_properties().line_width);
 
-    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+    if (base->get_properties().line_width != 1.0f)
+        vkCmdSetLineWidth(command_buffer, base->get_properties().line_width);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+}
+
+void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)
+{
+    bind_material(*command_buffer, in_material);
     vkCmdDraw(*command_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
 {
-    MasterMaterial_VK* base = dynamic_cast<MasterMaterial_VK*>(in_material->get_base().get());
-
-    const auto* pipeline_layout = base->get_pipeline_layout(render_pass);
-    const auto* pipeline = base->get_pipeline(render_pass);
-    
-    if (!pipeline_layout)
-        return;
-    
-    if (!pipeline)
-        return;
-
-    if (base->get_properties().line_width != 1.0f)
-        vkCmdSetLineWidth(*command_buffer, base->get_properties().line_width);
-
-    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
-
+    bind_material(*command_buffer, in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(*command_buffer);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(*command_buffer);    
     vkCmdDrawIndexed(*command_buffer, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
@@ -82,19 +73,22 @@ void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
 
 void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
+    LOG_ERROR("NOT IMPLEMENTED YET");
+    bind_material(*command_buffer, in_material);
     (void)in_buffer;
-    (void)in_material;
 }
 
 void CommandBuffer_VK::draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material)
 {
+    LOG_ERROR("NOT IMPLEMENTED YET");
+    bind_material(*command_buffer, in_material);
     (void)in_buffer;
-    (void)in_material;
 }
 
 void CommandBuffer_VK::draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
+    LOG_ERROR("NOT IMPLEMENTED YET");
+    bind_material(*command_buffer, in_material);
     (void)in_buffer;
-    (void)in_material;
 }
 } // namespace gfx::vulkan

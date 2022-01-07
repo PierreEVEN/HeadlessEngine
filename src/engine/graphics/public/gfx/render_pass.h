@@ -1,7 +1,8 @@
 #pragma once
 #include "types/type_format.h"
 
-#include <memory>
+#include "gfx/render_pass_reference.h"
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -32,7 +33,7 @@ class RenderPass
     };
 
     static RenderPass* declare(const Config& frame_graph_config, bool present_pass = false);
-    static RenderPass* find(const std::string& render_pass_name);
+    static RenderPass* find(const RenderPassID& render_pass_name);
     static void        destroy_passes();
     virtual ~RenderPass() = default;
 
@@ -46,10 +47,16 @@ class RenderPass
         return present_pass;
     }
 
+    [[nodiscard]] const RenderPassID& get_id() const
+    {
+        return render_pass_id;
+    }
+
   protected:
     RenderPass(const Config& frame_graph_config);
 
   private:
+    RenderPassID render_pass_id;
     const Config config;
     bool         present_pass;
 };

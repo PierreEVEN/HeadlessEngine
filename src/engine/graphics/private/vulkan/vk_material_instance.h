@@ -6,6 +6,9 @@ namespace gfx::vulkan
 class MaterialInstance_VK : public MaterialInstance
 {
 public:
-    MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base) : MaterialInstance(base) {}
+    MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base);
+private:
+    void build_descriptor_sets();
 };
+
 }

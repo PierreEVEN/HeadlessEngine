@@ -26,7 +26,6 @@ void gfx::vulkan::RenderPassInstance_VK::begin(CommandBuffer* command_buffer)
 #if GFX_USE_VULKAN
     RenderPass_VK* base = static_cast<RenderPass_VK*>(get_base());
 
-    command_buffer->render_pass  = base->get_config().pass_name;
     CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
 
     VkCommandBuffer& cmd = **cmd_buffer;

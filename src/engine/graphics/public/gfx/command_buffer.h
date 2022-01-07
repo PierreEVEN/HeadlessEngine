@@ -5,11 +5,13 @@
 
 namespace gfx
 {
+class RenderPassID;
 class Mesh;
 class MaterialInstance;
 
 class CommandBuffer
 {
+    friend class RenderPassInstance;
   public:
     virtual ~CommandBuffer() = default;
 
@@ -22,7 +24,9 @@ class CommandBuffer
     virtual void draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material)           = 0;
     virtual void draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material)  = 0;
 
-    std::string render_pass;
+protected:
+
+    const RenderPassID* render_pass;
 };
 
 } // namespace gfx
