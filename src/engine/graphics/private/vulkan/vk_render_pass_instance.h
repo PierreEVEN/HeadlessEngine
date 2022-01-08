@@ -8,6 +8,8 @@ namespace gfx::vulkan
 {
 class RenderPassInstance_VK final : public RenderPassInstance
 {
+    friend class Surface_VK;
+
   public:
     RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
     ~RenderPassInstance_VK() override;
@@ -19,9 +21,10 @@ class RenderPassInstance_VK final : public RenderPassInstance
     void submit() override;
 
   private:
-    uint32_t                              framebuffer_width;
-    uint32_t                              framebuffer_height;
-    SwapchainImageResource<VkFramebuffer> framebuffers;
-    SwapchainImageResource<VkSemaphore>   render_finished_semaphore;
+    uint32_t                              framebuffer_width                 = 0;
+    uint32_t                              framebuffer_height                = 0;
+    SwapchainImageResource<VkFramebuffer> framebuffers                      = {};
+    SwapchainImageResource<VkSemaphore>   render_finished_semaphore         = {};
+    VkSemaphore                           swapchain_image_acquire_semaphore = VK_NULL_HANDLE;
 };
 } // namespace gfx::vulkan

@@ -10,7 +10,7 @@
 
 namespace gfx::vulkan
 {
-RenderPass_VK::RenderPass_VK(const Config& frame_graph_config) : RenderPass(frame_graph_config)
+RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_pass) : RenderPass(frame_graph_config, in_present_pass)
 {
     std::vector<VkAttachmentDescription> attachment_descriptions;
     std::vector<VkAttachmentReference>   color_attachment_references;

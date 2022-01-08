@@ -15,7 +15,7 @@ class RenderPassInstance
   public:
     static std::shared_ptr<RenderPassInstance> create(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images = {});
 
-    virtual ~RenderPassInstance() = default;
+    virtual ~RenderPassInstance();
 
     virtual void resize(uint32_t width, uint32_t height) = 0;
     void         draw_pass();

@@ -92,13 +92,7 @@ int main()
                                 }};
     auto indices      = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
     auto glob_mesh    = std::make_shared<gfx::Mesh>("test_mesh", vertices, indices);
-
-    surface_1->on_draw(
-        [&](gfx::CommandBuffer* command_buffer)
-        {
-            command_buffer->draw_mesh(glob_mesh.get(), mat_instance.get());
-        });
-
+    
     /**
      * 5° Application loop
      */

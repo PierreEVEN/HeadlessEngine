@@ -20,6 +20,11 @@ std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, u
 #endif
 }
 
+RenderPassInstance::~RenderPassInstance()
+{
+    delete command_buffer;
+}
+
 RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images) : framebuffer_width(width), framebuffer_height(height)
 {
     if (!base)
@@ -62,11 +67,13 @@ RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const Re
                                                              }));
         }
     }
+
+    command_buffer = CommandBuffer::create("test");
 }
 
 void RenderPassInstance::build_framegraph()
 {
-    // Fetch all the required dependencies //@TODO : remove the need to build framegraph and use semaphores instead
+    // Fetch all the required dependencies
 
     if (is_generated)
         return;
@@ -95,8 +102,14 @@ void RenderPassInstance::draw_pass()
     for (const auto& child : children)
         child->draw_pass();
 
+    // Set current render pass
+    command_buffer->render_pass = &render_pass_base->get_id();
+
+    // Record command buffer
     begin_pass();
     on_draw_pass.execute(command_buffer);
+
+    // Submit command buffer
     submit();
 }
 

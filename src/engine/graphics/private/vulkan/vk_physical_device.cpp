@@ -1,7 +1,9 @@
 #include "vk_physical_device.h"
 
+#include "vk_errors.h"
 #include "vk_helper.h"
 #include "vulkan/vk_device.h"
+#include <types/magic_enum.h>
 #include <cpputils/logger.hpp>
 
 namespace gfx::vulkan
@@ -79,11 +81,12 @@ PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(
     }
 }
 
-VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos)
+VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
 {
     const QueueInfo& queue_info = get_queue_family(queue_family, 0);
+    VK_CHECK(vkWaitForFences(get_device(), 1, &*queue_info.queue_submit_fence, VK_TRUE, UINT64_MAX), "failed to wait on fence");
     vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
-    vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence);
+    VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence), "failed to submit queue");
     return *queue_info.queue_submit_fence;
 }
 

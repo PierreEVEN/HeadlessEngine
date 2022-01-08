@@ -12,7 +12,7 @@ namespace gfx
 
 static RenderPassData<RenderPass*> render_passes;
 
-RenderPass::RenderPass(const Config& frame_graph_config) : config(frame_graph_config), render_pass_id(RenderPassID::declare(frame_graph_config.pass_name))
+RenderPass::RenderPass(const Config& frame_graph_config, bool in_present_pass) : config(frame_graph_config), render_pass_id(RenderPassID::declare(frame_graph_config.pass_name)), present_pass(in_present_pass)
 {
 }
 
@@ -30,9 +30,7 @@ void RenderPass::destroy_passes()
 RenderPass* RenderPass::declare_internal(const Config& frame_graph_config, bool present_pass)
 {
 #if GFX_USE_VULKAN
-    const auto render_pass    = new vulkan::RenderPass_VK(frame_graph_config);
-    render_pass->present_pass = present_pass;
-
+    const auto render_pass    = new vulkan::RenderPass_VK(frame_graph_config, present_pass);
     const auto   pass_id  = RenderPassID::get(frame_graph_config.pass_name);
     RenderPass*& pass_ptr = render_passes.init(pass_id);
     pass_ptr              = render_pass;

@@ -39,10 +39,10 @@ RenderPassInstance_VK::~RenderPassInstance_VK()
 void RenderPassInstance_VK::begin_pass()
 {
     // Begin buffer record
-    command_buffer->start();
+    get_pass_command_buffer()->start();
 
     const auto*            base = dynamic_cast<RenderPass_VK*>(get_base());
-    const VkCommandBuffer& cmd  = **dynamic_cast<CommandBuffer_VK*>(command_buffer);
+    const VkCommandBuffer& cmd  = **dynamic_cast<CommandBuffer_VK*>(get_pass_command_buffer());
 
     debug_add_marker("draw render pass [" + base->get_config().pass_name + "]", cmd, {0.5f, 1.0f, 0.5f, 1.0f});
 
@@ -79,25 +79,28 @@ void RenderPassInstance_VK::begin_pass()
 
 void RenderPassInstance_VK::submit()
 {
-    const VkCommandBuffer& cmd = **dynamic_cast<CommandBuffer_VK*>(command_buffer);
+    const VkCommandBuffer& cmd = **dynamic_cast<CommandBuffer_VK*>(get_pass_command_buffer());
 
     // End command buffer
     vkCmdEndRenderPass(cmd);
     debug_end_marker(cmd);
 
     // End buffer record
-    command_buffer->end();
+    get_pass_command_buffer()->end();
 
     // Submit buffer (wait children completion using children_semaphores)
     std::vector<VkSemaphore> children_semaphores;
     for (const auto& child : children)
         children_semaphores.emplace_back(*dynamic_cast<RenderPassInstance_VK*>(child.get())->render_finished_semaphore);
-    VkPipelineStageFlags wait_stage[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // We wait the output framebuffer image is fully generated
+    if (get_base()->is_present_pass())
+        children_semaphores.emplace_back(swapchain_image_acquire_semaphore);
+    std::vector<VkPipelineStageFlags> wait_stage(children_semaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     const VkSubmitInfo   submit_infos{
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext                = nullptr,
         .waitSemaphoreCount   = static_cast<uint32_t>(children_semaphores.size()),
         .pWaitSemaphores      = children_semaphores.data(),
-        .pWaitDstStageMask    = wait_stage,
+        .pWaitDstStageMask    = wait_stage.data(),
         .commandBufferCount   = 1,
         .pCommandBuffers      = &cmd,
         .signalSemaphoreCount = 1,
@@ -115,7 +118,7 @@ void RenderPassInstance_VK::resize(uint32_t width, uint32_t height)
     for (uint8_t i = 0; i < framebuffers.get_max_instance_count(); ++i)
     {
         std::vector<VkImageView> attachments(0);
-        for (const auto& image : framebuffers_images)
+        for (const auto& image : get_framebuffer_images())
         {
             const auto texture = dynamic_cast<Texture_VK*>(image.get());
             attachments.emplace_back(texture->get_view()[i]);

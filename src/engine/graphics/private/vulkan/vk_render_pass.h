@@ -16,7 +16,7 @@ namespace gfx::vulkan
 class RenderPass_VK final : public RenderPass
 {
   public:
-    RenderPass_VK(const Config& frame_graph_config);
+    RenderPass_VK(const Config & frame_graph_config, bool in_present_pass);
     ~RenderPass_VK() override;
 
     [[nodiscard]] const VkRenderPass& get() const

@@ -42,7 +42,7 @@ class PhysicalDevice_VK : public PhysicalDevice
 
     [[nodiscard]] QueueInfo get_queue_family(EQueueFamilyType queue_family, uint8_t queue_index = 0) const;
 
-    VkFence submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos);
+    VkFence submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const;
 
   private:
     VkPhysicalDevice       physical_device;

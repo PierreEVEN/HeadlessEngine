@@ -21,6 +21,12 @@ class CommandBuffer_VK : public CommandBuffer
     void draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material) override;
     void draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material) override;
     void draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material) override;
+    void bind_buffer([[maybe_unused]] std::string buffer_name, [[maybe_unused]] gfx::Buffer* in_buffer) override
+    {
+    }
+    void bind_texture([[maybe_unused]] std::string buffer_name, [[maybe_unused]] gfx::Texture* in_buffer) override
+    {
+    }
 
     VkCommandBuffer& operator*()
     {
@@ -33,6 +39,8 @@ class CommandBuffer_VK : public CommandBuffer
   private:
     SwapchainImageResource<VkCommandBuffer> command_buffer;
     void                                    bind_material(VkCommandBuffer cmd, MaterialInstance* in_material);
+
+  public:
 };
 
 } // namespace gfx::vulkan

@@ -4,6 +4,8 @@
 #include "application/application.h"
 #include "gfx/physical_device.h"
 #include "vk_helper.h"
+#include "vk_render_pass.h"
+#include "vk_render_pass_instance.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_command_buffer.h"
 #include "vulkan/vk_command_pool.h"
@@ -136,15 +138,9 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
         }
     }
 
-    const VkCommandBufferAllocateInfo command_buffer_infos{
-        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool        = command_pool::get(),
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-        };
-        const VkSemaphoreCreateInfo semaphore_infos{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        };
+    const VkSemaphoreCreateInfo semaphore_infos{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
 
     const VkFenceCreateInfo fence_infos{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -187,7 +183,7 @@ void Surface_VK::render()
     if (window_container->width() == 0 || window_container->height() == 0)
         return;
 
-    VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
+    const VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
 
     // Retrieve the next available images ID
     uint32_t       image_index;
@@ -196,8 +192,9 @@ void Surface_VK::render()
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        recreate_swapchain();
-        return;
+        LOG_FATAL("framebuffer resizing is not implemented yet");
+        // recreate_swapchain();
+        // return;
     }
 
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -206,24 +203,28 @@ void Surface_VK::render()
         return;
     }
 
+    // The present pass must wait for the image acquire semaphore
+    dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->swapchain_image_acquire_semaphore = image_acquire_semaphore;
+
     // Draw content
     main_render_pass->draw_pass();
-    
+
+    // Submit to present queue
     const VkPresentInfoKHR present_infos{
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores    = &swapchain_resources->render_finished_semaphore,
+        .pWaitSemaphores    = &*dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->render_finished_semaphore,
         .swapchainCount     = 1,
         .pSwapchains        = &swapchain,
         .pImageIndices      = &image_index,
         .pResults           = nullptr,
     };
-
     const VkResult submit_result = vkQueuePresentKHR(present_queue, &present_infos);
 
     if (submit_result == VK_ERROR_OUT_OF_DATE_KHR || submit_result == VK_SUBOPTIMAL_KHR)
     {
-        recreate_swapchain();
+        LOG_FATAL("framebuffer resizing is not implemented yet");
+        // recreate_swapchain();
     }
     else if (submit_result != VK_SUCCESS)
     {
@@ -239,7 +240,7 @@ void Surface_VK::recreate_swapchain()
     if (swapchain != VK_NULL_HANDLE)
         vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
 
-    VkSwapchainCreateInfoKHR create_info{
+    const VkSwapchainCreateInfoKHR create_info{
         .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext                 = nullptr,
         .flags                 = 0,

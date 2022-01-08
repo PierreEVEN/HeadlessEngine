@@ -43,19 +43,31 @@ void declare_render_pass()
                                                      }});
 }
 
-int main(int argc, char* argv[])
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
+
+    Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
+
     application::create();
     gfx::init();
-    auto* window  = create_window(application::window::WindowConfig{.name = "padenom", .window_style = application::window::EWindowStyle::WINDOWED});
+    auto* window  = create_window(application::window::WindowConfig{
+        .name         = "padenom",
+        .width = 2560,
+        .height = 1428,
+        .window_style = application::window::EWindowStyle::WINDOWED,
+    });
     auto* surface = gfx::Surface::create_surface(window);
     declare_render_pass();
+
+    space_regions.emplace_back(SpaceRegion{});
+    space_regions.emplace_back(SpaceRegion{});
+    space_regions.emplace_back(SpaceRegion{});
 
     gfx::View camera;
 
     const auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("region_combine"));
-    combine_pass->on_draw(
-        [](gfx::CommandBuffer* command_buffer)
+    combine_pass->on_draw_pass.add_lambda(
+        []([[maybe_unused]] gfx::CommandBuffer* command_buffer)
         {
             // Repeat for each of the gbuffers textures
             // std::vector<Texture> children_albedo;
@@ -65,7 +77,7 @@ int main(int argc, char* argv[])
     for (auto& region : space_regions)
     {
         const auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("gbuffer"));
-        gbuffer_pass->on_draw(
+        gbuffer_pass->on_draw_pass.add_lambda(
             [&region](gfx::CommandBuffer* command_buffer)
             {
                 // This is a pass where we will render a region
@@ -94,8 +106,6 @@ int main(int argc, char* argv[])
     }
 
     delete surface;
-    destroy_window(window);
-    gfx::destroy();
     application::destroy();
     exit(EXIT_SUCCESS);
 }

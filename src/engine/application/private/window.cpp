@@ -40,7 +40,7 @@ Window* create_window(const WindowConfig& config)
 #endif
 }
 
-void destroy_window(Window* window)
+void Window::destroy_window(Window* window)
 {
     delete window;
 }

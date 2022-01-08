@@ -8,7 +8,7 @@
 
 namespace gfx::vulkan
 {
-template <typename Object_T> void debug_set_object_name(const std::string& object_name, const Object_T& object)
+template <typename Object_T> void debug_set_object_name([[maybe_unused]] const std::string& object_name, [[maybe_unused]] const Object_T& object)
 {
 #ifdef ENABLE_VALIDATION_LAYER
 
@@ -84,7 +84,7 @@ template <typename Object_T> void debug_set_object_name(const std::string& objec
 #endif
 }
 
-inline void debug_add_marker(const std::string& marker_name, VkCommandBuffer command_buffer, std::array<float, 4> color)
+inline void debug_add_marker([[maybe_unused]] const std::string& marker_name, [[maybe_unused]] VkCommandBuffer command_buffer, [[maybe_unused]] std::array<float, 4> color)
 {
 #ifdef ENABLE_VALIDATION_LAYER
     // add marker
@@ -99,7 +99,7 @@ inline void debug_add_marker(const std::string& marker_name, VkCommandBuffer com
 #endif
 }
 
-inline void debug_end_marker(VkCommandBuffer command_buffer)
+inline void debug_end_marker([[maybe_unused]] VkCommandBuffer command_buffer)
 {
 #ifdef ENABLE_VALIDATION_LAYER
     const auto pfn_debug_marker_end = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(vkGetDeviceProcAddr(get_device(), "vkCmdDebugMarkerEndEXT"));

@@ -57,7 +57,7 @@ class RenderPass
     }
 
   protected:
-    RenderPass(const Config& frame_graph_config);
+    RenderPass(const Config& frame_graph_config, bool in_present_pass);
 
   private:
     static RenderPass* declare_internal(const Config& frame_graph_config, bool present_pass);

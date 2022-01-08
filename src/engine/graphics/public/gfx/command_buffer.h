@@ -18,6 +18,9 @@ class CommandBuffer
     friend class RenderPassInstance;
 
   public:
+
+      static CommandBuffer* create(const std::string& name);
+
     virtual ~CommandBuffer() = default;
 
     using RenderLayer = int64_t;
@@ -32,16 +35,16 @@ class CommandBuffer
     virtual void bind_buffer(std::string buffer_name, gfx::Buffer* in_buffer)   = 0;
     virtual void bind_texture(std::string buffer_name, gfx::Texture* in_buffer) = 0;
 
-    const RenderPassID& get_render_pass() const
+    [[nodiscard]] const RenderPassID& get_render_pass() const
     {
-        return render_pass;
+        return *render_pass;
     }
 
     virtual void start() = 0;
     virtual void end()   = 0;
 
   protected:
-    RenderPassID render_pass;
+    const RenderPassID* render_pass;
 };
 
 } // namespace gfx

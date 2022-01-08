@@ -108,7 +108,7 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
     auto       name_split = stringutils::split(variable->name, {'.'});
     const auto type       = get_type(variable->type_description);
     uint32_t   offset     = current_offset;
-    current_offset += type.type_size;
+    current_offset += static_cast<uint32_t>(type.type_size);
 
     /*
     LOG_WARNING("%s : %d,  %s", variable->name, variable->location, variable->semantic);
@@ -182,7 +182,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
         {
             auto property = reflect_property(shader_module.input_variables[i], offset);
             result.inputs.emplace_back(property);
-            result.input_size += property.type.type_size;
+            result.input_size += static_cast<uint32_t>(property.type.type_size);
         }
     }
     offset = 0;
@@ -192,7 +192,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
         {
             auto property = reflect_property(shader_module.output_variables[i], offset);
             result.outputs.emplace_back(property);
-            result.output_size += property.type.type_size;
+            result.output_size += static_cast<uint32_t>(property.type.type_size);
         }
     }
 

@@ -22,12 +22,12 @@ constexpr std::initializer_list<const char*> required_extensions = {VK_KHR_SURFA
 #if APP_USE_WIN32
                                                                     "VK_KHR_win32_surface",
 #endif
-
+};
 #endif
 
 #ifdef ENABLE_VALIDATION_LAYER
 constexpr std::initializer_list<const char*> device_extensions = {"VK_KHR_swapchain", VK_EXT_DEBUG_MARKER_EXTENSION_NAME};
 #else
-                                                                    constexpr std::initializer_list<const char*> device_extensions = {"VK_KHR_swapchain"};
+constexpr std::initializer_list<const char*> device_extensions = {"VK_KHR_swapchain"};
 #endif
 } // namespace gfx::config

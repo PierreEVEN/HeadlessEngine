@@ -61,8 +61,8 @@ class Window
     static void  register_window(Window* new_window);
     static void  unregister_window(Window* destroyed_window);
     WindowConfig config;
+    static void         destroy_window(Window* window);
 };
 
 Window* create_window(const WindowConfig& config);
-void    destroy_window(Window* window);
 } // namespace application::window
