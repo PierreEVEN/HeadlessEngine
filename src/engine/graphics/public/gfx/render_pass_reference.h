@@ -116,14 +116,14 @@ template <typename Data_T> class RenderPassData
     Data_T& operator[](const RenderPassID& id)
     {
         if (!contains(id))
-            LOG_FATAL("render pass %s is not valid in the current context. Please init it first", id.name().c_str());
+            LOG_FATAL("render pass %s is not valid in the current context. Please gfx_update it first", id.name().c_str());
         return data[id.get_internal_num()];
     }
 
     const Data_T& operator[](const RenderPassID& id) const
     {
         if (!contains(id))
-            LOG_FATAL("render pass %s is not valid in the current context. Please init it first", id.name().c_str());
+            LOG_FATAL("render pass %s is not valid in the current context. Please gfx_update it first", id.name().c_str());
         return data[id.get_internal_num()];
     }
 

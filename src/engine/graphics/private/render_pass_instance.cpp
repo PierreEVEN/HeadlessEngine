@@ -20,8 +20,7 @@ std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, u
 #endif
 }
 
-RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
-    :framebuffer_width(width), framebuffer_height(height)
+RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images) : framebuffer_width(width), framebuffer_height(height)
 {
     if (!base)
         LOG_FATAL("there is no render pass named %s", base.name().c_str());
@@ -32,10 +31,12 @@ RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const Re
 
     if (images)
     {
+        // If framebuffer images are provided, use them
         framebuffers_images = images.value();
     }
     else
     {
+        // Else : generate new framebuffer images
         for (const auto& attachment : render_pass_base->get_config().color_attachments)
         {
             if (Texture::is_depth_format(attachment.image_format))
@@ -65,6 +66,8 @@ RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const Re
 
 void RenderPassInstance::build_framegraph()
 {
+    // Fetch all the required dependencies //@TODO : remove the need to build framegraph and use semaphores instead
+
     if (is_generated)
         return;
     is_generated = true;
@@ -87,20 +90,14 @@ void RenderPassInstance::link_dependency(const std::shared_ptr<RenderPassInstanc
     children.emplace_back(render_pass);
 }
 
-void RenderPassInstance::draw_pass(CommandBuffer* command_buffer)
+void RenderPassInstance::draw_pass()
 {
     for (const auto& child : children)
-    {
-        child->draw_pass(command_buffer);
-    }
+        child->draw_pass();
 
-    command_buffer->render_pass = &get_base()->get_id();
-    begin(command_buffer);
-
-    if (draw_interface)
-        draw_interface->draw(command_buffer);
-
-    end(command_buffer);
+    begin_pass();
+    on_draw_pass.execute(command_buffer);
+    submit();
 }
 
 } // namespace gfx

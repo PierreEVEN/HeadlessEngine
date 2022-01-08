@@ -121,4 +121,19 @@ void CommandBuffer_VK::draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialIns
         vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
     }
 }
+
+void CommandBuffer_VK::start()
+{
+    const VkCommandBufferBeginInfo begin_info{
+        .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags            = 0,
+        .pInheritanceInfo = nullptr,
+    };
+    VK_CHECK(vkBeginCommandBuffer(*command_buffer, &begin_info), "Failed to start command buffer");
+}
+
+void CommandBuffer_VK::end()
+{
+    VK_CHECK(vkEndCommandBuffer(*command_buffer), "Failed to end command buffer");
+}
 } // namespace gfx::vulkan

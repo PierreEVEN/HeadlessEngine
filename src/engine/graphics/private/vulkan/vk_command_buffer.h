@@ -22,14 +22,17 @@ class CommandBuffer_VK : public CommandBuffer
     void draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material) override;
     void draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material) override;
 
-    VkCommandBuffer& get(const RenderPassID& id)
+    VkCommandBuffer& operator*()
     {
-        return (*command_buffer)[id];
+        return *command_buffer;
     }
 
+    void start() override;
+    void end() override;
+
   private:
-    SwapchainImageResource<RenderPassData<VkCommandBuffer>> command_buffer;
-    void                                                    bind_material(VkCommandBuffer cmd, MaterialInstance* in_material);
+    SwapchainImageResource<VkCommandBuffer> command_buffer;
+    void                                    bind_material(VkCommandBuffer cmd, MaterialInstance* in_material);
 };
 
 } // namespace gfx::vulkan

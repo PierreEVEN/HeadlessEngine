@@ -34,6 +34,11 @@ Surface* Surface::create_surface(application::window::Window* container)
 #endif
 }
 
+void Surface::link_dependency(const std::shared_ptr<RenderPassInstance>& render_pass) const
+{
+    main_render_pass->link_dependency(render_pass);
+}
+
 void Surface::build_framegraph()
 {
     main_render_pass->build_framegraph();

@@ -898,7 +898,7 @@ struct WrapKeyEqual : public T {
 //   actually belongs to the previous position and was pushed out because that place is already
 //   taken.
 //
-// * infoSentinel: Sentinel byte set to 1, so that iterator's ++ can stop at end() without the
+// * infoSentinel: Sentinel byte set to 1, so that iterator's ++ can stop at submit() without the
 //   need for a idx variable.
 //
 // According to STL, order of templates has effect on throughput. That's why I've moved the
@@ -1234,7 +1234,7 @@ private:
         using iterator_category = std::forward_iterator_tag;
 
         // default constructed iterator can be compared to itself, but WON'T return true when
-        // compared to end().
+        // compared to submit().
         Iter() = default;
 
         // Rule of zero: nothing specified. The conversion constructor is only enabled for
@@ -1267,7 +1267,7 @@ private:
             return *this;
         }
 
-        // prefix increment. Undefined behavior if we are at end()!
+        // prefix increment. Undefined behavior if we are at submit()!
         Iter& operator++() noexcept {
             mInfo++;
             mKeyVals++;
@@ -1359,7 +1359,7 @@ private:
         *idx = (static_cast<size_t>(h) >> InitialInfoNumBits) & mMask;
     }
 
-    // forwards the index by one, wrapping around at the end
+    // forwards the index by one, wrapping around at the submit
     void next(InfoType* info, size_t* idx) const noexcept {
         *idx = *idx + 1;
         *info += mInfoInc;
@@ -1528,7 +1528,7 @@ public:
         : WHash(h)
         , WKeyEqual(equal) {
         ROBIN_HOOD_TRACE(this)
-        insert(initlist.begin(), initlist.end());
+        insert(initlist.start(), initlist.submit());
     }
 
     Table(Table&& o) noexcept
@@ -2011,7 +2011,7 @@ public:
 
     iterator end() {
         ROBIN_HOOD_TRACE(this)
-        // no need to supply valid info pointer: end() must not be dereferenced, and only node
+        // no need to supply valid info pointer: submit() must not be dereferenced, and only node
         // pointer is compared.
         return iterator{reinterpret_cast_no_cast_align_warning<Node*>(mInfo), nullptr};
     }
@@ -2034,7 +2034,7 @@ public:
     // Erases element at pos, returns iterator to the next element.
     iterator erase(iterator pos) {
         ROBIN_HOOD_TRACE(this)
-        // we assume that pos always points to a valid entry, and not end().
+        // we assume that pos always points to a valid entry, and not submit().
         auto const idx = static_cast<size_t>(pos.mKeyVals - mKeyVals);
 
         shiftDown(idx);

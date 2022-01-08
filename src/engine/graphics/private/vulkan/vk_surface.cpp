@@ -141,10 +141,10 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
         .commandPool        = command_pool::get(),
         .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
-    };
-    const VkSemaphoreCreateInfo semaphore_infos{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
+        };
+        const VkSemaphoreCreateInfo semaphore_infos{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
 
     const VkFenceCreateInfo fence_infos{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -155,17 +155,13 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     for (auto& resource : swapchain_resources)
     {
         VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.image_acquire_semaphore), "Failed to create images acquire semaphore");
-        VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.render_finished_semaphore), "Failed to create draw_pass finnished semaphore");
         VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &resource.in_flight_fence), "Failed to create fence");
         debug_set_object_name(stringutils::format("surface %s : semaphore image acquire #%d", window_container->name().c_str(), resource_index), resource.image_acquire_semaphore);
-        debug_set_object_name(stringutils::format("surface %s : semaphore render finished #%d", window_container->name().c_str(), resource_index), resource.render_finished_semaphore);
         debug_set_object_name(stringutils::format("surface %s : fence image in flight #%d", window_container->name().c_str(), resource_index), resource.in_flight_fence);
 
         resource.image_in_flight = VK_NULL_HANDLE;
         ++resource_index;
     }
-
-    main_command_buffer = std::make_unique<CommandBuffer_VK>("render_surface_" + window_container->name());
 
     recreate_swapchain();
 }
@@ -178,7 +174,6 @@ Surface_VK::~Surface_VK()
     for (const auto& elem : swapchain_resources)
     {
         vkDestroySemaphore(get_device(), elem.image_acquire_semaphore, get_allocator());
-        vkDestroySemaphore(get_device(), elem.render_finished_semaphore, get_allocator());
         vkDestroyFence(get_device(), elem.in_flight_fence, get_allocator());
     }
 }
@@ -211,47 +206,9 @@ void Surface_VK::render()
         return;
     }
 
-    /**
-     * Prepare command buffer
-     */
-
-    const VkCommandBufferBeginInfo begin_info{
-        .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags            = 0,
-        .pInheritanceInfo = nullptr,
-    };
-
-    CommandBuffer_VK* cmd            = dynamic_cast<CommandBuffer_VK*>(main_command_buffer.get());
-    VkCommandBuffer&  command_buffer = **cmd;
-
-    VK_CHECK(vkBeginCommandBuffer(command_buffer, &begin_info), "Failed to create command buffer #%d", image_index);
-
     // Draw content
-    main_render_pass->draw_pass(main_command_buffer.get()); // swapchain_resources->command_buffer);
-
-    /**
-     * Submit queues
-     */
-    VK_CHECK(vkEndCommandBuffer(command_buffer), "Failed to register command buffer #d", image_index);
-
-    VkPipelineStageFlags wait_stage[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-
-    const VkSubmitInfo submit_infos{
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount   = 1,
-        .pWaitSemaphores      = &image_acquire_semaphore,
-        .pWaitDstStageMask    = wait_stage,
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &command_buffer,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &swapchain_resources->render_finished_semaphore,
-    };
-    swapchain_resources->image_in_flight = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
-
-    /**
-     * Present to swapchain
-     */
-
+    main_render_pass->draw_pass();
+    
     const VkPresentInfoKHR present_infos{
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
