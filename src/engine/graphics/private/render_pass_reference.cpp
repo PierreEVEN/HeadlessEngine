@@ -56,6 +56,15 @@ uint8_t RenderPassID::get_internal_num() const
     return internal_id;
 }
 
+std::vector<RenderPassID> RenderPassID::get_all()
+{
+    std::vector<RenderPassID> passes;
+    for (uint8_t pass_id = 0; pass_id < MAX_RENDER_PASS; ++pass_id)
+        if (RenderPassID(pass_id))
+            passes.emplace_back(RenderPassID(pass_id));
+    return passes;
+}
+
 RenderPassID RenderPassID::declare(const std::string& pass_name)
 {
     if (pass_id_map.contains(pass_name))

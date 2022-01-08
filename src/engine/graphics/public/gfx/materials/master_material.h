@@ -17,12 +17,14 @@ class MasterMaterial
     {
         shader_properties = compilation_results.properties;
 
+        enabled_render_passes.clear();
         for (const auto& pass : compilation_results.passes)
         {
             if (const auto pass_id = RenderPassID::get(pass.first))
             {
                 vertex_reflection.init(pass_id)   = pass.second.vertex.reflection;
                 fragment_reflection.init(pass_id) = pass.second.fragment.reflection;
+                enabled_render_passes.emplace_back(pass_id);
             }
         }
     }
@@ -50,10 +52,16 @@ class MasterMaterial
         return fragment_reflection[render_pass_id];
     }
 
+    [[nodiscard]] const std::vector<RenderPassID>& get_compatible_render_passes() const
+    {
+        return enabled_render_passes;
+    }
+
   protected:
     MasterMaterial() = default;
 
   private:
+    std::vector<RenderPassID>                        enabled_render_passes;
     shader_builder::ShaderProperties                 shader_properties;
     RenderPassData<shader_builder::ReflectionResult> vertex_reflection;
     RenderPassData<shader_builder::ReflectionResult> fragment_reflection;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gfx/command_buffer.h"
+#include "gfx/render_pass_reference.h"
 
 #include "vulkan/vk_unit.h"
 
@@ -21,14 +22,14 @@ class CommandBuffer_VK : public CommandBuffer
     void draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material) override;
     void draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material) override;
 
-    VkCommandBuffer& operator*()
+    VkCommandBuffer& get(const RenderPassID& id)
     {
-        return *command_buffer;
+        return (*command_buffer)[id];
     }
 
-private:
-    SwapchainImageResource<VkCommandBuffer> command_buffer;
-  void                                    bind_material(MaterialInstance* in_material);
+  private:
+    SwapchainImageResource<RenderPassData<VkCommandBuffer>> command_buffer;
+    void                                                    bind_material(VkCommandBuffer cmd, MaterialInstance* in_material);
 };
 
 } // namespace gfx::vulkan

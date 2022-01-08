@@ -16,5 +16,4 @@ std::shared_ptr<MasterMaterial> MasterMaterial::create(const std::filesystem::pa
 {
     return create(shader_builder::compile_shader(shader_path));
 }
-
 } // namespace gfx

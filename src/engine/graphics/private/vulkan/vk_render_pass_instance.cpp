@@ -22,9 +22,8 @@ RenderPassInstance_VK::~RenderPassInstance_VK()
         vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
 }
 
-void gfx::vulkan::RenderPassInstance_VK::begin(CommandBuffer* command_buffer)
+void RenderPassInstance_VK::begin(CommandBuffer* command_buffer)
 {
-#if GFX_USE_VULKAN
     RenderPass_VK* base = static_cast<RenderPass_VK*>(get_base());
 
     CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
@@ -63,18 +62,15 @@ void gfx::vulkan::RenderPassInstance_VK::begin(CommandBuffer* command_buffer)
 
     vkCmdSetViewport(cmd, 0, 1, &viewport);
     vkCmdSetScissor(cmd, 0, 1, &scissor);
-#endif
 }
 
 void RenderPassInstance_VK::end(CommandBuffer* command_buffer)
 {
-#if GFX_USE_VULKAN
     CommandBuffer_VK* cmd_buffer = dynamic_cast<CommandBuffer_VK*>(command_buffer);
     VkCommandBuffer&  cmd        = **cmd_buffer;
     vkCmdEndRenderPass(cmd);
 
     debug_end_marker(cmd);
-#endif
 }
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height)

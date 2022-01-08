@@ -28,6 +28,8 @@ class RenderPassID
     [[nodiscard]] std::string name() const;
     [[nodiscard]] uint8_t     get_internal_num() const;
 
+    static std::vector<RenderPassID> get_all();
+
   private:
     static RenderPassID declare(const std::string& pass_name);
     explicit RenderPassID(uint8_t new_id) : internal_id(new_id)
@@ -42,7 +44,7 @@ template <typename Data_T> class RenderPassData
     class Iterator
     {
       public:
-        Iterator(Data_T* in_data, uint8_t in_index, uint64_t& in_valid_map) : index(in_index), valid_map(in_valid_map), data(in_data)
+        Iterator(Data_T* in_data, uint8_t in_index, uint64_t& in_valid_map) : data(in_data), index(in_index), valid_map(in_valid_map)
         {
         }
 
@@ -84,9 +86,10 @@ template <typename Data_T> class RenderPassData
             return RenderPassID(index);
         }
 
-        uint8_t index;
-        Data_T* data;
+
       private:
+        Data_T*   data;
+        uint8_t   index;
         uint64_t& valid_map;
     };
 

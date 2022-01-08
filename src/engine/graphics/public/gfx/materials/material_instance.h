@@ -16,6 +16,11 @@ class MaterialInstance
         return base_material;
     }
 
+    [[nodiscard]] const std::vector<RenderPassID>& get_compatible_render_passes() const
+    {
+        return base_material->get_compatible_render_passes();
+    }
+
   protected:
     MaterialInstance(const std::shared_ptr<MasterMaterial>& base) : base_material(base)
     {

@@ -25,8 +25,12 @@ CommandBuffer_VK::CommandBuffer_VK(const std::string& name)
     uint8_t cmd = 0;
     for (auto& buffer : command_buffer)
     {
-        VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &buffer), "Failed to allocate command buffer");
-        debug_set_object_name(stringutils::format("command buffer %s #%d", name.c_str(), cmd++), buffer);
+        for (auto& pass_id : RenderPassID::get_all())
+        {
+            auto& pass_buffer = buffer.init(pass_id);
+            VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &pass_buffer), "Failed to allocate command buffer");
+            debug_set_object_name(stringutils::format("command buffer %s #%d %s", name.c_str(), cmd++, pass_id.name().c_str()), pass_buffer);
+        }
     }
 }
 
@@ -34,10 +38,14 @@ CommandBuffer_VK::~CommandBuffer_VK()
 {
     vkDeviceWaitIdle(get_device());
     for (auto& buffer : command_buffer)
-        vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &buffer);
+    {
+        for (const auto& pass_buffer : buffer)
+            vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &pass_buffer);
+        buffer.clear();
+    }
 }
 
-void CommandBuffer_VK::bind_material(MaterialInstance* in_material)
+void CommandBuffer_VK::bind_material(VkCommandBuffer cmd, MaterialInstance* in_material)
 {
     const auto base = dynamic_cast<MasterMaterial_VK*>(in_material->get_base().get());
 
@@ -51,43 +59,66 @@ void CommandBuffer_VK::bind_material(MaterialInstance* in_material)
         return;
 
     if (base->get_properties().line_width != 1.0f)
-        vkCmdSetLineWidth(*command_buffer, base->get_properties().line_width);
+        vkCmdSetLineWidth(cmd, base->get_properties().line_width);
 
-    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
 }
 
 void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)
 {
-    bind_material(in_material);
-    vkCmdDraw(*command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+    for (const auto& pass : in_material->get_compatible_render_passes())
+    {
+        const auto& cmd = (*command_buffer)[pass];
+        bind_material(cmd, in_material);
+        vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
+    }
 }
 
 void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
 {
-    bind_material(in_material);
-    dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(*command_buffer);
-    dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(*command_buffer);
-    vkCmdDrawIndexed(*command_buffer, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    for (const auto& pass : in_material->get_compatible_render_passes())
+    {
+        const auto& cmd = (*command_buffer)[pass];
+        bind_material(cmd, in_material);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
+        vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    }
 }
 
 void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
-    LOG_ERROR("NOT IMPLEMENTED YET");
-    bind_material(in_material);
-    (void)in_buffer;
+    for (const auto& pass : in_material->get_compatible_render_passes())
+    {
+        const auto& cmd = (*command_buffer)[pass];
+        bind_material(cmd, in_material);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
+        vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    }
 }
 
 void CommandBuffer_VK::draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material)
 {
-    LOG_ERROR("NOT IMPLEMENTED YET");
-    bind_material(in_material);
-    (void)in_buffer;
+    for (const auto& pass : in_material->get_compatible_render_passes())
+    {
+        const auto& cmd = (*command_buffer)[pass];
+        bind_material(cmd, in_material);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
+        vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    }
 }
 
 void CommandBuffer_VK::draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
-    LOG_ERROR("NOT IMPLEMENTED YET");
-    bind_material(in_material);
-    (void)in_buffer;
+    for (const auto& pass : in_material->get_compatible_render_passes())
+    {
+        const auto& cmd = (*command_buffer)[pass];
+        bind_material(cmd, in_material);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
+        dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
+        vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    }
 }
 } // namespace gfx::vulkan
