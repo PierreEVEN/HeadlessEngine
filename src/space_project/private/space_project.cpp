@@ -105,7 +105,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     space_regions.clear();
     combine_pass = nullptr;
-    gfx::RenderPass::destroy_passes();
     delete surface;
     gfx::destroy();
     application::destroy();
