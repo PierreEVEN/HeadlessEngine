@@ -11,12 +11,15 @@ namespace gfx
 {
 struct ClearValue
 {
-    float clear_color[4];
+    float    color[4];
+    float    depth;
+    uint32_t stencil;
 };
 
 class RenderPass
 {
     friend class Surface;
+
   public:
     struct Config
     {
@@ -61,9 +64,9 @@ class RenderPass
 
   private:
     static RenderPass* declare_internal(const Config& frame_graph_config, bool present_pass);
-    RenderPassID render_pass_id;
-    const Config config;
-    bool         present_pass;
+    RenderPassID       render_pass_id;
+    const Config       config;
+    bool               present_pass;
 };
 
 } // namespace gfx

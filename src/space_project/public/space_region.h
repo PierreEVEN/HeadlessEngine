@@ -52,7 +52,7 @@ class SpaceRegion
                                     gfx::Mesh::Vertex{
                                         .pos = glm::vec3(0, 1, 0),
                                     }};
-        auto indices  = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
+        auto indices  = std::vector<uint32_t>{0, 2, 1, 0, 3, 2};
         test_mesh     = std::make_shared<gfx::Mesh>("test", vertices, indices);
 
         test_material_base = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");

@@ -36,6 +36,23 @@ RenderPassInstance_VK::~RenderPassInstance_VK()
         vkDestroySemaphore(get_device(), semaphore, get_allocator());
 }
 
+VkClearValue to_vk_clear_color(const ClearValue& in_clear)
+{
+    VkClearValue clear_value;
+    clear_value.color.float32[0] = in_clear.color[0];
+    clear_value.color.float32[1] = in_clear.color[1];
+    clear_value.color.float32[2] = in_clear.color[2];
+    clear_value.color.float32[3] = in_clear.color[3];
+    return clear_value;
+}
+VkClearValue to_vk_clear_depth_stencil(const ClearValue& in_clear)
+{
+    VkClearValue clear_value;
+    clear_value.depthStencil.depth   = in_clear.depth;
+    clear_value.depthStencil.stencil = in_clear.stencil;
+    return clear_value;
+}
+
 void RenderPassInstance_VK::begin_pass()
 {
     // Begin buffer record
@@ -46,7 +63,14 @@ void RenderPassInstance_VK::begin_pass()
 
     debug_add_marker("draw render pass [" + base->get_config().pass_name + "]", cmd, {0.5f, 1.0f, 0.5f, 1.0f});
 
-    // Begin render pass @TODO : add clear values
+    // Begin render pass
+    std::vector<VkClearValue> clear_values;
+    for (auto& attachment : get_base()->get_config().color_attachments)
+        clear_values.emplace_back(attachment.clear_value ? to_vk_clear_color(attachment.clear_value.value()) : VkClearValue{});
+
+    if (get_base()->get_config().depth_attachment)
+        clear_values.emplace_back(get_base()->get_config().depth_attachment->clear_value ? to_vk_clear_depth_stencil(get_base()->get_config().depth_attachment->clear_value.value()) : VkClearValue{});
+
     const VkRenderPassBeginInfo begin_infos = {
         .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass  = base->get(),
@@ -56,6 +80,8 @@ void RenderPassInstance_VK::begin_pass()
                 .offset = {0, 0},
                 .extent = {get_width(), get_height()},
             },
+        .clearValueCount = static_cast<uint32_t>(clear_values.size()),
+        .pClearValues    = clear_values.data(),
     };
     vkCmdBeginRenderPass(cmd, &begin_infos, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -95,7 +121,7 @@ void RenderPassInstance_VK::submit()
     if (get_base()->is_present_pass())
         children_semaphores.emplace_back(swapchain_image_acquire_semaphore);
     std::vector<VkPipelineStageFlags> wait_stage(children_semaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    const VkSubmitInfo   submit_infos{
+    const VkSubmitInfo                submit_infos{
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext                = nullptr,
         .waitSemaphoreCount   = static_cast<uint32_t>(children_semaphores.size()),
