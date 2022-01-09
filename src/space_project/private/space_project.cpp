@@ -60,10 +60,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     declare_render_pass();
 
     space_regions.emplace_back(SpaceRegion{});
-    space_regions.emplace_back(SpaceRegion{});
-    space_regions.emplace_back(SpaceRegion{});
 
-    gfx::View camera;
 
     auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("region_combine"));
     combine_pass->on_draw_pass.add_lambda(
@@ -98,6 +95,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
             // gameplay
             region.tick();
             // send gameplay to gfx
+            gfx::View camera;
             region.pre_render(&camera);
         }
         // render everything
@@ -105,6 +103,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         window->update();
     }
 
+    space_regions.clear();
     combine_pass = nullptr;
     gfx::RenderPass::destroy_passes();
     delete surface;

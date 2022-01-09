@@ -59,17 +59,20 @@ class SpaceRegion
         test_material      = gfx::MaterialInstance::create(test_material_base);
 
         view_matrix_uniform_buffer = gfx::Buffer::create("test_ubo", 1, sizeof(gfx::View), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU);
+
+        gfx::View view;
+
+        view_matrix_uniform_buffer->set_data(view);
+        test_material->bind_buffer("view_ubo", view_matrix_uniform_buffer);
     }
 
     void pre_render([[maybe_unused]] gfx::View* view_point)
     {
-        view_matrix_uniform_buffer->set_data(*view_point);
         ecs.pre_render();
     }
 
     void render(gfx::CommandBuffer* command_buffer)
     {
-        test_material->bind_buffer("view", view_matrix_uniform_buffer.get());
         command_buffer->draw_mesh(test_mesh.get(), test_material.get());
         ecs.render(command_buffer);
     }

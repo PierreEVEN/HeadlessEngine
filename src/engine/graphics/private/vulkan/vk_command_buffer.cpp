@@ -39,21 +39,7 @@ CommandBuffer_VK::~CommandBuffer_VK()
 
 void CommandBuffer_VK::bind_material(VkCommandBuffer cmd, MaterialInstance* in_material)
 {
-    const auto base = dynamic_cast<MasterMaterial_VK*>(in_material->get_base().get());
-
-    const auto* pipeline_layout = base->get_pipeline_layout(*render_pass);
-    const auto* pipeline        = base->get_pipeline(*render_pass);
-
-    if (!pipeline_layout)
-        return;
-
-    if (!pipeline)
-        return;
-
-    if (base->get_properties().line_width != 1.0f)
-        vkCmdSetLineWidth(cmd, base->get_properties().line_width);
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+    in_material->bind_material(this);
 }
 
 void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)

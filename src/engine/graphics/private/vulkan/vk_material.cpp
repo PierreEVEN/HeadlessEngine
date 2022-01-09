@@ -98,7 +98,7 @@ void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& 
         };
         VK_CHECK(vkCreateShaderModule(get_device(), &fragment_create_infos, get_allocator(), &pass_data.fragment_module), "failed to create fragment shader module");
 
-        pass_data.descriptor_set_layout = SwapchainImageResource<VkDescriptorSetLayout>();
+        pass_data.descriptor_set_layout = VK_NULL_HANDLE;
     }
 }
 
@@ -111,8 +111,7 @@ void MasterMaterial_VK::clear()
         vkDestroyPipelineLayout(get_device(), pass_data->layout, get_allocator());
         vkDestroyShaderModule(get_device(), pass_data->vertex_module, get_allocator());
         vkDestroyShaderModule(get_device(), pass_data->fragment_module, get_allocator());
-        for (const auto& desc_set_layout : pass_data->descriptor_set_layout)
-            vkDestroyDescriptorSetLayout(get_device(), desc_set_layout, get_allocator());
+        vkDestroyDescriptorSetLayout(get_device(), pass_data->descriptor_set_layout, get_allocator());
     }
     per_pass_data.clear();
 }
@@ -153,17 +152,14 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             });
         }
 
-        for (auto& desc : pass_data->descriptor_set_layout)
-        {
-            VkDescriptorSetLayoutCreateInfo layout_infos{
-                .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-                .pNext        = nullptr,
-                .flags        = 0,
-                .bindingCount = static_cast<uint32_t>(pipeline_bindings.size()),
-                .pBindings    = pipeline_bindings.data(),
-            };
-            VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &desc), "Failed to create descriptor set layout");
-        }
+        VkDescriptorSetLayoutCreateInfo layout_infos{
+            .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext        = nullptr,
+            .flags        = 0,
+            .bindingCount = static_cast<uint32_t>(pipeline_bindings.size()),
+            .pBindings    = pipeline_bindings.data(),
+        };
+        VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &pass_data->descriptor_set_layout), "Failed to create descriptor set layout");
 
         std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
             {
@@ -182,8 +178,8 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
 
         VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount         = static_cast<uint32_t>(pass_data->descriptor_set_layout.get_max_instance_count()),
-            .pSetLayouts            = &pass_data->descriptor_set_layout[0],
+            .setLayoutCount         = 1,
+            .pSetLayouts            = &pass_data->descriptor_set_layout,
             .pushConstantRangeCount = 0,
             .pPushConstantRanges    = nullptr,
         };

@@ -114,6 +114,7 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
 
 RenderPass_VK::~RenderPass_VK()
 {
+    vkDeviceWaitIdle(get_device());
     vkDestroyRenderPass(get_device(), render_pass, get_allocator());
 }
 } // namespace gfx::vulkan

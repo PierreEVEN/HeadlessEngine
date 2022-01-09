@@ -1,56 +1,60 @@
 
 global(gbuffer)
 [
-	int _Subdivision = 4;
-	int _Width = 1;
+int _Subdivision = 4;
+int _Width = 1;
 
-	struct VsToFsStruct
-	{
-		[[vk::location(0)]] float4 Pos 			: POSITION0;
-	};
+struct VsToFsStruct
+{
+    [[vk::location(0)]] float4 Pos : POSITION0;
+};
 ]
 
 vertex(gbuffer)
 [
-	struct ViewData
-	{
-		float4x4 projection;
-		float4x4 model;
-		float4x4 view;
-	};
+struct ViewUbo
+{
+    float4x4 projection;
+    float4x4 model;
+    float4x4 view;
+    float4 instancePos[3];
+};
 
-	cbuffer view_data : register(b0) { ViewData view_data; }
+cbuffer view_ubo : register(b0)
+{
+    ViewUbo view_ubo;
+}
 
-	struct VsInput 
-	{
-		float3 pos : POSITION0;
-	};
+struct VsInput
+{
+    float3 pos : POSITION0;
+};
 
-	VsToFsStruct main(VsInput input) // SV_InstanceID
-	{
-		VsToFsStruct output = (VsToFsStruct)0;
+VsToFsStruct main(VsInput input) // SV_InstanceID
+{
+    VsToFsStruct output = (VsToFsStruct) 0;
 		
-		output.Pos = float4(input.pos, 0) * view_data.projection;
+    output.Pos = float4(input.pos, 0);
 
-		return output;
-	}
+    return output;
+}
 ];
 
 fragment(gbuffer) 
 [
-	struct FSOutput
-	{
-		float4 Color1 		: SV_TARGET0;
-		float4 Color2 		: SV_TARGET1;
-		float4 Color3 		: SV_TARGET2;
-	};
+struct FSOutput
+{
+    float4 Color1 : SV_TARGET0;
+    float4 Color2 : SV_TARGET1;
+    float4 Color3 : SV_TARGET2;
+};
 	
-	FSOutput main(VsToFsStruct input)
-	{
-		FSOutput output = (FSOutput)0;
-		output.Color1 = float4(1, 0, 0, 1);
-		output.Color2 = float4(0, 1, 0, 1);
-		output.Color3 = float4(0, 0, 1, 1);
-		return output;
-	}
+FSOutput main(VsToFsStruct input)
+{
+    FSOutput output = (FSOutput) 0;
+    output.Color1 = float4(1, 0, 0, 1);
+    output.Color2 = float4(0, 1, 0, 1);
+    output.Color3 = float4(0, 0, 1, 1);
+    return output;
+}
 ];

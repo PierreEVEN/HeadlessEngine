@@ -34,6 +34,7 @@ void next_frame()
 
 void destroy()
 {
+    RenderPass::destroy_passes();
 #if GFX_USE_VULKAN
     vulkan::allocator::destroy();
     vulkan::device::destroy();

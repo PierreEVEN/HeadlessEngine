@@ -1,20 +1,36 @@
 #pragma once
 #include "gfx/materials/material_instance.h"
 
-#include <vulkan/vulkan.hpp>
 #include "vulkan/vk_unit.h"
+#include <vulkan/vulkan.hpp>
 
 namespace gfx::vulkan
 {
 class MaterialInstance_VK : public MaterialInstance
 {
-public:
+  public:
     MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base);
-    void bind_buffer(const std::string& binding_name, Buffer* in_buffer) override;
+    void bind_buffer(const std::string& binding_name, const std::shared_ptr<Buffer>& in_buffer) override;
 
-private:
-  void                                                    build_descriptor_sets();
-    RenderPassData<SwapchainImageResource<VkDescriptorSet>> descriptor_sets;
+    void bind_material(CommandBuffer* command_buffer) override;
+
+  private:
+    struct WriteDescriptorSet
+    {
+        bool                              is_dirty;
+        std::vector<VkWriteDescriptorSet> write_descriptor_sets;
+    };
+    struct DescriptorSet
+    {
+        SwapchainImageResource<WriteDescriptorSet> write_descriptor_sets;
+        VkDescriptorSet                            descriptor_set;
+    };
+
+    [[nodiscard]] const shader_builder::BindingDescriptor* find_binding(const std::string& binding_name, const RenderPassID& render_pass) const;
+
+    RenderPassData<DescriptorSet>                             descriptor_sets;
+    std::unordered_map<std::string, std::shared_ptr<Buffer>>  write_buffers;
+    std::unordered_map<std::string, std::shared_ptr<Texture>> write_textures;
 };
 
-}
+} // namespace gfx::vulkan

@@ -114,6 +114,13 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
         return &operator[](GetMaxImageLambda_T::get_current_image());
     }
 
+    const Resource_T* operator->() const
+    {
+        if (is_static())
+            return &operator[](0);
+        return &operator[](GetMaxImageLambda_T::get_current_image());
+    }
+
     [[nodiscard]] uint8_t get_max_instance_count() const
     {
         if (is_static())
@@ -148,6 +155,8 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
     SwapchainResource_Base(bool make_resource_static) : resource_static(make_resource_static)
     {
         items = new Resource_T[get_max_instance_count()];
+        for (uint8_t i = 0; i < get_max_instance_count(); ++i)
+            new (items + i) Resource_T();
         std::memset(items, 0, sizeof(Resource_T) * get_max_instance_count());
     }
 

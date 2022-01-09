@@ -10,6 +10,8 @@
 #include <string>
 #include <vulkan/vk_allocator.h>
 
+#include "glm/glm.hpp"
+
 namespace gfx::vulkan
 {
 Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access)
@@ -78,6 +80,10 @@ Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uin
         .pUserData      = nullptr,
     };
 
+    if (buffer_name == "test_vertex_buffer")
+    {
+        LOG_VALIDATE("create vertex buffer : usage = %s, access = %s", magic_enum::enum_name((VkBufferUsageFlagBits)vk_usage).data(), magic_enum::enum_name(vma_usage).data());
+    }
     VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &buffer, &memory, nullptr), "failed to create buffer");
     buffer_infos = VkDescriptorBufferInfo{
         .buffer = buffer,
@@ -88,20 +94,14 @@ Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uin
 
 void* Buffer_VK::get_ptr()
 {
-    VmaAllocationInfo allocation_infos;
-    vmaGetAllocationInfo(get_vma_allocator(), memory, &allocation_infos);
-
     void* dst_ptr;
-    VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, 0, get_size(), NULL, (void**)(&dst_ptr)), "failed to map memory");
+    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), memory, &dst_ptr), "failed to map memory");
     return dst_ptr;
 }
 
 void Buffer_VK::submit_data()
 {
-    VmaAllocationInfo allocation_infos;
-    vmaGetAllocationInfo(get_vma_allocator(), memory, &allocation_infos);
-
-    vkUnmapMemory(get_device(), allocation_infos.deviceMemory);
+    vmaUnmapMemory(get_vma_allocator(), memory);
 }
 Buffer_VK::~Buffer_VK()
 {
@@ -129,13 +129,26 @@ void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
         return;
     }
 
-    VmaAllocationInfo allocation_infos;
-    vmaGetAllocationInfo(vulkan::get_vma_allocator(), memory, &allocation_infos);
-
     void* dst_ptr;
-    VK_CHECK(vkMapMemory(vulkan::get_device(), allocation_infos.deviceMemory, offset, data_length, NULL, (void**)(&dst_ptr)), "failed to map memory");
+    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), memory, &dst_ptr), "failed to map memory");
+
     memcpy(dst_ptr, data, data_length);
-    vkUnmapMemory(vulkan::get_device(), allocation_infos.deviceMemory);
+
+    struct VertexTest
+    {
+        glm::vec3 pos;
+    };
+    if (buffer_name == "test_vertex_buffer")
+    {
+        LOG_VALIDATE("set vertex buffer data : type = %s, access = %s", magic_enum::enum_name(usage).data(), magic_enum::enum_name(buffer_access).data());
+        auto* testptr = (VertexTest*)dst_ptr;
+        for (int i = 0; i < 6; ++i)
+        {
+            LOG_INFO("%d : %f, %f, %f", i, testptr[i].pos.x, testptr[i].pos.y, testptr[i].pos.z);
+        }
+    }
+
+    vmaUnmapMemory(get_vma_allocator(), memory);
 }
 
 void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)

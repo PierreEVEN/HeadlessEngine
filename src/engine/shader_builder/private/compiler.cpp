@@ -110,17 +110,6 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
     uint32_t   offset     = current_offset;
     current_offset += static_cast<uint32_t>(type.type_size);
 
-    /*
-    LOG_WARNING("%s : %d,  %s", variable->name, variable->location, variable->semantic);
-    for (int i = 0; i < 32; ++i)
-    {
-        if (variable->decoration_flags & 1 << i)
-        {
-            LOG_DEBUG("semantic : %s", magic_enum::enum_name(static_cast<SpvReflectDecorationFlagBits>(1 << i)).data());
-        }
-    }
-    */
-
     return Property{
         .name     = name_split.size() == 2 ? name_split[1] : name_split[0],
         .type     = type,
@@ -199,14 +188,14 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     for (uint32_t i = 0; i < shader_module.descriptor_binding_count; ++i)
     {
         const auto& binding = shader_module.descriptor_bindings[i];
-
+        
         result.bindings.emplace_back(BindingDescriptor{
-            .name            = binding.name,
+            .name            = std::string(binding.name).empty() ? binding.type_description->type_name : binding.name,
             .descriptor_type = make_descriptor_type(binding.descriptor_type),
             .binding         = binding.binding,
         });
     }
-
+    
     return result;
 }
 
@@ -305,6 +294,9 @@ StageResult build_shader(glslang::TShader& shader, EShLanguage stage)
     spv_option.disassemble       = false;
     spv_option.validate          = true;
     GlslangToSpv(*program.getIntermediate(stage), compilation_result.spirv, &logger, &spv_option);
+
+    //program.buildReflection();
+    //program.dumpReflection();
 
     compilation_result.reflection = build_reflection(compilation_result.spirv);
     return compilation_result;

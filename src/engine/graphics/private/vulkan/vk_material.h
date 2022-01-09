@@ -15,7 +15,7 @@ class MasterMaterial_VK final : public MasterMaterial
 
     struct MaterialPassData
     {
-        SwapchainImageResource<VkDescriptorSetLayout> descriptor_set_layout;
+        VkDescriptorSetLayout descriptor_set_layout;
         VkPipeline                                    pipeline        = VK_NULL_HANDLE;
         VkPipelineLayout                              layout          = VK_NULL_HANDLE;
         VkShaderModule                                vertex_module   = VK_NULL_HANDLE;
@@ -38,7 +38,7 @@ class MasterMaterial_VK final : public MasterMaterial
         return &per_pass_data[render_pass].pipeline;
     }
 
-    const SwapchainImageResource<VkDescriptorSetLayout>& get_descriptor_set_layout(const RenderPassID& render_pass)&
+    const VkDescriptorSetLayout& get_descriptor_set_layout(const RenderPassID& render_pass) const
     {
         return per_pass_data[render_pass].descriptor_set_layout;
     }
