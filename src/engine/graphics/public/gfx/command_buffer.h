@@ -18,8 +18,7 @@ class CommandBuffer
     friend class RenderPassInstance;
 
   public:
-
-      static CommandBuffer* create(const std::string& name);
+    static CommandBuffer* create(const std::string& name);
 
     virtual ~CommandBuffer() = default;
 

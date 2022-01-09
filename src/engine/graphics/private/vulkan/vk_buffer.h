@@ -15,11 +15,17 @@ class Buffer_VK final : public Buffer
 
     void bind_buffer(VkCommandBuffer command_buffer);
 
+    const VkDescriptorBufferInfo& get_buffer_infos() const
+    {
+        return buffer_infos;
+    }
+
   protected:
     void* get_ptr() override;
     void  submit_data() override;
 
   private:
+    VkDescriptorBufferInfo buffer_infos;
     VkBuffer      buffer;
     VmaAllocation memory;
 };

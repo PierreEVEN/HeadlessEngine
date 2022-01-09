@@ -5,6 +5,8 @@
 
 namespace gfx
 {
+class Texture;
+class Buffer;
 
 class MaterialInstance
 {
@@ -21,11 +23,14 @@ class MaterialInstance
         return base_material->get_compatible_render_passes();
     }
 
+    virtual void bind_buffer(const std::string& binding_name, Buffer* in_buffer) = 0;
+    virtual void bind_texture(const std::string& binding_name, Texture* in_texture) {}
+
   protected:
     MaterialInstance(const std::shared_ptr<MasterMaterial>& base) : base_material(base)
     {
-        
     }
+
   private:
     std::shared_ptr<MasterMaterial> base_material;
 };

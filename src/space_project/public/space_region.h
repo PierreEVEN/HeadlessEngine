@@ -57,24 +57,22 @@ class SpaceRegion
 
         test_material_base = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
         test_material      = gfx::MaterialInstance::create(test_material_base);
+
+        view_matrix_uniform_buffer = gfx::Buffer::create("test_ubo", 1, sizeof(gfx::View), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU);
     }
 
     void pre_render([[maybe_unused]] gfx::View* view_point)
     {
-        // set view matrix (using the world-to-local conversion)
-        //
-        // view_matrix_buffer.set_data(region_to_world_view(view_point));
+        view_matrix_uniform_buffer->set_data(*view_point);
         ecs.pre_render();
     }
 
-    //@before : command_buffer->start(); // clear last pass data
     void render(gfx::CommandBuffer* command_buffer)
     {
-        // command_buffer.set_uniform("view_matrix", view_matrix_buffer);
+        test_material->bind_buffer("view", view_matrix_uniform_buffer.get());
         command_buffer->draw_mesh(test_mesh.get(), test_material.get());
         ecs.render(command_buffer);
     }
-    //@after : command_buffer->submit(); // submit data
 
     void tick()
     {
@@ -85,7 +83,7 @@ class SpaceRegion
     // Contains all the actors that are currently contained in the region
     ECSInstance ecs;
 
-    gfx::RenderPassData<gfx::Buffer*> view_matrix_uniform_buffer;
+    std::shared_ptr<gfx::Buffer> view_matrix_uniform_buffer;
 
     std::shared_ptr<gfx::Mesh>             test_mesh;
     std::shared_ptr<gfx::MaterialInstance> test_material;

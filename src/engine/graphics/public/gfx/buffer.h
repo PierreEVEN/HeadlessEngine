@@ -37,13 +37,7 @@ class Buffer
         return stride * element_count;
     }
     virtual void set_data(void* data, size_t data_length, size_t offset = 0) = 0;
-
-    template <typename Lambda_T> void set_data(Lambda_T lambda)
-    {
-        lambda(get_ptr());
-        submit_data();
-    }
-
+    
     template <typename T> void set_data(T& data)
     {
         set_data(&data, sizeof(T));

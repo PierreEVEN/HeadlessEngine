@@ -65,7 +65,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     gfx::View camera;
 
-    const auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("region_combine"));
+    auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("region_combine"));
     combine_pass->on_draw_pass.add_lambda(
         []([[maybe_unused]] gfx::CommandBuffer* command_buffer)
         {
@@ -76,7 +76,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         });
     for (auto& region : space_regions)
     {
-        const auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("gbuffer"));
+        auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("gbuffer"));
         gbuffer_pass->on_draw_pass.add_lambda(
             [&region](gfx::CommandBuffer* command_buffer)
             {
@@ -105,7 +105,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         window->update();
     }
 
+    combine_pass = nullptr;
+    gfx::RenderPass::destroy_passes();
     delete surface;
+    gfx::destroy();
     application::destroy();
     exit(EXIT_SUCCESS);
 }

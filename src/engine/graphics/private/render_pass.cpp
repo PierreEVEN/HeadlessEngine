@@ -25,6 +25,9 @@ RenderPass* RenderPass::find(const RenderPassID& render_pass_name)
 
 void RenderPass::destroy_passes()
 {
+    for (const auto& pass : render_passes)
+        delete pass;
+    render_passes.clear();
 }
 
 RenderPass* RenderPass::declare_internal(const Config& frame_graph_config, bool present_pass)
@@ -34,7 +37,6 @@ RenderPass* RenderPass::declare_internal(const Config& frame_graph_config, bool 
     const auto   pass_id  = RenderPassID::get(frame_graph_config.pass_name);
     RenderPass*& pass_ptr = render_passes.init(pass_id);
     pass_ptr              = render_pass;
-
     return pass_ptr;
 #else
     return nullptr;

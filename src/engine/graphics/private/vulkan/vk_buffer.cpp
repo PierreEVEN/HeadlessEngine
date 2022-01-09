@@ -2,10 +2,10 @@
 
 #include "vk_buffer.h"
 
+#include "types/magic_enum.h"
 #include "vk_command_buffer.h"
 #include "vk_device.h"
 #include "vk_errors.h"
-#include "types/magic_enum.h"
 
 #include <string>
 #include <vulkan/vk_allocator.h>
@@ -79,6 +79,11 @@ Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uin
     };
 
     VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &buffer, &memory, nullptr), "failed to create buffer");
+    buffer_infos = VkDescriptorBufferInfo{
+        .buffer = buffer,
+        .offset = 0,
+        .range  = count() * stride,
+    };
 }
 
 void* Buffer_VK::get_ptr()
@@ -123,7 +128,7 @@ void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
         LOG_ERROR("trying to set buffer data of size %lu, with data of size %lu and offset %lu", get_size(), data_length, offset);
         return;
     }
-    
+
     VmaAllocationInfo allocation_infos;
     vmaGetAllocationInfo(vulkan::get_vma_allocator(), memory, &allocation_infos);
 
