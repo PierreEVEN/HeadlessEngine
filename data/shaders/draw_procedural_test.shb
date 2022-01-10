@@ -14,10 +14,8 @@ vertex(gbuffer)
 [
 struct ViewUbo
 {
-    float4x4 projection;
-    float4x4 model;
     float4x4 view;
-    float4 instancePos[3];
+    float4x4 projection;
 };
 
 cbuffer view_ubo : register(b0)
@@ -34,7 +32,7 @@ VsToFsStruct main(VsInput input) // SV_InstanceID
 {
     VsToFsStruct output = (VsToFsStruct) 0;
 		
-    output.Pos = float4(input.pos, 0);
+    output.Pos = mul(mul(view_ubo.projection, view_ubo.view), float4(input.pos, 0));
 
     return output;
 }

@@ -156,7 +156,7 @@ void MainGameInterface::engine_load_resources()
     // scene_importer.import_file("data/models/fireplaceRoom.glb", "fireplaceRoom", root_scene.get())->set_relative_rotation(glm::dvec3(M_PI, 0, 0));
     // scene_importer.import_file("data/models/powerplant.glb", "powerplant", root_scene.get());
     // scene_importer.import_file("data/models/rungholt.glb", "rungholt", root_scene.get());
-     scene_importer.import_file("data/models/bistro.glb", "cafe_ext", root_scene.get());
+    // scene_importer.import_file("data/models/bistro.glb", "cafe_ext", root_scene.get());
     // scene_importer.import_file("data/models/bistro_interior.glb", "cafe_int", root_scene.get());
     // scene_importer.import_file("data/models/sibenik.glb", "sponza_elem", root_scene.get());
     // root_scene->add_node<NMesh>("cube", TAssetPtr<AMeshData>("default_cube"), TAssetPtr<AMaterialBase>("default_material"));

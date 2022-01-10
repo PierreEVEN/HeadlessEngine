@@ -9,15 +9,16 @@
 
 #include <glm/detail/type_quat.hpp>
 #include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace gfx
 {
 class CommandBuffer;
+
 struct View
 {
-    glm::dquat global_rotation;
-    glm::dvec3 global_location;
-    double     fov;
+    glm::mat4 view_matrix;
+    glm::mat4 proj_matrix;
 };
 } // namespace gfx
 
@@ -26,6 +27,7 @@ struct ECSInstance
     void pre_render()
     {
     }
+
     void render([[maybe_unused]] gfx::CommandBuffer* command_buffer)
     {
     }
@@ -37,23 +39,23 @@ struct ECSInstance
 
 class SpaceRegion
 {
-  public:
+public:
     SpaceRegion()
     {
         auto vertices = std::vector{gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0, 0, 0),
+                                        .pos = glm::vec3(0.5f, -2, -2),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(1, 0, 0),
+                                        .pos = glm::vec3(0.5f, 2, -2),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(1, 1, 0),
+                                        .pos = glm::vec3(0.5, 2, 2),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0, 1, 0),
+                                        .pos = glm::vec3(0.5f , - 2, 2),
                                     }};
-        auto indices  = std::vector<uint32_t>{0, 2, 1, 0, 3, 2};
-        test_mesh     = std::make_shared<gfx::Mesh>("test", vertices, indices);
+        auto indices = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
+        test_mesh    = std::make_shared<gfx::Mesh>("test", vertices, indices);
 
         test_material_base = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
         test_material      = gfx::MaterialInstance::create(test_material_base);
@@ -61,6 +63,9 @@ class SpaceRegion
         view_matrix_uniform_buffer = gfx::Buffer::create("test_ubo", 1, sizeof(gfx::View), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU);
 
         gfx::View view;
+
+        view.view_matrix = glm::lookAt(glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
+        view.proj_matrix = glm::perspective(glm::radians(90.f), 800.0f / 600.0f, 0.1f, 100.0f);
 
         view_matrix_uniform_buffer->set_data(view);
         test_material->bind_buffer("view_ubo", view_matrix_uniform_buffer);
@@ -82,7 +87,7 @@ class SpaceRegion
         ecs.tick();
     }
 
-  private:
+private:
     // Contains all the actors that are currently contained in the region
     ECSInstance ecs;
 
