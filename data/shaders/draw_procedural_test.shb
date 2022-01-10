@@ -1,3 +1,4 @@
+#pragma shader_language HLSL
 
 global(gbuffer)
 [
@@ -14,8 +15,9 @@ vertex(gbuffer)
 [
 struct ViewUbo
 {
-    float4x4 view;
     float4x4 projection;
+    float4x4 view;
+    float end;
 };
 
 cbuffer view_ubo : register(b0)
@@ -26,14 +28,15 @@ cbuffer view_ubo : register(b0)
 struct VsInput
 {
     float3 pos : POSITION0;
+    uint vertex_index : SV_VertexID;
 };
 
-VsToFsStruct main(VsInput input) // SV_InstanceID
+VsToFsStruct main(VsInput input)
 {
     VsToFsStruct output = (VsToFsStruct) 0;
-		
-    output.Pos = mul(mul(view_ubo.projection, view_ubo.view), float4(input.pos, 0));
 
+    float2 uv = float2((input.vertex_index << 1) & 2, input.vertex_index & 2);
+    output.Pos = float4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
     return output;
 }
 ];
@@ -50,9 +53,56 @@ struct FSOutput
 FSOutput main(VsToFsStruct input)
 {
     FSOutput output = (FSOutput) 0;
-    output.Color1 = float4(1, 0, 0, 1);
-    output.Color2 = float4(0, 1, 0, 1);
-    output.Color3 = float4(0, 0, 1, 1);
+    output.Color1 = float4(1, 10, 5, 1);
+    output.Color2 = float4(1, 1, 1, 1);
+    output.Color3 = float4(1, 1, 1, 1);
     return output;
 }
 ];
+
+
+/*
+global(gbuffer)
+[
+#version 450
+]
+
+vertex(gbuffer)
+[
+
+layout(location = 0) in vec3 inPos;
+
+layout(binding = 0) uniform UBO 
+{
+    mat4 projection;
+    mat4 view;
+} view_ubo;
+
+
+
+void main()
+{
+    vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+    gl_Position = vec4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
+    //view_ubo.projection * view_ubo.view * vec4(inPos, 0);
+}
+]
+
+fragment(gbuffer)
+[
+
+layout (location = 0) out vec4 outPosition;
+layout (location = 1) out vec4 outNormal;
+layout (location = 2) out vec4 outAlbedo;
+
+void main()
+{
+    outPosition = vec4(1, 1, 1, 1.0);
+    outNormal = vec4(1, 1, 1, 1.0);
+    outAlbedo = vec4(1, 1, 1, 1.0);
+
+
+}
+
+]
+*/

@@ -29,7 +29,7 @@ set_runtimes(is_mode("debug") and "MTd" or "MT")
 		
 add_repositories("third_party deps", {rootdir = os.scriptdir()})
 add_requires("glslang", "glfw", "glm", "vulkan-hpp", "vulkan-loader", "vulkan-validationlayers", "vulkan-memory-allocator", "spirv-cross","spirv-reflect", "spirv-tools", "imgui docking", "imguizmo", "assimp", "stb", "glslang")
-add_requires("cpputils")
+add_requires("cpputils", "directxshadercompilerfixed")
 
 function declare_module(module_name, deps, packages, is_executable)
 	if DEBUG then

@@ -99,7 +99,6 @@ Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pix
         image_infos.arrayLayers = 6;
         break;
     }
-
     const VmaAllocationCreateInfo vma_allocation{
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
     };
@@ -120,8 +119,8 @@ Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pix
     create_views();
 }
 
-Texture_VK::Texture_VK(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images)
-    : Texture(width, height, depth, parameters), use_external_images(true), images(existing_images)
+Texture_VK::Texture_VK(uint32_t image_width, uint32_t image_height, uint32_t image_depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images)
+    : Texture(image_width, image_height, image_depth, parameters), use_external_images(true), images(existing_images)
 {
     for (uint8_t i      = 0; i < images.get_max_instance_count(); ++i)
         image_layout[i] = VK_IMAGE_LAYOUT_UNDEFINED;

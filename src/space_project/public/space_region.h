@@ -1,15 +1,17 @@
 #pragma once
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+#define GLM_FORCE_RADIANS
+#include <glm/detail/type_quat.hpp>
+#include <glm/glm.hpp>
+
 #include "gfx/buffer.h"
 #include "gfx/command_buffer.h"
 #include "gfx/materials/master_material.h"
 #include "gfx/materials/material_instance.h"
 #include "gfx/mesh.h"
-#include "gfx/render_pass_reference.h"
 
-#include <glm/detail/type_quat.hpp>
-#include <glm/glm.hpp>
-#include <glm/mat4x4.hpp>
 
 namespace gfx
 {
@@ -17,8 +19,9 @@ class CommandBuffer;
 
 struct View
 {
-    glm::mat4 view_matrix;
     glm::mat4 proj_matrix;
+    glm::mat4 view_matrix;
+    float     end;
 };
 } // namespace gfx
 
@@ -42,19 +45,32 @@ class SpaceRegion
 public:
     SpaceRegion()
     {
+        /*
         auto vertices = std::vector{gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0.5f, -2, -2),
+                                        .pos = glm::vec3(-1, -1, 0),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0.5f, 2, -2),
+                                        .pos = glm::vec3(-1, 1, 0),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0.5, 2, 2),
+                                        .pos = glm::vec3(1, 1, 0),
                                     },
                                     gfx::Mesh::Vertex{
-                                        .pos = glm::vec3(0.5f , - 2, 2),
+                                        .pos = glm::vec3(1 , -1, 0),
+                                    }};*/
+        auto vertices = std::vector{gfx::Mesh::Vertex{
+                                        .pos = glm::vec3(0.5f, -1, -1),
+                                    },
+                                    gfx::Mesh::Vertex{
+                                        .pos = glm::vec3(0.5f, -1, 1),
+                                    },
+                                    gfx::Mesh::Vertex{
+                                        .pos = glm::vec3(0.5f, 1, 1),
+                                    },
+                                    gfx::Mesh::Vertex{
+                                        .pos = glm::vec3(0.5f, 1, -1),
                                     }};
-        auto indices = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
+        auto indices = std::vector<uint32_t>{0, 2, 1, 0, 3, 2};
         test_mesh    = std::make_shared<gfx::Mesh>("test", vertices, indices);
 
         test_material_base = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
@@ -62,11 +78,10 @@ public:
 
         view_matrix_uniform_buffer = gfx::Buffer::create("test_ubo", 1, sizeof(gfx::View), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU);
 
-        gfx::View view;
-
-        view.view_matrix = glm::lookAt(glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
-        view.proj_matrix = glm::perspective(glm::radians(90.f), 800.0f / 600.0f, 0.1f, 100.0f);
-
+        gfx::View view   = {};
+        view.proj_matrix = (glm::perspective(glm::radians(45.f), 800.0f / 600.0f, 0.1f, 20.0f));
+        view.view_matrix = (glm::lookAt(glm::vec3(-10, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)));
+        view.end         = 4.5f;
         view_matrix_uniform_buffer->set_data(view);
         test_material->bind_buffer("view_ubo", view_matrix_uniform_buffer);
     }

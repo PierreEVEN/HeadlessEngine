@@ -96,10 +96,27 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
         .primitiveRestartEnable = VK_FALSE,
     };
 
+    // Set viewport and scissor
+    const VkViewport viewport{
+        .x        = 0,
+        .y        = 600, // Flip viewport vertically to avoid textures to being displayed upside down
+        .width    = 800,
+        .height   = -600,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+    const VkRect2D scissor{
+        .offset = VkOffset2D{0, 0},
+        .extent = VkExtent2D{800, 600},
+    };
+
+
     VkPipelineViewportStateCreateInfo viewport_state{
         .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
+        .pViewports    = &viewport,
         .scissorCount  = 1,
+        .pScissors     = &scissor,
     };
 
     VkPipelineRasterizationStateCreateInfo rasterizer{
@@ -158,7 +175,7 @@ MaterialPipeline::MaterialPipeline(const MaterialInfos& material_infos, const st
         .pAttachments    = color_blend_attachment.data(),
     };
 
-    std::vector                      dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT};
+    std::vector dynamic_states_array = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT};
     if (material_infos.pipeline_infos.wireframe_lines_width)
         dynamic_states_array.emplace_back(VK_DYNAMIC_STATE_LINE_WIDTH);
 

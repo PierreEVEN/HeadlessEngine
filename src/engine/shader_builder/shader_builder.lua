@@ -1,5 +1,5 @@
 
-declare_module("shader_builder", {"types"}, {"cpputils", "glm", "glslang", "spirv-reflect"})
+declare_module("shader_builder", {"types"}, {"cpputils", "glm", "glslang", "spirv-reflect", "directxshadercompilerfixed"})
 
 target("shader_builder")
 	set_group("engine_new")

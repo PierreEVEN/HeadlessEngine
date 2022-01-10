@@ -1,6 +1,8 @@
 
 #include "shader_builder/compiler.h"
 
+#include "backend/backend_dxc.h"
+#include "backend/backend_glslang.h"
 #include "custom_includer.h"
 #include "internal.h"
 #include "shader_builder/parser.h"
@@ -14,6 +16,7 @@
 #include <spirv_reflect.h>
 
 #include "types/magic_enum.h"
+#include <cpputils/simplemacros.hpp>
 
 namespace shader_builder
 {
@@ -188,14 +191,14 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     for (uint32_t i = 0; i < shader_module.descriptor_binding_count; ++i)
     {
         const auto& binding = shader_module.descriptor_bindings[i];
-        
+
         result.bindings.emplace_back(BindingDescriptor{
             .name            = std::string(binding.name).empty() ? binding.type_description->type_name : binding.name,
             .descriptor_type = make_descriptor_type(binding.descriptor_type),
             .binding         = binding.binding,
         });
     }
-    
+
     return result;
 }
 
@@ -295,11 +298,19 @@ StageResult build_shader(glslang::TShader& shader, EShLanguage stage)
     spv_option.validate          = true;
     GlslangToSpv(*program.getIntermediate(stage), compilation_result.spirv, &logger, &spv_option);
 
-    //program.buildReflection();
-    //program.dumpReflection();
+    // program.buildReflection();
+    // program.dumpReflection();
 
     compilation_result.reflection = build_reflection(compilation_result.spirv);
     return compilation_result;
+}
+
+std::shared_ptr<Compiler> Compiler::create(EShaderLanguage source_language)
+{
+    if (source_language == EShaderLanguage::HLSL)
+        return std::make_shared<dxc_backend::DxcCompiler>(source_language);
+    else
+        return std::make_shared<glslang_backend::GlslangCompiler>(source_language);
 }
 
 CompilationResult compile_shader(const std::filesystem::path& file_path)
@@ -325,8 +336,11 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
             vertex_lengths[i] = static_cast<int32_t>(pass.second.vertex_chunks[i].content.size());
             vertex_names[i]   = pass.second.vertex_chunks[i].file.c_str();
         }
+
+        glslang::EShSource shader_language = parsed_shader_file.shader_properties.shader_language == EShaderLanguage::HLSL ? glslang::EShSourceHlsl : glslang::EShSourceGlsl;
+
         glslang::TShader vertex_shader(EShLangVertex);
-        vertex_shader.setEnvInput(glslang::EShSourceHlsl, EShLangVertex, glslang::EShClientVulkan, 0);
+        vertex_shader.setEnvInput(shader_language, EShLangVertex, glslang::EShClientVulkan, 0);
         vertex_shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
         vertex_shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
         vertex_shader.setEntryPoint("main");
@@ -343,7 +357,7 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
             fragment_names[i]   = pass.second.fragment_chunks[i].file.c_str();
         }
         glslang::TShader fragment_shader(EShLangFragment);
-        fragment_shader.setEnvInput(glslang::EShSourceHlsl, EShLangFragment, glslang::EShClientVulkan, 0);
+        fragment_shader.setEnvInput(shader_language, EShLangFragment, glslang::EShClientVulkan, 0);
         fragment_shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
         fragment_shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
         fragment_shader.setEntryPoint("main");

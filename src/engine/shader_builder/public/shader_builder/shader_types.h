@@ -85,10 +85,16 @@ struct ShaderPass
     std::vector<ParsedChunk> fragment_chunks;
 };
 
-enum class EShaderLangage
+enum class EShaderLanguage
 {
     HLSL,
     GLSL
+};
+
+enum class EShaderStage
+{
+    Vertex,
+    Fragment
 };
 
 enum class ECulling
@@ -129,7 +135,7 @@ enum class EAlphaMode
 struct ShaderProperties
 {
     std::string    shader_version  = "1.0";
-    EShaderLangage shader_language = EShaderLangage::HLSL;
+    EShaderLanguage shader_language = EShaderLanguage::HLSL;
     ECulling       culling         = ECulling::Back;
     EFrontFace     front_face      = EFrontFace::CounterClockwise;
     ETopology      topology        = ETopology::Triangles;
@@ -149,7 +155,6 @@ struct CompilationResult
 struct ParserResult
 {
     std::unordered_map<std::string, ShaderPass>  passes;
-    std::unordered_map<std::string, std::string> properties;
     std::unordered_map<std::string, std::string> default_values;
     ShaderProperties                             shader_properties;
     OperationStatus                              status;

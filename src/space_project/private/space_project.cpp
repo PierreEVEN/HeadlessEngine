@@ -13,22 +13,26 @@ void render()
 
 void declare_render_pass()
 {
-    const auto color_attachments = std::vector<gfx::RenderPass::Config::Attachment>{{
-                                                                                        .attachment_name = "velocity",
-                                                                                        .image_format    = ETypeFormat::R16G16B16A16_SFLOAT,
-                                                                                    },
-                                                                                    {
-                                                                                        .attachment_name = "normal",
-                                                                                    },
-                                                                                    {
-                                                                                        .attachment_name = "albedo",
-                                                                                    }};
-    const auto gbuffer_depth     = gfx::RenderPass::Config::Attachment{
+    const auto color_attachments = std::vector<gfx::RenderPass::Config::Attachment>{
+        {
+            .attachment_name = "velocity",
+            .image_format    = ETypeFormat::R16G16B16A16_SFLOAT,
+            .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
+        },
+        {
+            .attachment_name = "normal",
+            .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
+        },
+        {
+            .attachment_name = "albedo",
+            .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
+        },
+    };
+    const auto gbuffer_depth = gfx::RenderPass::Config::Attachment{
         .attachment_name = "depth",
         .image_format    = ETypeFormat::D32_SFLOAT,
         .clear_value     = gfx::ClearValue{.depth = 1, .stencil = 0},
     };
-
     gfx::RenderPass::declare(gfx::RenderPass::Config{
         .pass_name         = "gbuffer",
         .color_attachments = color_attachments,
@@ -38,6 +42,7 @@ void declare_render_pass()
     const auto region_combine_color_attachments = std::vector<gfx::RenderPass::Config::Attachment>{
         {
             .attachment_name = "color",
+            .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
         },
     };
     const auto region_combine_depth_attachment = gfx::RenderPass::Config::Attachment{
@@ -71,7 +76,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     space_regions.emplace_back(SpaceRegion{});
 
-    auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("region_combine"));
+    auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->height(), gfx::RenderPassID::get("region_combine"));
     combine_pass->on_draw_pass.add_lambda(
         []([[maybe_unused]] gfx::CommandBuffer* command_buffer)
         {
@@ -82,7 +87,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         });
     for (auto& region : space_regions)
     {
-        auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->width(), gfx::RenderPassID::get("gbuffer"));
+        auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->height(), gfx::RenderPassID::get("gbuffer"));
         gbuffer_pass->on_draw_pass.add_lambda(
             [&region](gfx::CommandBuffer* command_buffer)
             {

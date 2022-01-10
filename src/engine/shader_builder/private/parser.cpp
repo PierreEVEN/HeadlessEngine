@@ -148,10 +148,10 @@ bool property_trim_func(char chr)
 }
 static ParsedChunk get_next_chunk(ShaderFileIterator& it, const std::filesystem::path& shader_file)
 {
-    int64_t indentation = 0;
-    int64_t found_body     = false;
-    ParsedChunk   chunk;
-    bool    is_init = false;
+    int64_t     indentation = 0;
+    int64_t     found_body  = false;
+    ParsedChunk chunk;
+    bool        is_init = false;
 
     while (it && (!found_body || indentation > 0))
     {
@@ -160,7 +160,7 @@ static ParsedChunk get_next_chunk(ShaderFileIterator& it, const std::filesystem:
         if (it == '=' && it + 1 == '>')
         {
             it += 2;
-            found_body                               = true;
+            found_body                            = true;
             std::string                    file   = stringutils::trim(get_line(it), property_trim_func);
             CustomIncluder::IncludeResult* result = get()->get_includer()->includeLocal(file.c_str(), shader_file.string().c_str(), 0);
             if (result && result->headerData)
@@ -261,9 +261,17 @@ std::vector<std::string> parse_chunk_head(const std::string& chunk_head)
     return passes;
 }
 
+static std::string get_property(std::unordered_map<std::string, std::string>& properties, const std::string& field)
+{
+    if (properties.contains(field))
+        return properties[field];
+    return "";
+}
+
 ParserResult parser::parse_shader(const std::filesystem::path& file_path)
 {
-    ParserResult result;
+    ParserResult                                 result;
+    std::unordered_map<std::string, std::string> properties;
 
     std::vector<ParsedChunk> globals;
 
@@ -294,7 +302,7 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
         {
             std::string pragma_directive = get_line(it);
             const auto& fields           = stringutils::split(pragma_directive, {' ', '\t'});
-            result.properties.insert({fields[0], fields.size() < 2 ? "" : fields[1]});
+            properties.insert({fields[0], fields.size() < 2 ? "" : fields[1]});
         }
 
         if (find_string(it, "head"))
@@ -310,7 +318,7 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
         if (find_string(it, "global"))
         {
             std::string global_args = get_next_definition(it);
-            ParsedChunk       global_code = get_next_chunk(it, file_path);
+            ParsedChunk global_code = get_next_chunk(it, file_path);
             if (!global_code.result)
                 result.status.append(global_code.result);
             else
@@ -324,7 +332,7 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
         if (find_string(it, "vertex"))
         {
             std::string vertex_args = get_next_definition(it);
-            ParsedChunk       vertex_code = get_next_chunk(it, file_path);
+            ParsedChunk vertex_code = get_next_chunk(it, file_path);
             if (!vertex_code.result)
                 result.status.append(vertex_code.result);
             else
@@ -339,7 +347,7 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
         if (find_string(it, "fragment"))
         {
             std::string fragment_args = get_next_definition(it);
-            ParsedChunk       fragment_code = get_next_chunk(it, file_path);
+            ParsedChunk fragment_code = get_next_chunk(it, file_path);
             if (!fragment_code.result)
                 result.status.append(fragment_code.result);
             else
@@ -361,7 +369,7 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
             pass.second.vertex_chunks.insert(pass.second.vertex_chunks.begin(), global);
         }
     }
-
+    result.shader_properties.shader_language = get_property(properties, "shader_language") == "GLSL" ? EShaderLanguage::GLSL : EShaderLanguage::HLSL;
     return result;
 }
 
