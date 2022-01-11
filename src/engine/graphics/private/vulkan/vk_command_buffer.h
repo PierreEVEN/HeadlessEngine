@@ -38,7 +38,7 @@ class CommandBuffer_VK : public CommandBuffer
 
   private:
     SwapchainImageResource<VkCommandBuffer> command_buffer;
-    void                                    bind_material(VkCommandBuffer cmd, MaterialInstance* in_material);
+    void                                    bind_material(MaterialInstance* in_material);
 
   public:
 };

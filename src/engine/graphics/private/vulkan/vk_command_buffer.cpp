@@ -37,7 +37,7 @@ CommandBuffer_VK::~CommandBuffer_VK()
         vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &buffer);
 }
 
-void CommandBuffer_VK::bind_material(VkCommandBuffer cmd, MaterialInstance* in_material)
+void CommandBuffer_VK::bind_material(MaterialInstance* in_material)
 {
     in_material->bind_material(this);
 }
@@ -45,14 +45,14 @@ void CommandBuffer_VK::bind_material(VkCommandBuffer cmd, MaterialInstance* in_m
 void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
-    bind_material(cmd, in_material);
+    bind_material(in_material);
     vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
-    bind_material(cmd, in_material);
+    bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
     vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
@@ -61,7 +61,7 @@ void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material)
 void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
-    bind_material(cmd, in_material);
+    bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
     vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
@@ -70,7 +70,7 @@ void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_
 void CommandBuffer_VK::draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
-    bind_material(cmd, in_material);
+    bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
     vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
@@ -79,7 +79,7 @@ void CommandBuffer_VK::draw_mesh_instanced(Mesh* in_buffer, MaterialInstance* in
 void CommandBuffer_VK::draw_mesh_instanced_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
-    bind_material(cmd, in_material);
+    bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
     vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);

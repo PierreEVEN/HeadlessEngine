@@ -1,3 +1,4 @@
+/*
 #include "backend_dxc.h"
 
 #include <atlbase.h> // Common COM helpers
@@ -7,7 +8,7 @@
 
 namespace shader_builder::dxc_backend
 {
-std::vector<uint32_t> DxcCompiler::build_to_spirv(const std::vector<ShaderBlock>& shader_code, EShaderLanguage source_language, EShaderStage shader_stage)
+std::vector<uint32_t> DxcCompiler::build_to_spirv(const std::vector<ShaderBlock>& shader_code, [[maybe_unused]] EShaderLanguage source_language, EShaderStage shader_stage)
 {
     std::string code;
     for (const auto& block : shader_code)
@@ -87,3 +88,4 @@ std::vector<uint32_t> DxcCompiler::build_to_spirv(const std::vector<ShaderBlock>
     return std::vector(static_cast<uint32_t*>(shader->GetBufferPointer()), static_cast<uint32_t*>(shader->GetBufferPointer()) + shader->GetBufferSize() / 4);
 }
 } // namespace shader_builder::dxc_backend
+*/

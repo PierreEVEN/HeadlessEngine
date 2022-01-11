@@ -76,14 +76,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     space_regions.emplace_back(SpaceRegion{});
 
+    auto region_combine_master_material   = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
+    auto region_combine_material_instance = gfx::MaterialInstance::create(region_combine_master_material);
+
     auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->height(), gfx::RenderPassID::get("region_combine"));
     combine_pass->on_draw_pass.add_lambda(
-        []([[maybe_unused]] gfx::CommandBuffer* command_buffer)
+        [&region_combine_material_instance](gfx::CommandBuffer* command_buffer)
         {
-            // Repeat for each of the gbuffers textures
-            // std::vector<Texture> children_albedo;
-            // command_buffer.set_texture_array("albedo_buffers", children_albedo);
-            // command_buffer.draw_mesh(screen_mesh, region_combine);
+            std::vector<gfx::Texture> children_albedo;
+            // command_buffer->set_texture_array("albedo_buffers", children_albedo);
+            command_buffer->draw_procedural(region_combine_material_instance.get(), 3, 0, 1, 0);
         });
     for (auto& region : space_regions)
     {
@@ -96,8 +98,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
             });
         combine_pass->link_dependency(gbuffer_pass);
     }
+
+    auto surface_resolve_master_material   = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
+    auto surface_resolve_material_instance = gfx::MaterialInstance::create(surface_resolve_master_material);
     surface->link_dependency(combine_pass);
     surface->build_framegraph();
+    surface->on_draw->add_lambda(
+        [&surface_resolve_material_instance](gfx::CommandBuffer* command_buffer)
+        {            
+            command_buffer->draw_procedural(surface_resolve_material_instance.get(), 3, 0, 1, 0);
+        });
 
     while (application::window::Window::get_window_count() > 0)
     {
@@ -118,7 +128,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     }
 
     space_regions.clear();
-    combine_pass = nullptr;
+    surface_resolve_master_material  = nullptr;
+    surface_resolve_material_instance = nullptr;
+    region_combine_master_material   = nullptr;
+    region_combine_material_instance = nullptr;
+    combine_pass                     = nullptr;
     delete surface;
     gfx::destroy();
     application::destroy();

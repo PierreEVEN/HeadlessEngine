@@ -13,7 +13,7 @@ Surface* Surface::create_surface(application::window::Window* container)
 #if GFX_USE_VULKAN
 
     const auto surface = new vulkan::Surface_VK(container);
-    
+
     if (!RenderPassID::exists("resolve_pass"))
     {
         RenderPass::declare_internal(
@@ -28,6 +28,7 @@ Surface* Surface::create_surface(application::window::Window* container)
     }
 
     surface->main_render_pass = RenderPassInstance::create(container->width(), container->height(), RenderPassID::get("resolve_pass"), std::vector{surface->get_surface_render_texture()});
+    surface->on_draw          = &surface->main_render_pass->on_draw_pass;
     return surface;
 #else
     return nullptr;

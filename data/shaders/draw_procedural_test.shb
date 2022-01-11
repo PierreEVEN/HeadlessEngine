@@ -5,15 +5,17 @@ global(gbuffer)
 struct VsToFsStruct
 {
     float4 Pos : SV_Position;
+    float2 Uv : TEXCOORD0;
 };
 ]
 
-vertex(gbuffer)
+vertex(gbuffer, region_combine, resolve_pass)
 [
 VsToFsStruct main(uint vertex_index : SV_VertexID)
 {
     VsToFsStruct output = (VsToFsStruct) 0;
-    output.Pos = float4(float2((vertex_index << 1) & 2, vertex_index & 2) * 2.0f - 1.0f, 0.0f, 1.0f);
+    output.Uv = float2((vertex_index << 1) & 2, vertex_index & 2);
+    output.Pos = float4(output.Uv * 2.0f - 1.0f, 0.0f, 1.0f);
     return output;
 }
 ];
@@ -33,6 +35,21 @@ FSOutput main(VsToFsStruct input)
     output.Color1 = float4(1, 1, 1, 1);
     output.Color2 = float4(1, 1, 1, 1);
     output.Color3 = float4(1, 1, 1, 1);
+    return output;
+}
+];
+
+fragment(region_combine, resolve_pass) 
+[
+struct FSOutput
+{
+    float4 Color1 : SV_TARGET0;
+};
+	
+FSOutput main(VsToFsStruct input)
+{
+    FSOutput output = (FSOutput) 0;
+    output.Color1 = float4(input.Uv, 1, 1);
     return output;
 }
 ];

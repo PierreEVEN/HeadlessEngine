@@ -1,3 +1,4 @@
+/*
 #pragma once
 
 #include "shader_builder/compiler.h"
@@ -17,3 +18,4 @@ class DxcCompiler : public Compiler
     std::vector<uint32_t> build_to_spirv(const std::vector<ShaderBlock>& shader_code, EShaderLanguage source_language, EShaderStage shader_stage) override;
 };
 } // namespace shader_builder::dxc_backend
+*/

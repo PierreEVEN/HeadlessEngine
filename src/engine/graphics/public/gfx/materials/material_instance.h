@@ -25,7 +25,7 @@ class MaterialInstance
     }
 
     virtual void bind_buffer(const std::string& binding_name, const std::shared_ptr<Buffer>& in_buffer) = 0;
-    virtual void bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
+    virtual void bind_texture([[maybe_unused]] const std::string& binding_name, [[maybe_unused]] const std::shared_ptr<Texture>& in_texture)
     {
     }
     virtual void bind_material(CommandBuffer* command_buffer) = 0;

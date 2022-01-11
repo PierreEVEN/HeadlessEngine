@@ -18,7 +18,7 @@ class Surface
 
     void link_dependency(const std::shared_ptr<RenderPassInstance>& render_pass) const;
     void build_framegraph();
-
+    OnDrawPass* on_draw = nullptr;
   protected:
     Surface() = default;
     std::shared_ptr<RenderPassInstance> main_render_pass;
