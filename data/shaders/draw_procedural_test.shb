@@ -1,13 +1,99 @@
+
+vertex(gbuffer)
+[
+struct VertOut
+{
+    [builtin(position)] position: vec4<f32>
+}
+
+struct FragOut
+{
+    [location(0)] color: vec4<f32>
+}
+
+struct VertIn
+{
+	[location(0)] position: vec3<f32>
+}
+
+[entry(vert)]
+fn main(input: VertIn) -> VertOut
+{
+    let output: VertOut;
+    
+    let uv = vec2<f32>(0, 0);
+    //let uv = vec2<f32>((vertex_index << 1) & 2, vertex_index & 2);
+    output.position = vec4<f32>(uv * 2.0f - 1.0f, 0.0f, 1.0f);
+}
+
+]
+
+
+
+fragment(gbuffer)
+[
+[layout(std140)]
+
+struct VertOut
+{
+    [builtin(position)] position: vec4<f32>
+}
+
+struct FragOut
+{
+    [location(0)] color: vec4<f32>
+}
+
+
+
+[entry(frag)]
+fn main(input: VertOut) -> FragOut
+{
+    let output: FragOut;
+    output.color = vec4<f32>(1, 1, 1, 1);
+    return output;
+}
+
+struct VertIn
+{
+	[location(0)] position: vec3<f32>
+}
+
+]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 #pragma shader_language HLSL
 
 global(gbuffer)
 [
-int _Subdivision = 4;
-int _Width = 1;
-
 struct VsToFsStruct
 {
-    [[vk::location(0)]] float4 Pos : POSITION0;
+    float4 Pos : POSITION0;
 };
 ]
 
@@ -27,16 +113,15 @@ cbuffer view_ubo : register(b0)
 
 struct VsInput
 {
-    float3 pos : POSITION0;
-    uint vertex_index : SV_VertexID;
+    float3 pos : POSITION0;    
 };
 
-VsToFsStruct main(VsInput input)
+VsToFsStruct main(VsInput input, uint vertex_index : SV_VertexID)
 {
     VsToFsStruct output = (VsToFsStruct) 0;
 
-    float2 uv = float2((input.vertex_index << 1) & 2, input.vertex_index & 2);
-    output.Pos = float4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
+    float2 uv = float2((vertex_index << 1) & 2, vertex_index & 2);
+    output.Pos = float4(uv  * 2.0f - 1.0f, 0.0f, 1.0f);
     return output;
 }
 ];
@@ -53,15 +138,17 @@ struct FSOutput
 FSOutput main(VsToFsStruct input)
 {
     FSOutput output = (FSOutput) 0;
-    output.Color1 = float4(1, 10, 5, 1);
+    output.Color1 = float4(1, 1, 1, 1);
     output.Color2 = float4(1, 1, 1, 1);
     output.Color3 = float4(1, 1, 1, 1);
     return output;
 }
 ];
-
+*/
 
 /*
+#pragma shader_language GLSL
+
 global(gbuffer)
 [
 #version 450
@@ -69,28 +156,17 @@ global(gbuffer)
 
 vertex(gbuffer)
 [
-
 layout(location = 0) in vec3 inPos;
-
-layout(binding = 0) uniform UBO 
-{
-    mat4 projection;
-    mat4 view;
-} view_ubo;
-
-
 
 void main()
 {
     vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
     gl_Position = vec4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
-    //view_ubo.projection * view_ubo.view * vec4(inPos, 0);
 }
 ]
 
 fragment(gbuffer)
 [
-
 layout (location = 0) out vec4 outPosition;
 layout (location = 1) out vec4 outNormal;
 layout (location = 2) out vec4 outAlbedo;
@@ -100,9 +176,6 @@ void main()
     outPosition = vec4(1, 1, 1, 1.0);
     outNormal = vec4(1, 1, 1, 1.0);
     outAlbedo = vec4(1, 1, 1, 1.0);
-
-
 }
-
 ]
 */

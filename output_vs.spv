@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Google spiregg; 0
+; Bound: 34
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %1 "main" %2 %3 %4
+OpSource HLSL 600
+OpName %2 "in.var.POSITION0"
+OpName %4 "out.var.POSITION0"
+OpName %1 "main"
+OpDecorate %3 BuiltIn VertexIndex
+OpDecorate %2 Location 0
+OpDecorate %4 Location 0
+%5 = OpTypeFloat 32
+%6 = OpTypeVector %5 4
+%7 = OpTypeInt 32 0
+%8 = OpConstant %7 1
+%9 = OpConstant %7 2
+%10 = OpConstant %5 2
+%11 = OpConstant %5 1
+%12 = OpTypeVector %5 2
+%13 = OpConstantComposite %12 %11 %11
+%14 = OpConstant %5 0
+%15 = OpTypeVector %5 3
+%16 = OpTypePointer Input %15
+%17 = OpTypePointer Input %7
+%18 = OpTypePointer Output %6
+%19 = OpTypeVoid
+%20 = OpTypeFunction %19
+%2 = OpVariable %16 Input
+%3 = OpVariable %17 Input
+%4 = OpVariable %18 Output
+%1 = OpFunction %19 None %20
+%21 = OpLabel
+%22 = OpLoad %7 %3
+%23 = OpShiftLeftLogical %7 %22 %8
+%24 = OpBitwiseAnd %7 %23 %9
+%25 = OpConvertUToF %5 %24
+%26 = OpBitwiseAnd %7 %22 %9
+%27 = OpConvertUToF %5 %26
+%28 = OpCompositeConstruct %12 %25 %27
+%29 = OpVectorTimesScalar %12 %28 %10
+%30 = OpFSub %12 %29 %13
+%31 = OpCompositeExtract %5 %30 0
+%32 = OpCompositeExtract %5 %30 1
+%33 = OpCompositeConstruct %6 %31 %32 %14 %11
+OpStore %4 %33
+OpReturn
+OpFunctionEnd

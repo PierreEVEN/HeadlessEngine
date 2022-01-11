@@ -35,7 +35,7 @@ std::vector<uint32_t> GlslangCompiler::build_to_spirv(const std::vector<ShaderBl
 
     if (!shader.parse(&get_resources(), 0, false, EShMsgDefault, *get()->get_includer()))
     {
-        LOG_FATAL("failed to parse");
+        LOG_FATAL("failed to parse : \n%s", shader.getInfoLog());
         return compilation_result;
     }
 
@@ -43,7 +43,7 @@ std::vector<uint32_t> GlslangCompiler::build_to_spirv(const std::vector<ShaderBl
     program.addShader(&shader);
     if (!program.link(EShMsgDefault))
     {
-        LOG_FATAL("failed to link");
+        LOG_FATAL("failed to link : \n%s", shader.getInfoLog());
         return compilation_result;
     }
 

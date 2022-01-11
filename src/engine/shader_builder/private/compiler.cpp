@@ -4,19 +4,13 @@
 #include "backend/backend_dxc.h"
 #include "backend/backend_glslang.h"
 #include "custom_includer.h"
-#include "internal.h"
+#include "backend/backend_nazarashader.h"
 #include "shader_builder/parser.h"
-#include "shader_builder/shader_builder.h"
-
 #include <cpputils/logger.hpp>
 #include <functional>
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-
 #include <spirv_reflect.h>
-
 #include "types/magic_enum.h"
-#include <cpputils/simplemacros.hpp>
+#include <spirv-tools/libspirv.hpp>
 
 namespace shader_builder
 {
@@ -114,7 +108,7 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
     current_offset += static_cast<uint32_t>(type.type_size);
 
     return Property{
-        .name     = name_split.size() == 2 ? name_split[1] : name_split[0],
+        .name     = name_split[name_split.size() - 1],
         .type     = type,
         .offset   = offset,
         .location = variable->location,
@@ -263,51 +257,10 @@ OperationStatus check_pass_result(const PassResult& pass)
     return result;
 }
 
-StageResult build_shader(glslang::TShader& shader, EShLanguage stage)
-{
-    StageResult compilation_result;
-
-    if (!shader.parse(&get_resources(), 0, false, EShMsgDefault, *get()->get_includer()))
-    {
-        compilation_result.status.add_error({
-            .column        = -1,
-            .line          = -1,
-            .error_message = "parsing failed : " + std::string(shader.getInfoLog()),
-        });
-        return compilation_result;
-    }
-
-    glslang::TProgram program{};
-    program.addShader(&shader);
-    if (!program.link(EShMsgDefault))
-    {
-        compilation_result.status.add_error({
-            .column        = -1,
-            .line          = -1,
-            .error_message = "link failed : " + std::string(program.getInfoLog()),
-        });
-        return compilation_result;
-    }
-
-    spv::SpvBuildLogger logger;
-    glslang::SpvOptions spv_option;
-
-    spv_option.generateDebugInfo = true;
-    spv_option.disableOptimizer  = false;
-    spv_option.optimizeSize      = false;
-    spv_option.disassemble       = false;
-    spv_option.validate          = true;
-    GlslangToSpv(*program.getIntermediate(stage), compilation_result.spirv, &logger, &spv_option);
-
-    // program.buildReflection();
-    // program.dumpReflection();
-
-    compilation_result.reflection = build_reflection(compilation_result.spirv);
-    return compilation_result;
-}
-
 std::shared_ptr<Compiler> Compiler::create(EShaderLanguage source_language)
 {
+    return std::make_shared<nazarashader_backend::NazaraShaderCompiler>(source_language);
+
     if (source_language == EShaderLanguage::HLSL)
         return std::make_shared<dxc_backend::DxcCompiler>(source_language);
     else
@@ -333,13 +286,24 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
         std::vector<ShaderBlock> vertex_blocks(pass.second.vertex_chunks.size());
         for (size_t i = 0; i < pass.second.vertex_chunks.size(); ++i)
         {
-            vertex_blocks[i].text  = pass.second.vertex_chunks[i].content;
+            vertex_blocks[i].text = pass.second.vertex_chunks[i].content;
             vertex_blocks[i].name = pass.second.vertex_chunks[i].file;
         }
         StageResult vertex_result;
-        vertex_result.spirv = compiler->build_to_spirv(vertex_blocks, compilation_result.properties.shader_language, EShaderStage::Vertex);
+        vertex_result.spirv                          = compiler->build_to_spirv(vertex_blocks, compilation_result.properties.shader_language, EShaderStage::Vertex);
         vertex_result.reflection                     = build_reflection(vertex_result.spirv);
         compilation_result.passes[pass.first].vertex = vertex_result;
+
+        {
+            const auto&    context = spvContextCreate(SPV_ENV_VULKAN_1_2);
+            spv_text       text;
+            spv_diagnostic diag;
+            spvBinaryToText(context, vertex_result.spirv.data(), vertex_result.spirv.size(), 0, &text, &diag);
+            spvContextDestroy(context);
+            std::ofstream test_fs("output_vs.spv");
+            test_fs << text->str;
+            spvTextDestroy(text);
+        }
 
         std::vector<ShaderBlock> fragment_block(pass.second.fragment_chunks.size());
         for (size_t i = 0; i < pass.second.fragment_chunks.size(); ++i)
@@ -348,10 +312,20 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
             fragment_block[i].name = pass.second.fragment_chunks[i].file;
         }
         StageResult fragment_result;
-        fragment_result.spirv                        = compiler->build_to_spirv(fragment_block, compilation_result.properties.shader_language, EShaderStage::Fragment);
-        fragment_result.reflection                   = build_reflection(fragment_result.spirv);
+        fragment_result.spirv                          = compiler->build_to_spirv(fragment_block, compilation_result.properties.shader_language, EShaderStage::Fragment);
+        fragment_result.reflection                     = build_reflection(fragment_result.spirv);
         compilation_result.passes[pass.first].fragment = fragment_result;
 
+        {
+            const auto&    context = spvContextCreate(SPV_ENV_VULKAN_1_2);
+            spv_text       text;
+            spv_diagnostic diag;
+            spvBinaryToText(context, fragment_result.spirv.data(), fragment_result.spirv.size(), 0, &text, &diag);
+            spvContextDestroy(context);
+            std::ofstream test_fs("output_fs.spv");
+            test_fs << text->str;
+            spvTextDestroy(text);
+        }
         compilation_result.passes[pass.first].status = check_pass_result(compilation_result.passes[pass.first]);
     }
 

@@ -10,7 +10,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL validation_layer_debug_callback(VkDebugUtilsMessa
 {
     std::string context      = "FAILED TO PARSE MESSAGE";
     std::string message_id   = "FAILED TO PARSE MESSAGE";
-    std::string message_text = "FAILED TO PARSE MESSAGE";
+    std::string message_text = callback_data->pMessage;
 
     const std::string message     = callback_data->pMessage;
     const auto        message_ids = stringutils::split(message, {'|'});

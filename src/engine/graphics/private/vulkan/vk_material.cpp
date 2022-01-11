@@ -8,7 +8,6 @@
 
 namespace gfx::vulkan
 {
-
 static VkPolygonMode vk_polygon_mode(shader_builder::EPolygonMode polygon_mode)
 {
     switch (polygon_mode)
@@ -23,6 +22,7 @@ static VkPolygonMode vk_polygon_mode(shader_builder::EPolygonMode polygon_mode)
         LOG_FATAL("unhandled case");
     }
 }
+
 static VkPrimitiveTopology vk_topology(shader_builder::ETopology topology)
 {
     switch (topology)
@@ -86,6 +86,8 @@ void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& 
 
         VkShaderModuleCreateInfo vertex_create_infos{
             .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .pNext    = nullptr,
+            .flags    = 0,
             .codeSize = pass.second.vertex.spirv.size() * sizeof(uint32_t),
             .pCode    = pass.second.vertex.spirv.data(),
         };
@@ -93,6 +95,8 @@ void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& 
 
         VkShaderModuleCreateInfo fragment_create_infos{
             .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .pNext    = nullptr,
+            .flags    = 0,
             .codeSize = pass.second.fragment.spirv.size() * sizeof(uint32_t),
             .pCode    = pass.second.fragment.spirv.data(),
         };
