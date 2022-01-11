@@ -93,7 +93,7 @@ public:
 
     void render(gfx::CommandBuffer* command_buffer)
     {
-        command_buffer->draw_mesh(test_mesh.get(), test_material.get());
+        command_buffer->draw_procedural(test_material.get(), 3, 0, 1, 0);
         ecs.render(command_buffer);
     }
 

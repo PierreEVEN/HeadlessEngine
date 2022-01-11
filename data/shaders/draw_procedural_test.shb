@@ -1,127 +1,19 @@
-
-vertex(gbuffer)
-[
-struct VertOut
-{
-    [builtin(position)] position: vec4<f32>
-}
-
-struct FragOut
-{
-    [location(0)] color: vec4<f32>
-}
-
-struct VertIn
-{
-	[location(0)] position: vec3<f32>
-}
-
-[entry(vert)]
-fn main(input: VertIn) -> VertOut
-{
-    let output: VertOut;
-    
-    let uv = vec2<f32>(0, 0);
-    //let uv = vec2<f32>((vertex_index << 1) & 2, vertex_index & 2);
-    output.position = vec4<f32>(uv * 2.0f - 1.0f, 0.0f, 1.0f);
-}
-
-]
-
-
-
-fragment(gbuffer)
-[
-[layout(std140)]
-
-struct VertOut
-{
-    [builtin(position)] position: vec4<f32>
-}
-
-struct FragOut
-{
-    [location(0)] color: vec4<f32>
-}
-
-
-
-[entry(frag)]
-fn main(input: VertOut) -> FragOut
-{
-    let output: FragOut;
-    output.color = vec4<f32>(1, 1, 1, 1);
-    return output;
-}
-
-struct VertIn
-{
-	[location(0)] position: vec3<f32>
-}
-
-]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
 #pragma shader_language HLSL
 
 global(gbuffer)
 [
 struct VsToFsStruct
 {
-    float4 Pos : POSITION0;
+    float4 Pos : SV_Position;
 };
 ]
 
 vertex(gbuffer)
 [
-struct ViewUbo
-{
-    float4x4 projection;
-    float4x4 view;
-    float end;
-};
-
-cbuffer view_ubo : register(b0)
-{
-    ViewUbo view_ubo;
-}
-
-struct VsInput
-{
-    float3 pos : POSITION0;    
-};
-
-VsToFsStruct main(VsInput input, uint vertex_index : SV_VertexID)
+VsToFsStruct main(uint vertex_index : SV_VertexID)
 {
     VsToFsStruct output = (VsToFsStruct) 0;
-
-    float2 uv = float2((vertex_index << 1) & 2, vertex_index & 2);
-    output.Pos = float4(uv  * 2.0f - 1.0f, 0.0f, 1.0f);
+    output.Pos = float4(float2((vertex_index << 1) & 2, vertex_index & 2) * 2.0f - 1.0f, 0.0f, 1.0f);
     return output;
 }
 ];
@@ -144,38 +36,3 @@ FSOutput main(VsToFsStruct input)
     return output;
 }
 ];
-*/
-
-/*
-#pragma shader_language GLSL
-
-global(gbuffer)
-[
-#version 450
-]
-
-vertex(gbuffer)
-[
-layout(location = 0) in vec3 inPos;
-
-void main()
-{
-    vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
-    gl_Position = vec4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
-}
-]
-
-fragment(gbuffer)
-[
-layout (location = 0) out vec4 outPosition;
-layout (location = 1) out vec4 outNormal;
-layout (location = 2) out vec4 outAlbedo;
-
-void main()
-{
-    outPosition = vec4(1, 1, 1, 1.0);
-    outNormal = vec4(1, 1, 1, 1.0);
-    outAlbedo = vec4(1, 1, 1, 1.0);
-}
-]
-*/

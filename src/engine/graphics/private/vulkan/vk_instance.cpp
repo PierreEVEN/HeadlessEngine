@@ -22,15 +22,15 @@ void create()
 {
     /* Set application information */
 
-    const char* application_name = application::get_full_name().c_str();
-    const char* engine_name      = application::get_engine_full_name().c_str();
+    std::string application_name = application::get_full_name();
+    std::string engine_name      = application::get_engine_full_name();
 
     VkApplicationInfo vkAppInfo = {
         .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext              = nullptr,
-        .pApplicationName   = application_name,
+        .pApplicationName   = application_name.c_str(),
         .applicationVersion = VK_MAKE_VERSION(application::get_version_major(), application::get_version_minor(), application::get_version_patch()),
-        .pEngineName        = engine_name,
+        .pEngineName        = engine_name.c_str(),
         .engineVersion      = VK_MAKE_VERSION(application::get_engine_version_major(), application::get_engine_version_minor(), application::get_engine_version_patch()),
         .apiVersion         = VK_API_VERSION_1_2,
     };

@@ -1,51 +1,59 @@
 ; SPIR-V
-; Version: 1.0
-; Generator: Google spiregg; 0
-; Bound: 34
+; Version: 1.3
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 86
 ; Schema: 0
 OpCapability Shader
+%2 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
-OpEntryPoint Vertex %1 "main" %2 %3 %4
-OpSource HLSL 600
-OpName %2 "in.var.POSITION0"
-OpName %4 "out.var.POSITION0"
-OpName %1 "main"
-OpDecorate %3 BuiltIn VertexIndex
-OpDecorate %2 Location 0
-OpDecorate %4 Location 0
-%5 = OpTypeFloat 32
-%6 = OpTypeVector %5 4
+OpEntryPoint Vertex %5 "main" %50 %53
+%1 = OpString ""
+%16 = OpString "data/shaders/draw_procedural_test.shb"
+OpSource HLSL 500 %1
+OpName %5 "main"
+OpName %50 "vertex_index"
+OpName %53 "@entryPointOutput.Pos"
+OpModuleProcessed "entry-point main"
+OpModuleProcessed "client vulkan100"
+OpModuleProcessed "target-env spirv1.3"
+OpModuleProcessed "target-env vulkan1.2"
+OpModuleProcessed "hlsl-offsets"
+OpDecorate %50 BuiltIn VertexIndex
+OpDecorate %53 BuiltIn Position
+%3 = OpTypeVoid
+%4 = OpTypeFunction %3
 %7 = OpTypeInt 32 0
-%8 = OpConstant %7 1
-%9 = OpConstant %7 2
-%10 = OpConstant %5 2
-%11 = OpConstant %5 1
-%12 = OpTypeVector %5 2
-%13 = OpConstantComposite %12 %11 %11
-%14 = OpConstant %5 0
-%15 = OpTypeVector %5 3
-%16 = OpTypePointer Input %15
-%17 = OpTypePointer Input %7
-%18 = OpTypePointer Output %6
-%19 = OpTypeVoid
-%20 = OpTypeFunction %19
-%2 = OpVariable %16 Input
-%3 = OpVariable %17 Input
-%4 = OpVariable %18 Output
-%1 = OpFunction %19 None %20
-%21 = OpLabel
-%22 = OpLoad %7 %3
-%23 = OpShiftLeftLogical %7 %22 %8
-%24 = OpBitwiseAnd %7 %23 %9
-%25 = OpConvertUToF %5 %24
-%26 = OpBitwiseAnd %7 %22 %9
-%27 = OpConvertUToF %5 %26
-%28 = OpCompositeConstruct %12 %25 %27
-%29 = OpVectorTimesScalar %12 %28 %10
-%30 = OpFSub %12 %29 %13
-%31 = OpCompositeExtract %5 %30 0
-%32 = OpCompositeExtract %5 %30 1
-%33 = OpCompositeConstruct %6 %31 %32 %14 %11
-OpStore %4 %33
+%9 = OpTypeFloat 32
+%10 = OpTypeVector %9 4
+%19 = OpConstant %9 0
+%22 = OpTypeInt 32 1
+%25 = OpConstant %22 1
+%27 = OpConstant %7 2
+%33 = OpTypeVector %9 2
+%35 = OpConstant %9 2
+%37 = OpConstant %9 1
+%49 = OpTypePointer Input %7
+%50 = OpVariable %49 Input
+%52 = OpTypePointer Output %10
+%53 = OpVariable %52 Output
+%85 = OpConstantComposite %33 %37 %37
+%5 = OpFunction %3 None %4
+%6 = OpLabel
+OpLine %16 3 0
+%51 = OpLoad %7 %50
+OpLine %16 5 0
+%62 = OpShiftLeftLogical %7 %51 %25
+%63 = OpBitwiseAnd %7 %62 %27
+%64 = OpConvertUToF %9 %63
+%66 = OpBitwiseAnd %7 %51 %27
+%67 = OpConvertUToF %9 %66
+%68 = OpCompositeConstruct %33 %64 %67
+%69 = OpVectorTimesScalar %33 %68 %35
+%71 = OpFSub %33 %69 %85
+%72 = OpCompositeExtract %9 %71 0
+%73 = OpCompositeExtract %9 %71 1
+%74 = OpCompositeConstruct %10 %72 %73 %19 %37
+OpLine %16 3 0
+OpStore %53 %74
 OpReturn
 OpFunctionEnd

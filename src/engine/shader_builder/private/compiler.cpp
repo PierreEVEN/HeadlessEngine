@@ -4,13 +4,12 @@
 #include "backend/backend_dxc.h"
 #include "backend/backend_glslang.h"
 #include "custom_includer.h"
-#include "backend/backend_nazarashader.h"
 #include "shader_builder/parser.h"
+#include "types/magic_enum.h"
 #include <cpputils/logger.hpp>
 #include <functional>
-#include <spirv_reflect.h>
-#include "types/magic_enum.h"
 #include <spirv-tools/libspirv.hpp>
+#include <spirv_reflect.h>
 
 namespace shader_builder
 {
@@ -259,12 +258,10 @@ OperationStatus check_pass_result(const PassResult& pass)
 
 std::shared_ptr<Compiler> Compiler::create(EShaderLanguage source_language)
 {
-    return std::make_shared<nazarashader_backend::NazaraShaderCompiler>(source_language);
-
-    if (source_language == EShaderLanguage::HLSL)
+    /* if (source_language == EShaderLanguage::HLSL)
         return std::make_shared<dxc_backend::DxcCompiler>(source_language);
-    else
-        return std::make_shared<glslang_backend::GlslangCompiler>(source_language);
+    else*/
+    return std::make_shared<glslang_backend::GlslangCompiler>(source_language);
 }
 
 CompilationResult compile_shader(const std::filesystem::path& file_path)
