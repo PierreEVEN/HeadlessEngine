@@ -11,7 +11,7 @@ class GlslangCompiler : public Compiler
     GlslangCompiler(EShaderLanguage source_language) : Compiler(source_language)
     {
     }
-    std::vector<uint32_t> build_to_spirv(std::string& shader_code, EShaderLanguage source_language, EShaderStage shader_stage) override;
+    std::vector<uint32_t> build_to_spirv(const std::vector<ShaderBlock> & shader_code, EShaderLanguage source_language, EShaderStage shader_stage) override;
 };
 
 } // namespace shader_builder::glslang

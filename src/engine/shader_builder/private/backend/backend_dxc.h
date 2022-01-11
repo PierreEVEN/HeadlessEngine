@@ -6,11 +6,11 @@ namespace shader_builder::dxc_backend
 {
 class DxcCompiler : public Compiler
 {
-public:
+  public:
     DxcCompiler(EShaderLanguage source_language) : Compiler(source_language)
     {
     }
 
-    std::vector<uint32_t> build_to_spirv(std::string& shader_code) override;
+    std::vector<uint32_t> build_to_spirv(const std::vector<ShaderBlock>& shader_code, EShaderLanguage source_language, EShaderStage shader_stage) override;
 };
-}
+} // namespace shader_builder::dxc_backend

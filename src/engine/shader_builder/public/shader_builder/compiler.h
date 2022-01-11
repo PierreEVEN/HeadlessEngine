@@ -5,16 +5,20 @@
 
 namespace shader_builder
 {
-
+    struct ShaderBlock
+    {
+        std::string text;
+        std::string name;
+    };
 class Compiler
 {
 public:
     static std::shared_ptr<Compiler> create(EShaderLanguage source_language);
 
-	virtual std::vector<uint32_t> build_to_spirv(std::string& shader_code) = 0;
+	virtual std::vector<uint32_t> build_to_spirv(const std::vector<ShaderBlock>& shader_code, EShaderLanguage source_language, EShaderStage shader_stage) = 0;
 
 protected:
-        Compiler(EShaderLanguage source_language);
+        Compiler(EShaderLanguage source_language) {}
 };
 
 

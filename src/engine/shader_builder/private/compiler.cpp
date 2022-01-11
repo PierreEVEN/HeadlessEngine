@@ -266,6 +266,7 @@ OperationStatus check_pass_result(const PassResult& pass)
 StageResult build_shader(glslang::TShader& shader, EShLanguage stage)
 {
     StageResult compilation_result;
+
     if (!shader.parse(&get_resources(), 0, false, EShMsgDefault, *get()->get_includer()))
     {
         compilation_result.status.add_error({
@@ -325,44 +326,31 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
 
     compilation_result.properties = parsed_shader_file.shader_properties;
 
+    auto compiler = Compiler::create(parsed_shader_file.shader_properties.shader_language);
+
     for (const auto& pass : parsed_shader_file.passes)
     {
-        std::vector<const char*> vertex_strings(pass.second.vertex_chunks.size());
-        std::vector<int32_t>     vertex_lengths(pass.second.vertex_chunks.size());
-        std::vector<const char*> vertex_names(pass.second.vertex_chunks.size());
+        std::vector<ShaderBlock> vertex_blocks(pass.second.vertex_chunks.size());
         for (size_t i = 0; i < pass.second.vertex_chunks.size(); ++i)
         {
-            vertex_strings[i] = pass.second.vertex_chunks[i].content.c_str();
-            vertex_lengths[i] = static_cast<int32_t>(pass.second.vertex_chunks[i].content.size());
-            vertex_names[i]   = pass.second.vertex_chunks[i].file.c_str();
+            vertex_blocks[i].text  = pass.second.vertex_chunks[i].content;
+            vertex_blocks[i].name = pass.second.vertex_chunks[i].file;
         }
+        StageResult vertex_result;
+        vertex_result.spirv = compiler->build_to_spirv(vertex_blocks, compilation_result.properties.shader_language, EShaderStage::Vertex);
+        vertex_result.reflection                     = build_reflection(vertex_result.spirv);
+        compilation_result.passes[pass.first].vertex = vertex_result;
 
-        glslang::EShSource shader_language = parsed_shader_file.shader_properties.shader_language == EShaderLanguage::HLSL ? glslang::EShSourceHlsl : glslang::EShSourceGlsl;
-
-        glslang::TShader vertex_shader(EShLangVertex);
-        vertex_shader.setEnvInput(shader_language, EShLangVertex, glslang::EShClientVulkan, 0);
-        vertex_shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-        vertex_shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
-        vertex_shader.setEntryPoint("main");
-        vertex_shader.setStringsWithLengthsAndNames(vertex_strings.data(), vertex_lengths.data(), vertex_names.data(), static_cast<int>(pass.second.vertex_chunks.size()));
-        compilation_result.passes[pass.first].vertex = build_shader(vertex_shader, EShLangVertex);
-
-        std::vector<const char*> fragment_strings(pass.second.fragment_chunks.size());
-        std::vector<int32_t>     fragment_lengths(pass.second.fragment_chunks.size());
-        std::vector<const char*> fragment_names(pass.second.fragment_chunks.size());
+        std::vector<ShaderBlock> fragment_block(pass.second.fragment_chunks.size());
         for (size_t i = 0; i < pass.second.fragment_chunks.size(); ++i)
         {
-            fragment_strings[i] = pass.second.fragment_chunks[i].content.c_str();
-            fragment_lengths[i] = static_cast<int32_t>(pass.second.fragment_chunks[i].content.size());
-            fragment_names[i]   = pass.second.fragment_chunks[i].file.c_str();
+            fragment_block[i].text = pass.second.fragment_chunks[i].content;
+            fragment_block[i].name = pass.second.fragment_chunks[i].file;
         }
-        glslang::TShader fragment_shader(EShLangFragment);
-        fragment_shader.setEnvInput(shader_language, EShLangFragment, glslang::EShClientVulkan, 0);
-        fragment_shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-        fragment_shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
-        fragment_shader.setEntryPoint("main");
-        fragment_shader.setStringsWithLengthsAndNames(fragment_strings.data(), fragment_lengths.data(), fragment_names.data(), static_cast<int>(pass.second.fragment_chunks.size()));
-        compilation_result.passes[pass.first].fragment = build_shader(fragment_shader, EShLangFragment);
+        StageResult fragment_result;
+        fragment_result.spirv                        = compiler->build_to_spirv(fragment_block, compilation_result.properties.shader_language, EShaderStage::Fragment);
+        fragment_result.reflection                   = build_reflection(fragment_result.spirv);
+        compilation_result.passes[pass.first].fragment = fragment_result;
 
         compilation_result.passes[pass.first].status = check_pass_result(compilation_result.passes[pass.first]);
     }
