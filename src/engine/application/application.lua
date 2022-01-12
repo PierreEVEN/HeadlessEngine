@@ -1,6 +1,6 @@
 
 
-declare_module("application", {}, {"cpputils"})
+declare_module("application", {"types"}, {"cpputils"})
 
 target("application")
 	set_group("engine_new")

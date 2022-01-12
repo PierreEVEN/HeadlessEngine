@@ -28,7 +28,7 @@ struct FSOutput
     float4 Color2 : SV_TARGET1;
     float4 Color3 : SV_TARGET2;
 };
-	
+
 FSOutput main(VsToFsStruct input)
 {
     FSOutput output = (FSOutput) 0;
@@ -45,7 +45,7 @@ struct FSOutput
 {
     float4 Color1 : SV_TARGET0;
 };
-	
+
 FSOutput main(VsToFsStruct input)
 {
     FSOutput output = (FSOutput) 0;
