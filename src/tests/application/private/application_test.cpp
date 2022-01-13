@@ -17,20 +17,26 @@ int main()
     application::create();
 
 
-    application::inputs::ActionMapping toto(application::inputs::EAxis::Mouse_X, {application::inputs::EButtons::Keyboard_B});
-
-    toto.value.value_changed.add_lambda(
+    application::inputs::ActionMapping test_action(application::inputs::EButtons::Keyboard_LeftControl, {application::inputs::EButtons::Keyboard_B});
+    test_action.value.value_changed.add_lambda(
         []([[maybe_unused]] bool value)
         {
-            LOG_INFO("key changed");
+            LOG_INFO("ACTION : %d", value);
         });
 
-    LOG_INFO("value = %d", *toto.value);
+    application::inputs::AxisMapping test_axis(application::inputs::EAxis::Mouse_X, {application::inputs::EButtons::Keyboard_B});
+    test_axis.value.value_changed.add_lambda(
+        []([[maybe_unused]] float value)
+        {
+            LOG_INFO("AXIS : %f", value);
+        });
+
+    LOG_INFO("value = %d", *test_action.value);
 
     /**
      * 2° declare some windows with surfaces (surfaces are layers that allow rendering images from the gfx backend onto application window)
      */
-    auto* window_1  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
+    create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
     while (application::window::Window::get_window_count() > 0)
     {
         for (uint32_t i = 0; i < application::window::Window::get_window_count(); ++i)

@@ -16,36 +16,61 @@ DECLARE_DELEGATE_MULTICAST(OnValueChanged);
 class InputManager final
 {
     friend class Key;
-
   public:
+    struct ButtonValue
+    {
+        bool           pressed;
+        bool           first_pressed;
+        OnValueChanged value_changed;
+    };
+    struct AxisValue
+    {
+        float          value;
+        OnValueChanged value_changed;
+    };
+
     static InputManager& get();
 
     void press_button(EButtons key);
     void release_button(EButtons key);
-    void move_axis(EAxis key, int value);
+    void move_axis(EAxis key, float value);
 
   private:
-    InputManager()
-    {
-        for (const auto& entry : magic_enum::enum_entries<EButtons>())
-            buttons[entry.first] = {};
-        for (const auto& entry : magic_enum::enum_entries<EAxis>())
-            mouse_axis[entry.first] = {};
-    }
+    InputManager();
 
-    std::unordered_map<EButtons, OnValueChanged> buttons;
-    std::unordered_map<EAxis, OnValueChanged>    mouse_axis;
+    std::unordered_map<EButtons, ButtonValue> buttons;
+    std::unordered_map<EAxis, AxisValue>      axis;
 };
 
-class Key
+class Key final
 {
   public:
-    Key(EButtons button) : on_value_changed(&InputManager::get().buttons[button])
+    Key(EButtons in_button) : on_value_changed(&InputManager::get().buttons[button].value_changed), is_button(true), button(in_button)
     {
     }
-    Key(EAxis axis) : on_value_changed(&InputManager::get().mouse_axis[axis])
+    Key(EAxis in_axis) : on_value_changed(&InputManager::get().axis[axis].value_changed), is_button(false), axis(in_axis)
     {
     }
+
+    [[nodiscard]] bool get_bool_value() const
+    {
+        if (is_button)
+            return InputManager::get().buttons[button].pressed;
+        else
+            return abs(InputManager::get().axis[axis].value) > 0.5;
+    }
+
+    [[nodiscard]] float get_float_value() const
+    {
+        if (is_button)
+            return InputManager::get().buttons[button].pressed ? 1 : 0;
+        else
+            return InputManager::get().axis[axis].value;
+    }
+
+    bool is_button;
+    EButtons button;
+    EAxis axis;
 
     OnValueChanged* on_value_changed;
 };

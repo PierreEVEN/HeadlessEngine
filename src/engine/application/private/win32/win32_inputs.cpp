@@ -52,13 +52,13 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().press_button(EButtons::Mouse_2);
         break;
     case VK_BACK:
-        InputManager::get().press_button(EButtons::Keyboard_Back);
+        InputManager::get().press_button(EButtons::Keyboard_Backspace);
         break;
     case VK_TAB:
         InputManager::get().press_button(EButtons::Keyboard_Tab);
         break;
     case VK_RETURN:
-        InputManager::get().press_button(EButtons::Keyboard_Return);
+        InputManager::get().press_button(EButtons::Keyboard_Enter);
         break;
     case VK_SHIFT:
         InputManager::get().press_button(MapVirtualKey(scan_code, MAPVK_VSC_TO_VK_EX) == VK_RSHIFT ? EButtons::Keyboard_RightShift : EButtons::Keyboard_LeftShift);
@@ -435,6 +435,9 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
 {
     switch (key_code)
     {
+    case 0x00:
+    case 0xFF:
+        break;
     case VK_LBUTTON:
         InputManager::get().release_button(EButtons::Mouse_Left);
         break;
@@ -451,13 +454,13 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().release_button(EButtons::Mouse_2);
         break;
     case VK_BACK:
-        InputManager::get().release_button(EButtons::Keyboard_Back);
+        InputManager::get().release_button(EButtons::Keyboard_Backspace);
         break;
     case VK_TAB:
         InputManager::get().release_button(EButtons::Keyboard_Tab);
         break;
     case VK_RETURN:
-        InputManager::get().release_button(EButtons::Keyboard_Return);
+        InputManager::get().release_button(EButtons::Keyboard_Enter);
         break;
     case VK_SHIFT:
         InputManager::get().release_button(MapVirtualKey(scan_code, MAPVK_VSC_TO_VK_EX) == VK_RSHIFT ? EButtons::Keyboard_RightShift : EButtons::Keyboard_LeftShift);
@@ -824,8 +827,6 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         break;
     case VK_OEM_102:
         InputManager::get().release_button(EButtons::Keyboard_BackSlash);
-        break;
-    case 0xFF:
         break;
     default:
         LOG_WARNING("release unknown 0x%x", key_code);

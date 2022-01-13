@@ -39,6 +39,8 @@ class Application_Win32 final : public Application
     {
         return application_handle;
     }
+    void                 set_clipboard_data(const std::vector<uint8_t>& clipboard_data) override;
+    std::vector<uint8_t> get_clipboard_data() override;
 
     void on_register_internal() override;
 

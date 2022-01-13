@@ -1,7 +1,7 @@
 #include "win32_application.h"
 
-#include "win32_window.h"
 #include "application/application.h"
+#include "win32_window.h"
 #include <ShellScalingApi.h>
 #include <cpputils/logger.hpp>
 #include <cstdint>
@@ -26,8 +26,8 @@ void Application_Win32::on_register_internal()
 {
     EnumDisplayMonitors(
         nullptr, nullptr,
-        [](HMONITOR monitor, HDC, LPRECT, LPARAM data) -> BOOL {
-
+        [](HMONITOR monitor, HDC, LPRECT, LPARAM data) -> BOOL
+        {
             (void)data;
 
             MONITORINFO win_monitor_info = {sizeof(MONITORINFO)};
@@ -53,4 +53,15 @@ void Application_Win32::on_register_internal()
         },
         reinterpret_cast<LPARAM>(this));
 }
+
+void Application_Win32::set_clipboard_data(const std::vector<uint8_t>& clipboard_data)
+{
+    LOG_ERROR("clipboard is not implemented");
+}
+
+std::vector<uint8_t> Application_Win32::get_clipboard_data()
+{
+    LOG_ERROR("clipboard is not implemented");
+}
+
 } // namespace application::win32

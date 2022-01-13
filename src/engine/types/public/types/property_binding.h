@@ -12,7 +12,7 @@ template <typename Property_T> class PropertyContainer final
     PropertyContainer& operator=(PropertyContainer&& other) = delete;
     PropertyContainer& operator=(const PropertyContainer& other) = delete;
     
-    PropertyContainer(const Property_T& value) : Property_T(value)
+    PropertyContainer(const Property_T& value) : value(value)
     {
     }
 

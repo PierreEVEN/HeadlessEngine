@@ -44,9 +44,13 @@ class Application
 
     using AppHandle = uint64_t;
 
-    void register_monitor_internal(const Monitor& monitor);
-    virtual void on_register_internal() = 0;
+    void              register_monitor_internal(const Monitor& monitor);
+    virtual void      on_register_internal()    = 0;
     virtual AppHandle get_platform_app_handle() = 0;
+
+    virtual void                 set_clipboard_data(const std::vector<uint8_t>& clipboard_data) = 0;
+    virtual std::vector<uint8_t> get_clipboard_data()                                           = 0;
+
   protected:
     std::vector<Monitor> available_monitors;
 };
