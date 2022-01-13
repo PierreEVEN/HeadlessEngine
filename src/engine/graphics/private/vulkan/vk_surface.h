@@ -49,7 +49,6 @@ class Surface_VK : public Surface
     {
         VkFence     image_in_flight           = VK_NULL_HANDLE;
         VkSemaphore image_acquire_semaphore   = VK_NULL_HANDLE;
-        VkFence     in_flight_fence           = VK_NULL_HANDLE;
     };
 
     std::shared_ptr<Texture>          surface_texture;

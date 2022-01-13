@@ -54,7 +54,7 @@ void Application_Win32::on_register_internal()
         reinterpret_cast<LPARAM>(this));
 }
 
-void Application_Win32::set_clipboard_data(const std::vector<uint8_t>& clipboard_data)
+void Application_Win32::set_clipboard_data([[maybe_unused]] const std::vector<uint8_t>& clipboard_data)
 {
     LOG_ERROR("clipboard is not implemented");
 }
@@ -62,6 +62,7 @@ void Application_Win32::set_clipboard_data(const std::vector<uint8_t>& clipboard
 std::vector<uint8_t> Application_Win32::get_clipboard_data()
 {
     LOG_ERROR("clipboard is not implemented");
+    return {'\0'};
 }
 
 } // namespace application::win32

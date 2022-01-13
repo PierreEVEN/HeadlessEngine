@@ -14,13 +14,15 @@ enum class EWindowStyle
 
 struct WindowConfig
 {
-    std::string  name         = "none";
-    uint32_t     width        = 800;
-    uint32_t     height       = 600;
-    int32_t      pos_x        = 0;
-    int32_t      pos_y        = 0;
-    float        opacity      = 1;
-    EWindowStyle window_style = EWindowStyle::WINDOWED;
+    std::string  name            = "none";
+    uint32_t     absolute_width  = 800;
+    uint32_t     absolute_height = 600;
+    uint32_t     framebuffer_width  = 800;
+    uint32_t     framebuffer_height = 600;
+    int32_t      absolute_pos_x  = 0;
+    int32_t      absolute_pos_y  = 0;
+    float        opacity         = 1;
+    EWindowStyle window_style    = EWindowStyle::WINDOWED;
 };
 
 class Window
@@ -39,19 +41,29 @@ class Window
     virtual void update()                                   = 0;
 
     static uint32_t get_window_count();
-    static Window*    get_window(uint32_t index);
-    
-    using WindowHandle = uint64_t;
+    static Window*  get_window(uint32_t index);
+
+    using WindowHandle                                = uint64_t;
     virtual WindowHandle get_platform_window_handle() = 0;
 
-    [[nodiscard]] const uint32_t& width() const
+    [[nodiscard]] const uint32_t& absolute_width() const
     {
-        return config.width;
+        return config.absolute_width;
     }
-    [[nodiscard]] const uint32_t& height() const
+    [[nodiscard]] const uint32_t& absolute_height() const
     {
-        return config.height;
+        return config.absolute_height;
     }
+
+    [[nodiscard]] const uint32_t& framebuffer_width() const
+    {
+        return config.framebuffer_width;
+    }
+    [[nodiscard]] const uint32_t& framebuffer_height() const
+    {
+        return config.framebuffer_height;
+    }
+
     [[nodiscard]] const std::string& name() const
     {
         return config.name;
@@ -61,8 +73,8 @@ class Window
     static void  register_window(Window* new_window);
     static void  unregister_window(Window* destroyed_window);
     WindowConfig config;
-    static void         destroy_window(Window* window);
+    static void  destroy_window(Window* window);
 };
 
 Window* create_window(const WindowConfig& config);
-} // namespace application::window
+} // namespace application::start_window

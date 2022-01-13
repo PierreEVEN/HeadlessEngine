@@ -151,11 +151,7 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     for (auto& resource : swapchain_resources)
     {
         VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.image_acquire_semaphore), "Failed to create images acquire semaphore");
-        VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &resource.in_flight_fence), "Failed to create fence");
         debug_set_object_name(stringutils::format("surface %s : semaphore image acquire #%d", window_container->name().c_str(), resource_index), resource.image_acquire_semaphore);
-        debug_set_object_name(stringutils::format("surface %s : fence image in flight #%d", window_container->name().c_str(), resource_index), resource.in_flight_fence);
-
-        resource.image_in_flight = VK_NULL_HANDLE;
         ++resource_index;
     }
 
@@ -168,19 +164,13 @@ Surface_VK::~Surface_VK()
     vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
     vkDestroySurfaceKHR(get_instance(), surface, get_allocator());
     for (const auto& elem : swapchain_resources)
-    {
         vkDestroySemaphore(get_device(), elem.image_acquire_semaphore, get_allocator());
-        vkDestroyFence(get_device(), elem.in_flight_fence, get_allocator());
-    }
 }
 
 void Surface_VK::render()
 {
-    if (swapchain_resources->image_in_flight)
-        VK_CHECK(vkWaitForFences(get_device(), 1, &swapchain_resources->image_in_flight, VK_TRUE, UINT64_MAX), "wait failed");
-
     // Don't draw_pass if window is minimized
-    if (window_container->width() == 0 || window_container->height() == 0)
+    if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
         return;
 
     const VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
@@ -234,7 +224,7 @@ void Surface_VK::render()
 
 void Surface_VK::recreate_swapchain()
 {
-    if (window_container->width() == 0 || window_container->height() == 0)
+    if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
         return;
 
     if (swapchain != VK_NULL_HANDLE)
@@ -248,7 +238,7 @@ void Surface_VK::recreate_swapchain()
         .minImageCount         = get_image_count(),
         .imageFormat           = surface_format.format,
         .imageColorSpace       = surface_format.colorSpace,
-        .imageExtent           = VkExtent2D{window_container->width(), window_container->height()},
+        .imageExtent           = VkExtent2D{window_container->absolute_width(), window_container->absolute_height()},
         .imageArrayLayers      = 1,
         .imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE,
@@ -275,7 +265,7 @@ void Surface_VK::recreate_swapchain()
         images[i] = swapchain_images[i];
         debug_set_object_name(stringutils::format("surface %s : swapchain image #%d", window_container->name().c_str(), i), images[i]);
     }
-    surface_texture = std::make_shared<Texture_VK>(window_container->width(), window_container->height(), 1,
+    surface_texture = std::make_shared<Texture_VK>(window_container->absolute_width(), window_container->absolute_height(), 1,
                                                    TextureParameter{
                                                        .format                 = Texture_VK::engine_texture_format_from_vk(get_surface_format().format),
                                                        .image_type             = EImageType::Texture_2D,

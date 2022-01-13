@@ -27,7 +27,7 @@ Surface* Surface::create_surface(application::window::Window* container)
             true);
     }
 
-    surface->main_render_pass = RenderPassInstance::create(container->width(), container->height(), RenderPassID::get("resolve_pass"), std::vector{surface->get_surface_render_texture()});
+    surface->main_render_pass = RenderPassInstance::create(container->absolute_width(), container->absolute_height(), RenderPassID::get("resolve_pass"), std::vector{surface->get_surface_render_texture()});
     surface->on_draw          = &surface->main_render_pass->on_draw_pass;
     return surface;
 #else

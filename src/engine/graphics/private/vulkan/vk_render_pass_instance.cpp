@@ -25,6 +25,8 @@ RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, co
 
     for (auto& semaphore : render_finished_semaphore)
         vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
+    for (auto& fence : render_finished_fence)
+        fence = VK_NULL_HANDLE;
 }
 
 RenderPassInstance_VK::~RenderPassInstance_VK()
@@ -55,6 +57,9 @@ VkClearValue to_vk_clear_depth_stencil(const ClearValue& in_clear)
 
 void RenderPassInstance_VK::begin_pass()
 {
+    if (*render_finished_fence)
+        VK_CHECK(vkWaitForFences(get_device(), 1, &*render_finished_fence, VK_TRUE, UINT64_MAX), "wait failed");
+
     // Begin buffer record
     get_pass_command_buffer()->start();
 
@@ -132,7 +137,7 @@ void RenderPassInstance_VK::submit()
         .signalSemaphoreCount = 1,
         .pSignalSemaphores    = &*render_finished_semaphore,
     };
-    get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
+    *render_finished_fence = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
 }
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height)

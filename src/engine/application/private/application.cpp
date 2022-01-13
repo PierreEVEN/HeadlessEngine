@@ -4,6 +4,8 @@
 #include "win32/win32_application.h"
 #endif
 
+#include "application/window.h"
+
 #include <cpputils/logger.hpp>
 #include <cpputils/stringutils.hpp>
 
@@ -62,9 +64,24 @@ static Application* application = nullptr;
     return 0;
 }
 
+Application::Application() : time_delta(1 / 60.0), last_time(0)
+{
+    start_time = std::chrono::steady_clock::now();
+}
+
 void Application::register_monitor_internal(const Monitor& monitor)
 {
     available_monitors.emplace_back(monitor);
+}
+
+void Application::next_frame()
+{
+    const auto current_time = time();
+    time_delta              = current_time - last_time;
+    last_time               = current_time;
+
+    for (uint32_t i = 0; i < window::Window::get_window_count(); ++i)
+        window::Window::get_window(i)->update();
 }
 
 void create()

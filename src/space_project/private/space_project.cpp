@@ -67,8 +67,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     gfx::init();
     auto* window  = create_window(application::window::WindowConfig{
         .name         = "padenom",
-        .width        = 800,
-        .height       = 600,
+        .absolute_width        = 800,
+        .absolute_height       = 600,
         .window_style = application::window::EWindowStyle::WINDOWED,
     });
     auto* surface = gfx::Surface::create_surface(window);
@@ -79,7 +79,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     auto region_combine_master_material   = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
     auto region_combine_material_instance = gfx::MaterialInstance::create(region_combine_master_material);
 
-    auto combine_pass = gfx::RenderPassInstance::create(window->width(), window->height(), gfx::RenderPassID::get("region_combine"));
+    auto combine_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("region_combine"));
     combine_pass->on_draw_pass.add_lambda(
         [&region_combine_material_instance](gfx::CommandBuffer* command_buffer)
         {
@@ -89,7 +89,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         });
     for (auto& region : space_regions)
     {
-        auto gbuffer_pass = gfx::RenderPassInstance::create(window->width(), window->height(), gfx::RenderPassID::get("gbuffer"));
+        auto gbuffer_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("gbuffer"));
         gbuffer_pass->on_draw_pass.add_lambda(
             [&region](gfx::CommandBuffer* command_buffer)
             {

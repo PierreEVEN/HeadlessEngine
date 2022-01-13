@@ -57,6 +57,9 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
     case VK_TAB:
         InputManager::get().press_button(EButtons::Keyboard_Tab);
         break;
+    case VK_PAUSE:
+        InputManager::get().press_button(EButtons::Keyboard_Pause);
+        break;
     case VK_RETURN:
         InputManager::get().press_button(EButtons::Keyboard_Enter);
         break;
@@ -244,6 +247,9 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().press_button(EButtons::Keyboard_Num5);
         break;
     case VK_NUMPAD6:
+        InputManager::get().press_button(EButtons::Keyboard_Num6);
+        break;
+    case VK_NUMPAD7:
         InputManager::get().press_button(EButtons::Keyboard_Num7);
         break;
     case VK_NUMPAD8:
@@ -253,7 +259,10 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().press_button(EButtons::Keyboard_Num9);
         break;
     case VK_MULTIPLY:
-        InputManager::get().press_button(EButtons::Keyboard_NumMuliply);
+        InputManager::get().press_button(EButtons::Keyboard_NumMultiply);
+        break;
+    case VK_DECIMAL:
+        InputManager::get().press_button(EButtons::Keyboard_NumDelete);
         break;
     case VK_ADD:
         InputManager::get().press_button(EButtons::Keyboard_NumAdd);
@@ -353,6 +362,9 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
         break;
     case VK_RCONTROL:
         InputManager::get().press_button(EButtons::Keyboard_RightControl);
+        break;
+    case VK_APPS:
+        InputManager::get().press_button(EButtons::Keyboard_Apps);
         break;
     case VK_LMENU:
         InputManager::get().press_button(EButtons::Keyboard_LeftMenu);
@@ -458,6 +470,9 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         break;
     case VK_TAB:
         InputManager::get().release_button(EButtons::Keyboard_Tab);
+        break;
+    case VK_PAUSE:
+        InputManager::get().release_button(EButtons::Keyboard_Pause);
         break;
     case VK_RETURN:
         InputManager::get().release_button(EButtons::Keyboard_Enter);
@@ -646,6 +661,9 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().release_button(EButtons::Keyboard_Num5);
         break;
     case VK_NUMPAD6:
+        InputManager::get().release_button(EButtons::Keyboard_Num6);
+        break;
+    case VK_NUMPAD7:
         InputManager::get().release_button(EButtons::Keyboard_Num7);
         break;
     case VK_NUMPAD8:
@@ -655,7 +673,10 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         InputManager::get().release_button(EButtons::Keyboard_Num9);
         break;
     case VK_MULTIPLY:
-        InputManager::get().release_button(EButtons::Keyboard_NumMuliply);
+        InputManager::get().release_button(EButtons::Keyboard_NumMultiply);
+        break;
+    case VK_DECIMAL:
+        InputManager::get().release_button(EButtons::Keyboard_NumDelete);
         break;
     case VK_ADD:
         InputManager::get().release_button(EButtons::Keyboard_NumAdd);
@@ -755,6 +776,9 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
         break;
     case VK_RCONTROL:
         InputManager::get().release_button(EButtons::Keyboard_RightControl);
+        break;
+    case VK_APPS:
+        InputManager::get().release_button(EButtons::Keyboard_Apps);
         break;
     case VK_LMENU:
         InputManager::get().release_button(EButtons::Keyboard_LeftMenu);

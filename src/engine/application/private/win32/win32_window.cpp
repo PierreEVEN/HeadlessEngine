@@ -30,10 +30,10 @@ Window_Win32::Window_Win32(const WindowConfig& config) : Window(config)
     ex_style |= WS_EX_ACCEPTFILES; // DRAG&DROP
     ex_style |= WS_EX_APPWINDOW;
 
-    RECT initial_area = {0, 0, static_cast<LONG>(config.width), static_cast<LONG>(config.height)};
+    RECT initial_area = {0, 0, static_cast<LONG>(config.absolute_width), static_cast<LONG>(config.absolute_height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));
 
-    window_handle = ::CreateWindowEx(ex_style, "headless_engine_window_class", config.name.c_str(), style, config.pos_x, config.pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top,
+    window_handle = ::CreateWindowEx(ex_style, "headless_engine_window_class", config.name.c_str(), style, config.absolute_pos_x, config.absolute_pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top,
                                      nullptr, nullptr, dynamic_cast<application::win32::Application_Win32*>(application::get())->get_handle(), nullptr);
     WIN_CHECK(window_handle);
 
@@ -76,19 +76,19 @@ void Window_Win32::set_name(const std::string& new_name)
 
 void Window_Win32::set_size(uint32_t width, uint32_t height)
 {
-    config.width  = width;
-    config.height = height;
+    config.absolute_width  = width;
+    config.absolute_height = height;
 
     RECT initial_area = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));
-    WIN_CHECK(::SetWindowPos(window_handle, nullptr, config.pos_x, config.pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top, 0));
+    WIN_CHECK(::SetWindowPos(window_handle, nullptr, config.absolute_pos_x, config.absolute_pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top, 0));
 }
 
 void Window_Win32::set_position(int32_t pos_x, int32_t pos_y)
 {
-    config.pos_x = pos_x;
-    config.pos_y = pos_y;
-    WIN_CHECK(::SetWindowPos(window_handle, nullptr, pos_x, pos_y, config.width, config.height, 0));
+    config.absolute_pos_x = pos_x;
+    config.absolute_pos_y = pos_y;
+    WIN_CHECK(::SetWindowPos(window_handle, nullptr, pos_x, pos_y, config.absolute_width, config.absolute_height, 0));
 }
 
 void Window_Win32::set_opacity(float alpha)
@@ -118,14 +118,14 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
         return 0;
     case WM_SIZE:
     {
-        config.width  = LOWORD(in_lparam);
-        config.height = HIWORD(in_lparam);
+        config.absolute_width  = LOWORD(in_lparam);
+        config.absolute_height = HIWORD(in_lparam);
         return 0;
     }
     case WM_MOVE:
     {
-        config.pos_x = LOWORD(in_lparam);
-        config.pos_y = HIWORD(in_lparam);
+        config.absolute_pos_x = LOWORD(in_lparam);
+        config.absolute_pos_y = HIWORD(in_lparam);
         return 0;
     }
     case WM_VSCROLL:

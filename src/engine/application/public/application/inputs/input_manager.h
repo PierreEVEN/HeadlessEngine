@@ -57,13 +57,13 @@ class Key final
         if (is_button)
             return InputManager::get().buttons[button].pressed;
         else
-            return abs(InputManager::get().axis[axis].value) > 0.5;
+            return abs(InputManager::get().axis[axis].value) > 0.5f;
     }
 
     [[nodiscard]] float get_float_value() const
     {
         if (is_button)
-            return InputManager::get().buttons[button].pressed ? 1 : 0;
+            return InputManager::get().buttons[button].pressed ? 1.f : 0.f;
         else
             return InputManager::get().axis[axis].value;
     }

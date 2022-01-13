@@ -43,6 +43,12 @@ class Buffer
         set_data(&data, sizeof(T));
     }
 
+    template <typename Lambda> void set_data_lambda(Lambda data_lambda)
+    {
+        data_lambda(get_ptr());
+        void submit_data();
+    }
+
     [[nodiscard]] uint32_t count() const
     {
         return element_count;

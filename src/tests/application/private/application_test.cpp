@@ -39,10 +39,7 @@ int main()
     create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
     while (application::window::Window::get_window_count() > 0)
     {
-        for (uint32_t i = 0; i < application::window::Window::get_window_count(); ++i)
-        {
-            application::window::Window::get_window(i)->update();
-        }
+        application::get()->next_frame();
     }
     
     application::destroy();

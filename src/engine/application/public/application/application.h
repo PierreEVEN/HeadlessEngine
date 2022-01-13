@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -39,7 +40,7 @@ struct Monitor
 class Application
 {
   public:
-    Application()          = default;
+    Application();
     virtual ~Application() = default;
 
     using AppHandle = uint64_t;
@@ -51,8 +52,22 @@ class Application
     virtual void                 set_clipboard_data(const std::vector<uint8_t>& clipboard_data) = 0;
     virtual std::vector<uint8_t> get_clipboard_data()                                           = 0;
 
+    [[nodiscard]] double time() const
+    {
+        return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start_time).count()) * 1.0e-9;
+    }
+    [[nodiscard]] double delta_time() const
+    {
+        return time_delta;
+    }
+
+    void next_frame();
+
   protected:
-    std::vector<Monitor> available_monitors;
+    std::vector<Monitor>                  available_monitors;
+    std::chrono::steady_clock::time_point start_time;
+    double                                time_delta;
+    double                                last_time;
 };
 
 void         create();

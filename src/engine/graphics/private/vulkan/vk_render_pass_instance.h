@@ -25,6 +25,7 @@ class RenderPassInstance_VK final : public RenderPassInstance
     uint32_t                              framebuffer_height                = 0;
     SwapchainImageResource<VkFramebuffer> framebuffers                      = {};
     SwapchainImageResource<VkSemaphore>   render_finished_semaphore         = {};
+    SwapchainImageResource<VkFence>       render_finished_fence             = {};
     VkSemaphore                           swapchain_image_acquire_semaphore = VK_NULL_HANDLE;
 };
 } // namespace gfx::vulkan
