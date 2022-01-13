@@ -3,6 +3,9 @@
 
 #include "application/application.h"
 #include "win32_application.h"
+#include "win32_inputs.h"
+
+#include <Windowsx.h>
 
 namespace application::window::win32
 {
@@ -104,13 +107,13 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
     if (has_called_destroy)
         return ::DefWindowProc(window_handle, in_msg, in_wparam, in_lparam);
 
+    const bool     extended = in_lparam & 0x01000000;
+    const uint32_t scancode = (in_lparam & 0x00ff0000) >> 16;
     switch (in_msg)
     {
     case WM_DESTROY:
-        LOG_INFO("destroy !!");
         destroy_window(this);
         return 0;
-        break;
     case WM_PAINT:
         return 0;
     case WM_SIZE:
@@ -125,13 +128,45 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
         config.pos_y = HIWORD(in_lparam);
         return 0;
     }
+    case WM_VSCROLL:
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+    case WM_MOUSEMOVE:
+        inputs::win32::input_axis(in_msg, in_wparam, in_lparam);
+        break;
+    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+    case WM_MBUTTONDOWN:
     case WM_XBUTTONDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYDOWN:
+        inputs::win32::press_key(in_wparam, extended, scancode);
+        break;
+    case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONUP:
     case WM_XBUTTONUP:
+    case WM_SYSKEYUP:
+    case WM_KEYUP:
+        inputs::win32::release_key(in_wparam, extended, scancode);
+        return 0;
     case WM_XBUTTONDBLCLK:
-        LOG_INFO("button");
-        return TRUE;
+        LOG_DEBUG("dbclck");
+        return 0;
+    case WM_CHAR:
+        return 0;
+    case WM_SYSCHAR:
+        LOG_DEBUG("syschar");
+        return 0;
+    case WM_DEADCHAR:
+        return 0;
+    case WM_COMMAND:
+        LOG_DEBUG("com");
+        return 0;
+    case WM_SYSCOMMAND:
+        LOG_DEBUG("syscom");
+        break;
     }
-
     return ::DefWindowProc(window_handle, in_msg, in_wparam, in_lparam);
 }
 
@@ -163,7 +198,8 @@ void Window_Win32::register_window_class(HINSTANCE handle)
 
     WNDCLASS application_window_class = {
         .style       = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS,
-        .lpfnWndProc = [](HWND in_hwnd, uint32_t in_msg, WPARAM wparam, LPARAM lparam) -> LRESULT {
+        .lpfnWndProc = [](HWND in_hwnd, uint32_t in_msg, WPARAM wparam, LPARAM lparam) -> LRESULT
+        {
             if (window::win32::Window_Win32* window = window::win32::Window_Win32::find_window_by_handle(in_hwnd))
                 return window->window_behaviour(in_msg, wparam, lparam);
 

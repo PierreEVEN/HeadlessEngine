@@ -17,7 +17,7 @@ int main()
     application::create();
 
 
-    application::inputs::ActionMapping toto(application::inputs::EMouseAxis::X, {application::inputs::EButtons::Keyboard_B});
+    application::inputs::ActionMapping toto(application::inputs::EAxis::Mouse_X, {application::inputs::EButtons::Keyboard_B});
 
     toto.value.value_changed.add_lambda(
         []([[maybe_unused]] bool value)
