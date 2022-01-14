@@ -27,7 +27,9 @@ class MaterialInstance_VK : public MaterialInstance
     };
 
     [[nodiscard]] const shader_builder::BindingDescriptor* find_binding(const std::string& binding_name, const RenderPassID& render_pass) const;
-
+protected:
+    void push_constants_internal(bool is_vertex_stage, const void* data, size_t data_size) override;
+private:
     RenderPassData<DescriptorSet>                             descriptor_sets;
     std::unordered_map<std::string, std::shared_ptr<Buffer>>  write_buffers;
     std::unordered_map<std::string, std::shared_ptr<Texture>> write_textures;
