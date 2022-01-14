@@ -8,6 +8,7 @@
 #include "types/magic_enum.h"
 #include <cpputils/logger.hpp>
 #include <functional>
+#include <set>
 #include <spirv-tools/libspirv.hpp>
 #include <spirv_reflect.h>
 
@@ -101,13 +102,17 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
         LOG_WARNING("var is null");
         return {};
     }
-    auto       name_split = stringutils::split(variable->name, {'.'});
-    const auto type       = get_type(variable->type_description);
-    uint32_t   offset     = current_offset;
+    std::string name       = "@";
+    auto        name_split = stringutils::split(variable->name, {'.'});
+    for (int i = 1; i < name_split.size(); ++i)
+        name += "." + name_split[i];
+
+    const auto type   = get_type(variable->type_description);
+    uint32_t   offset = current_offset;
     current_offset += static_cast<uint32_t>(type.type_size);
 
     return Property{
-        .name     = name_split[name_split.size() - 1],
+        .name     = name,
         .type     = type,
         .offset   = offset,
         .location = variable->location,
@@ -161,9 +166,15 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     uint32_t offset    = 0;
     result.input_size  = 0;
     result.output_size = 0;
+
+    if (shader_module.push_constant_block_count != 0)
+        result.push_constant = PushConstant{
+            .structure_size = shader_module.push_constant_blocks[0].size,
+        };
+
     for (uint32_t i = 0; i < shader_module.input_variable_count; ++i)
     {
-        if (!(shader_module.input_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN))
+        if (!(shader_module.input_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN) || true)
         {
             auto property = reflect_property(shader_module.input_variables[i], offset);
             result.inputs.emplace_back(property);
@@ -173,7 +184,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     offset = 0;
     for (uint32_t i = 0; i < shader_module.output_variable_count; ++i)
     {
-        if (!(shader_module.output_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN))
+        if (!(shader_module.output_variables[i]->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN) || true)
         {
             auto property = reflect_property(shader_module.output_variables[i], offset);
             result.outputs.emplace_back(property);
@@ -184,7 +195,6 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     for (uint32_t i = 0; i < shader_module.descriptor_binding_count; ++i)
     {
         const auto& binding = shader_module.descriptor_bindings[i];
-
         result.bindings.emplace_back(BindingDescriptor{
             .name            = std::string(binding.name).empty() ? binding.type_description->type_name : binding.name,
             .descriptor_type = make_descriptor_type(binding.descriptor_type),
@@ -229,27 +239,32 @@ OperationStatus check_pass_result(const PassResult& pass)
         return result;
     }
 
-    for (const auto& input : pass.fragment.reflection.inputs)
+    const auto& vertex_bindings   = pass.vertex.reflection.bindings;
+    const auto& fragment_bindings = pass.fragment.reflection.bindings;
+    for (uint32_t start = 0; start < vertex_bindings.size(); ++start)
     {
-        bool found_output = false;
-
-        for (const auto& output : pass.vertex.reflection.outputs)
-        {
-            if (output.name == input.name)
-            {
-                found_output = output.location == input.location;
-                break;
-            }
-        }
-        if (!found_output)
-        {
-            result.add_error({
-                .column        = -1,
-                .line          = -1,
-                .error_message = stringutils::format("missing output variable %s in vertex stage at location %d", input.name.c_str(), input.location),
-            });
-        }
+        for (uint32_t i = start + 1; i < vertex_bindings.size(); ++i)
+            if (vertex_bindings[i].name == vertex_bindings[start].name || vertex_bindings[i].binding == vertex_bindings[start].binding)
+                result.add_error({
+                    .column        = -1,
+                    .line          = -1,
+                    .error_message = stringutils::format("binding conflict in vertex stage : %s : %d => %s : %d", vertex_bindings[i].name.c_str(), vertex_bindings[i].binding, vertex_bindings[start].name.c_str(),
+                                                         vertex_bindings[start].binding),
+                });
     }
+
+    for (uint32_t start = 0; start < fragment_bindings.size(); ++start)
+    {
+        for (uint32_t i = start + 1; i < fragment_bindings.size(); ++i)
+            if (fragment_bindings[i].name == fragment_bindings[start].name || fragment_bindings[i].binding == fragment_bindings[start].binding)
+                result.add_error({
+                    .column        = -1,
+                    .line          = -1,
+                    .error_message = stringutils::format("binding conflict in fragment stage : %s : %d => %s : %d", fragment_bindings[i].name.c_str(), fragment_bindings[i].binding, fragment_bindings[start].name.c_str(),
+                                                         fragment_bindings[start].binding),
+                });
+    }
+
     if (!result)
         return result;
 
@@ -286,21 +301,11 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
             vertex_blocks[i].text = pass.second.vertex_chunks[i].content;
             vertex_blocks[i].name = pass.second.vertex_chunks[i].file;
         }
-        StageResult vertex_result;
-        vertex_result.spirv                          = compiler->build_to_spirv(vertex_blocks, compilation_result.properties.shader_language, EShaderStage::Vertex);
+        StageResult    vertex_result;
+        InterstageData vertex_output;
+        vertex_result.spirv                          = compiler->build_to_spirv(vertex_blocks, compilation_result.properties.shader_language, EShaderStage::Vertex, {}, vertex_output);
         vertex_result.reflection                     = build_reflection(vertex_result.spirv);
         compilation_result.passes[pass.first].vertex = vertex_result;
-
-        {
-            const auto&    context = spvContextCreate(SPV_ENV_VULKAN_1_2);
-            spv_text       text;
-            spv_diagnostic diag;
-            spvBinaryToText(context, vertex_result.spirv.data(), vertex_result.spirv.size(), 0, &text, &diag);
-            spvContextDestroy(context);
-            std::ofstream test_fs("output_vs.spv");
-            test_fs << text->str;
-            spvTextDestroy(text);
-        }
 
         std::vector<ShaderBlock> fragment_block(pass.second.fragment_chunks.size());
         for (size_t i = 0; i < pass.second.fragment_chunks.size(); ++i)
@@ -308,21 +313,12 @@ CompilationResult compile_shader(const std::filesystem::path& file_path)
             fragment_block[i].text = pass.second.fragment_chunks[i].content;
             fragment_block[i].name = pass.second.fragment_chunks[i].file;
         }
-        StageResult fragment_result;
-        fragment_result.spirv                          = compiler->build_to_spirv(fragment_block, compilation_result.properties.shader_language, EShaderStage::Fragment);
+        StageResult    fragment_result;
+        InterstageData fragment_output;
+        fragment_result.spirv                          = compiler->build_to_spirv(fragment_block, compilation_result.properties.shader_language, EShaderStage::Fragment, vertex_output, fragment_output);
         fragment_result.reflection                     = build_reflection(fragment_result.spirv);
         compilation_result.passes[pass.first].fragment = fragment_result;
 
-        {
-            const auto&    context = spvContextCreate(SPV_ENV_VULKAN_1_2);
-            spv_text       text;
-            spv_diagnostic diag;
-            spvBinaryToText(context, fragment_result.spirv.data(), fragment_result.spirv.size(), 0, &text, &diag);
-            spvContextDestroy(context);
-            std::ofstream test_fs("output_fs.spv");
-            test_fs << text->str;
-            spvTextDestroy(text);
-        }
         compilation_result.passes[pass.first].status = check_pass_result(compilation_result.passes[pass.first]);
     }
 
@@ -336,7 +332,7 @@ bool print_status(const std::string& prefix, const OperationStatus& status)
     return status;
 }
 
-bool print_compilation_results(const CompilationResult& results)
+bool print_compilation_errors(const CompilationResult& results)
 {
     if (!results.status)
         return print_status("shader compilation failed", results.status);
@@ -359,5 +355,47 @@ bool print_compilation_results(const CompilationResult& results)
             return print_status("shader pass [" + pass.first + "] error in fragment shader reflection", pass.second.fragment.reflection.status);
     }
     return true;
+}
+
+static void print_stage_reflection___(const ReflectionResult& result)
+{
+    std::string refl_result = "\n";
+    refl_result += "INPUTS\n";
+    for (const auto& in : result.inputs)
+    {
+        refl_result += stringutils::format("\t%s %s\n", in.type.type_name.c_str(), in.name.c_str());
+        refl_result += stringutils::format("\t\t=> #%d : [%d]\n", in.location, in.type.type_size);
+    }
+
+    refl_result += "OUTPUTS\n ";
+    for (const auto& in : result.outputs)
+    {
+        refl_result += stringutils::format("\t%s %s\n", in.type.type_name.c_str(), in.name.c_str());
+        refl_result += stringutils::format("\t\t=> #%d : [%d]\n", in.location, in.type.type_size);
+    }
+
+    refl_result += "BINDINGS\n";
+    for (const auto& bn : result.bindings)
+    {
+        refl_result += stringutils::format("\t[%d] %s %s\n", bn.binding, bn.name.c_str(), magic_enum::enum_name(bn.descriptor_type).data());
+    }
+
+    if (result.push_constant)
+        refl_result += stringutils::format("PUSH CONSTANT : [%d]\n", result.push_constant->structure_size);
+
+    LOG_INFO("%s", refl_result.c_str());
+}
+
+void print_compilation_results(const CompilationResult& results)
+{
+    for (const auto& pass : results.passes)
+    {
+        LOG_INFO("[PASS %s]", pass.first.c_str());
+
+        LOG_INFO("  ~VERTEX stage");
+        print_stage_reflection___(pass.second.vertex.reflection);
+        LOG_INFO("  ~FRAGMENT stage");
+        print_stage_reflection___(pass.second.fragment.reflection);
+    }
 }
 } // namespace shader_builder

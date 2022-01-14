@@ -3,15 +3,19 @@
 #include "application/application.h"
 #include "application/inputs/input_codes.h"
 #include "application/inputs/input_manager.h"
+#include "gfx/materials/master_material.h"
+#include "gfx/materials/material_instance.h"
 
 #include <imgui.h>
 
 namespace ui
 {
-static ImGuiContext*                 imgui_context = nullptr;
-static std::shared_ptr<gfx::Texture> font_texture;
-static gfx::Buffer*                  vertex_buffer;
-static gfx::Buffer*                  index_buffer;
+static ImGuiContext*                          imgui_context = nullptr;
+static std::shared_ptr<gfx::Texture>          font_texture;
+static gfx::Buffer*                           vertex_buffer;
+static gfx::Buffer*                           index_buffer;
+static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
+static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
 
 static const char* get_clipboard_text(void* user_data)
 {
@@ -99,10 +103,15 @@ void ImGuiWrapper::init_internal()
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     font_texture    = gfx::Texture::create(width, height, gfx::TextureParameter{});
     io.Fonts->TexID = font_texture.get();
+
+    imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb");
+    imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
 }
 
 void ImGuiWrapper::destroy()
 {
+    imgui_base_material     = nullptr;
+    imgui_material_instance = nullptr;
     ImGui::DestroyContext();
     font_texture = nullptr;
 }
@@ -172,31 +181,31 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
      * PREPARE MATERIALS
      */
 
-    auto         pipeline  = material_instance->get_material_base()->get_pipeline(render_pass);
-    VkDeviceSize offsets[] = {0};
-    material_instance->bind_material(render_context);
-    vkCmdBindVertexBuffers(render_context.command_buffer, 0, 1, &vertex_buffer[image_index].get_buffer(), offsets);
-    vkCmdBindIndexBuffer(render_context.command_buffer, index_buffer[image_index].get_buffer(), 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+    float scale_x = 2.0f / draw_data->DisplaySize.x;
+    float scale_y = -2.0f / draw_data->DisplaySize.y;
 
-    float scale[2] = {
-        2.0f / draw_data->DisplaySize.x,
-        -2.0f / draw_data->DisplaySize.y,
-    };
-    float translate[2] = {
-        -1.0f - draw_data->DisplayPos.x * scale[0],
-        1.0f - draw_data->DisplayPos.y * scale[1],
+    const struct ConstantData
+    {
+        float scale_x;
+        float scale_y;
+        float translate_x;
+        float translate_y;
+    } constant_data = {
+        .scale_x     = scale_x,
+        .scale_y     = scale_y,
+        .translate_x = -1.0f - draw_data->DisplayPos.x * scale_x,
+        .translate_y = 1.0f - draw_data->DisplayPos.y * scale_y,
     };
 
-    vkCmdPushConstants(render_context.command_buffer, *pipeline->get_pipeline_layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 2, scale);
-    vkCmdPushConstants(render_context.command_buffer, *pipeline->get_pipeline_layout(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+    command_buffer->push_constants(true, constant_data);
 
     /**
      * Draw meshs
      */
 
     // Will project scissor/clipping rectangles into framebuffer space
-    ImVec2 clip_off   = draw_data->DisplayPos;       // (0,0) unless using multi-viewports
-    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+    const ImVec2 clip_off   = draw_data->DisplayPos;       // (0,0) unless using multi-viewports
+    const ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -236,15 +245,19 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
                     });
 
                     // Bind descriptorset with font or user texture
+
+                    /*
                     VkDescriptorSet desc_set[1] = {static_cast<VkDescriptorSet>(pcmd->TextureId)};
                     if (!pcmd->TextureId)
                         desc_set[1] = {static_cast<VkDescriptorSet>(
                             TAssetPtr<ATexture>("default_texture")->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts()))};
                     vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1, desc_set, 0, NULL);
+                    */
+                    imgui_material_instance->bind_texture("test", *static_cast<std::shared_ptr<gfx::Texture>*>(pcmd->TextureId));
 
-                    command_buffer->draw_mesh();
+                    // command_buffer->draw_mesh();
                     // Draw
-                    vkCmdDrawIndexed(render_context.command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    // vkCmdDrawIndexed(render_context.command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
             }
         }

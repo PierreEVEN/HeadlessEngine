@@ -88,18 +88,23 @@ void CommandBuffer_VK::draw_mesh_instanced_indirect(StaticMesh* in_buffer, Mater
 void CommandBuffer_VK::set_scissor(const Scissor& scissors)
 {
     const VkRect2D vk_scissor{
-        .extent =
-            VkExtent2D{
-                .width  = scissors.width,
-                .height = scissors.height,
-            },
         .offset =
             VkOffset2D{
                 .x = scissors.offset_x,
                 .y = scissors.offset_y,
             },
+        .extent =
+            VkExtent2D{
+                .width  = scissors.width,
+                .height = scissors.height,
+            },
     };
     vkCmdSetScissor(*command_buffer, 0, 1, &vk_scissor);
+}
+
+void CommandBuffer_VK::push_constant(bool is_vertex_buffer, MaterialInstance* material, void* data, uint32_t data_size)
+{
+    vkCmdPushConstants(*command_buffer, , is_vertex_buffer ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, 0, )//@TIDIa fa
 }
 
 void CommandBuffer_VK::start()

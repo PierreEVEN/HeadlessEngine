@@ -15,14 +15,14 @@ void input_axis(uint32_t axis_code, int64_t scroll_param, int64_t pos_param)
     switch (axis_code)
     {
     case WM_MOUSEMOVE:
-        InputManager::get().move_axis(EAxis::Mouse_X, GET_X_LPARAM(pos_param));
-        InputManager::get().move_axis(EAxis::Mouse_Y, GET_Y_LPARAM(pos_param));
+        InputManager::get().move_axis(EAxis::Mouse_X, static_cast<float>(GET_X_LPARAM(pos_param)));
+        InputManager::get().move_axis(EAxis::Mouse_Y, static_cast<float>(GET_Y_LPARAM(pos_param)));
         break;
     case WM_MOUSEWHEEL:
-        InputManager::get().move_axis(EAxis::Scroll_Y, GET_Y_LPARAM(scroll_param));
+        InputManager::get().move_axis(EAxis::Scroll_Y, static_cast<float>(GET_Y_LPARAM(scroll_param)));
         break;
     case WM_MOUSEHWHEEL:
-        InputManager::get().move_axis(EAxis::Scroll_X, GET_X_LPARAM(scroll_param));
+        InputManager::get().move_axis(EAxis::Scroll_X, static_cast<float>(GET_X_LPARAM(scroll_param)));
         break;
     default:
         LOG_WARNING("unhandled axis : 0x%x", axis_code);

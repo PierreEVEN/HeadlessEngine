@@ -1,25 +1,32 @@
 #ifndef DEMO_FRAGMENT_H_
 #define DEMO_FRAGMENT_H_
 
-Texture2D textureColor : register(t1);
-SamplerState samplerColor : register(s1);
-Texture2D textureNormalMap : register(t2);
-SamplerState samplerNormalMap : register(s2);
+struct FSOutput
+{
+	float4 Position 	: SV_TARGET0;
+	float4 Normal 		: SV_TARGET1;
+	float4 Albedo 		: SV_TARGET2;
+};
 
-FSOutput main(VsToFsStruct input)
+Texture2D textureColor;
+SamplerState samplerColor;
+Texture2D textureNormalMap;
+SamplerState samplerNormalMap;
+
+FSOutput main(VsToFsStruct fs_input)
 {
 	FSOutput output = (FSOutput)0;
-	output.Position = float4(input.WorldPos, 1.0);
+	output.Position = float4(fs_input.WorldPos, 1.0);
 
 	// Calculate normal in tangent space
-	float3 N = normalize(input.Normal);
-	float3 T = normalize(input.Tangent);
+	float3 N = normalize(fs_input.Normal);
+	float3 T = normalize(fs_input.Tangent);
 	float3 B = cross(N, T);
 	float3x3 TBN = float3x3(T, B, N);
-	float3 tnorm = mul(normalize(textureNormalMap.Sample(samplerNormalMap, input.UV).xyz * 2.0 - float3(1.0, 1.0, 1.0)), TBN);
+	float3 tnorm = mul(normalize(textureNormalMap.Sample(samplerNormalMap, fs_input.UV).xyz * 2.0 - float3(1.0, 1.0, 1.0)), TBN);
 	output.Normal = float4(tnorm, 1.0);
 
-	output.Albedo = textureColor.Sample(samplerColor, input.UV);
+	output.Albedo = textureColor.Sample(samplerColor, fs_input.UV);
 	return output;
 }
 

@@ -108,4 +108,8 @@ const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const
 
     return nullptr;
 }
+
+void MaterialInstance_VK::push_constants_internal(CommandBuffer* command_buffer, bool is_vertex_stage, const void* data, size_t data_size)
+{
+}
 } // namespace gfx::vulkan

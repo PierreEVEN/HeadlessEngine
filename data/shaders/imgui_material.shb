@@ -1,0 +1,51 @@
+#pragma shader_language HLSL
+
+global(ui_pass, resolve_pass)
+[
+	struct VsToFs 
+	{
+		float4 Pos 		: SV_Position;
+		float4 Color 	: COLOR;
+		float2 UV 	 	: TEXCOORD;
+	};
+]
+
+vertex(ui_pass, resolve_pass)
+[
+	struct VSInput
+	{
+		 float2 aPos 	: POSITION;
+		 float2 aUV 	: TEXCOORD;
+		float4 aColor 	: COLOR;
+	};
+	
+	struct PushConsts 
+	{
+		float2 uScale;
+		float2 uTranslate;
+	};
+	[[vk::push_constant]] ConstantBuffer<PushConsts> pc;
+	
+	VsToFs main(VSInput input)
+	{
+		VsToFs Out;
+		Out.Color 	= input.aColor;
+		Out.UV 		= input.aUV;
+		Out.Pos 	= float4(input.aPos * pc.uScale + pc.uTranslate, 0, 1);
+		return Out;
+	}
+]
+
+fragment(ui_pass, resolve_pass)
+[
+	Texture2D	 sTexture;;
+	SamplerState sSampler;
+
+	float4 main(VsToFs input) : SV_TARGET
+	{
+		return input.Color * sTexture.Sample(sSampler, input.UV);
+	}
+]
+
+
+

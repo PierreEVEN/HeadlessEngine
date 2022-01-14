@@ -2,54 +2,47 @@
 
 global(gbuffer)
 [
-struct VsToFsStruct
-{
-    float4 Pos : SV_Position;
-    float2 Uv : TEXCOORD0;
-};
+    struct VsToFsStruct
+    {
+        float4 Pos : SV_Position;
+        float2 Uv  : TEXCOORD;
+    };
 ]
 
 vertex(gbuffer, region_combine, resolve_pass)
 [
-VsToFsStruct main(uint vertex_index : SV_VertexID)
-{
-    VsToFsStruct output = (VsToFsStruct) 0;
-    output.Uv = float2((vertex_index << 1) & 2, vertex_index & 2);
-    output.Pos = float4(output.Uv * 2.0f - 1.0f, 0.0f, 1.0f);
-    return output;
-}
+    VsToFsStruct main(uint vertex_index : SV_VertexID)
+    {
+        VsToFsStruct output;
+        output.Uv = float2((vertex_index << 1) & 2, vertex_index & 2);
+        output.Pos = float4(output.Uv * 2.0f - 1.0f, 0.0f, 1.0f);
+        return output;
+    }
 ];
 
 fragment(gbuffer) 
 [
-struct FSOutput
-{
-    float4 Color1 : SV_TARGET0;
-    float4 Color2 : SV_TARGET1;
-    float4 Color3 : SV_TARGET2;
-};
+    struct FSOutput
+    {
+        float4 Color1 : SV_TARGET0;
+        float4 Color2 : SV_TARGET1;
+        float4 Color3 : SV_TARGET2;
+    };
 
-FSOutput main(VsToFsStruct input)
-{
-    FSOutput output = (FSOutput) 0;
-    output.Color1 = float4(1, 1, 1, 1);
-    output.Color2 = float4(1, 1, 1, 1);
-    output.Color3 = float4(1, 1, 1, 1);
-    return output;
-}
+    FSOutput main(VsToFsStruct input)
+    {
+        FSOutput output = (FSOutput) 0;
+        output.Color1 = float4(input.Uv, 1, 1);
+        output.Color2 = float4(1, input.Uv, 1);
+        output.Color3 = float4(input.Uv.r, 1, input.Uv.g, 1);
+        return output;
+    }
 ];
 
 fragment(region_combine, resolve_pass) 
 [
-struct FSOutput
-{
-    float4 Color1 : SV_TARGET0;
-};
-
-FSOutput main(VsToFsStruct input)
-{
-    FSOutput output = (FSOutput) 0;
-    output.Color1 = float4(input.Uv, 1, 1);
-    return output;
-}
+    float4 main(VsToFsStruct input) : SV_TARGET
+    {
+        return float4(input.Uv, 1, 1);
+    }
 ];

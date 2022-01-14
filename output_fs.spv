@@ -4,6 +4,7 @@
 ; Bound: 61
 ; Schema: 0
 OpCapability Shader
+OpExtension "SPV_GOOGLE_hlsl_functionality1"
 %2 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %5 "main" %40 %44 %48
@@ -16,13 +17,19 @@ OpName %40 "input.Pos"
 OpName %44 "input.Uv"
 OpName %48 "@entryPointOutput.Color1"
 OpModuleProcessed "entry-point main"
+OpModuleProcessed "auto-map-bindings"
+OpModuleProcessed "auto-map-locations"
+OpModuleProcessed "hlsl-iomap"
 OpModuleProcessed "client vulkan100"
 OpModuleProcessed "target-env spirv1.3"
 OpModuleProcessed "target-env vulkan1.2"
 OpModuleProcessed "hlsl-offsets"
 OpDecorate %40 BuiltIn FragCoord
+OpDecorateString %40 UserSemantic "SV_POSITION"
 OpDecorate %44 Location 0
+OpDecorateString %44 UserSemantic "TEXCOORD0"
 OpDecorate %48 Location 0
+OpDecorateString %48 UserSemantic "SV_TARGET0"
 %3 = OpTypeVoid
 %4 = OpTypeFunction %3
 %7 = OpTypeFloat 32

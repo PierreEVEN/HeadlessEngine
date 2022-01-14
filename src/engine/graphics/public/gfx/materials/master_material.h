@@ -20,8 +20,9 @@ class MasterMaterial
         enabled_render_passes.clear();
         for (const auto& pass : compilation_results.passes)
         {
-            if (const auto pass_id = RenderPassID::get(pass.first))
+            if (RenderPassID::exists(pass.first))
             {
+                const auto pass_id                = RenderPassID::get(pass.first);
                 vertex_reflection.init(pass_id)   = pass.second.vertex.reflection;
                 fragment_reflection.init(pass_id) = pass.second.fragment.reflection;
                 enabled_render_passes.emplace_back(pass_id);

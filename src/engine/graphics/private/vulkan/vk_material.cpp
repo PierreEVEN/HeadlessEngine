@@ -77,10 +77,10 @@ void MasterMaterial_VK::create_modules(const shader_builder::CompilationResult& 
 {
     for (auto& pass : compilation_results.passes)
     {
-        const RenderPassID pass_id = RenderPassID::get(pass.first);
-
-        if (!pass_id)
+        if (!RenderPassID::exists(pass.first))
             continue;
+
+        const RenderPassID pass_id = RenderPassID::get(pass.first);
 
         MaterialPassData& pass_data = per_pass_data.init(pass_id);
 
@@ -133,8 +133,12 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         const RenderPass_VK* render_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(pass_data.id()));
 
         std::vector<VkDescriptorSetLayoutBinding> pipeline_bindings = {};
+        std::vector<VkPushConstantRange>          push_constants    = {};
 
-        for (const auto& binding : get_vertex_reflection(pass_data.id()).bindings)
+        const auto vertex_reflection_data   = get_vertex_reflection(pass_data.id());
+        const auto fragment_reflection_data = get_fragment_reflection(pass_data.id());
+
+        for (const auto& binding : vertex_reflection_data.bindings)
         {
             pipeline_bindings.emplace_back(VkDescriptorSetLayoutBinding{
                 .binding            = binding.binding,
@@ -145,7 +149,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             });
         }
 
-        for (const auto& binding : get_fragment_reflection(pass_data.id()).bindings)
+        for (const auto& binding : fragment_reflection_data.bindings)
         {
             pipeline_bindings.emplace_back(VkDescriptorSetLayoutBinding{
                 .binding            = binding.binding,
@@ -155,6 +159,27 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .pImmutableSamplers = nullptr,
             });
         }
+
+        if (vertex_reflection_data.push_constant)
+        {
+            push_constants.emplace_back(VkPushConstantRange{
+                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                .offset     = 0,
+                .size       = vertex_reflection_data.push_constant->structure_size,
+            });
+            LOG_WARNING("VS PC : %d", vertex_reflection_data.push_constant->structure_size);
+        }
+        if (fragment_reflection_data.push_constant)
+        {
+            push_constants.emplace_back(VkPushConstantRange{
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .offset     = 0,
+                .size       = fragment_reflection_data.push_constant->structure_size,
+            });
+
+            LOG_WARNING("FS PC : %d", fragment_reflection_data.push_constant->structure_size);
+        }
+
 
         VkDescriptorSetLayoutCreateInfo layout_infos{
             .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -180,12 +205,13 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             },
         };
 
+
         VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount         = 1,
             .pSetLayouts            = &pass_data->descriptor_set_layout,
-            .pushConstantRangeCount = 0,
-            .pPushConstantRanges    = nullptr,
+            .pushConstantRangeCount = static_cast<uint32_t>(push_constants.size()),
+            .pPushConstantRanges    = push_constants.data(),
         };
         VK_CHECK(vkCreatePipelineLayout(get_device(), &pipeline_layout_infos, nullptr, &pass_data->layout), "Failed to create pipeline layout");
 

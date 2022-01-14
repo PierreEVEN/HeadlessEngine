@@ -9,7 +9,7 @@ struct UBO
 	float4 instancePos[3];
 };
 
-cbuffer ubo : register(b0) { UBO ubo; }
+cbuffer ubo { UBO ubo; }
 
 
 #endif // UBO_DEFINITION_H_

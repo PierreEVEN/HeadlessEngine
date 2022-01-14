@@ -2,6 +2,7 @@
 
 #include "operation.h"
 
+#include <optional>
 #include <types/type_format.h>
 #include <unordered_map>
 
@@ -45,12 +46,18 @@ struct BindingDescriptor
     uint32_t     binding;
 };
 
+struct PushConstant
+{
+    uint32_t    structure_size;
+};
+
 struct ReflectionResult
 {
     OperationStatus                status;
     std::vector<BindingDescriptor> bindings;
     std::vector<Property>          inputs;
     std::vector<Property>          outputs;
+    std::optional<PushConstant>    push_constant;
     uint32_t                       input_size;
     uint32_t                       output_size;
 };
@@ -134,15 +141,15 @@ enum class EAlphaMode
 
 struct ShaderProperties
 {
-    std::string    shader_version  = "1.0";
+    std::string     shader_version  = "1.0";
     EShaderLanguage shader_language = EShaderLanguage::HLSL;
-    ECulling       culling         = ECulling::Back;
-    EFrontFace     front_face      = EFrontFace::CounterClockwise;
-    ETopology      topology        = ETopology::Triangles;
-    EPolygonMode   polygon_mode    = EPolygonMode::Fill;
-    EAlphaMode     alpha_mode      = EAlphaMode::Opaque;
-    bool           depth_test      = true;
-    float          line_width      = 1.0f;
+    ECulling        culling         = ECulling::Back;
+    EFrontFace      front_face      = EFrontFace::CounterClockwise;
+    ETopology       topology        = ETopology::Triangles;
+    EPolygonMode    polygon_mode    = EPolygonMode::Fill;
+    EAlphaMode      alpha_mode      = EAlphaMode::Opaque;
+    bool            depth_test      = true;
+    float           line_width      = 1.0f;
 };
 
 struct CompilationResult

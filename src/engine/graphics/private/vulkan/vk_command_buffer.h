@@ -23,6 +23,8 @@ class CommandBuffer_VK : public CommandBuffer
     void draw_mesh_instanced_indirect(StaticMesh* in_buffer, MaterialInstance* in_material) override;
     void set_scissor(const Scissor& scissors) override;
 
+    void push_constant(bool is_vertex_buffer, MaterialInstance* material, void* data, uint32_t data_size) override;
+
     VkCommandBuffer& operator*()
     {
         return *command_buffer;

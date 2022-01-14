@@ -30,10 +30,19 @@ class MaterialInstance
     }
     virtual void bind_material(CommandBuffer* command_buffer) = 0;
 
+    template <typename Data_T> void push_constants(bool is_vertex_stage, const Data_T& data)
+    {
+        push_constants_internal(is_vertex_stage, &data, sizeof(Data_T));
+    }
+
+    // virtual void push_constants_internal(void* data, size_t data_size) = 0;
+
   protected:
-    MaterialInstance(const std::shared_ptr<MasterMaterial>& base) : base_material(base)
+    MaterialInstance(std::shared_ptr<MasterMaterial> base) : base_material(std::move(base))
     {
     }
+
+    virtual void push_constants_internal(bool is_vertex_stage, const void* data, size_t data_size) = 0;
 
   private:
     std::shared_ptr<MasterMaterial> base_material;
