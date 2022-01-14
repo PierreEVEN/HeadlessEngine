@@ -43,7 +43,7 @@ class IoMapResolver : public glslang::TIoMapResolver
     }
     int resolveUniformLocation(EShLanguage, glslang::TVarEntryInfo& ent) override
     {
-        return ent.newLocation = binding_map[ent.symbol];
+        return -1;
     }
     bool validateInOut(EShLanguage, glslang::TVarEntryInfo&) override
     {
@@ -53,7 +53,9 @@ class IoMapResolver : public glslang::TIoMapResolver
     int resolveInOutLocation(EShLanguage, glslang::TVarEntryInfo& ent) override
     {
         if (ent.symbol->getQualifier().builtIn)
+        {
             return -1;
+        }
 
         const auto names = stringutils::split(ent.symbol->getName().c_str(), {'.'});
 
@@ -152,7 +154,6 @@ std::vector<uint32_t> GlslangCompiler::build_to_spirv(const std::vector<ShaderBl
     shader.setAutoMapBindings(true);
     shader.setAutoMapLocations(true);
     shader.setHlslIoMapping(true);
-    shader.setEnvTargetHlslFunctionality1();
     shader.setStringsWithLengthsAndNames(vertex_strings.data(), vertex_lengths.data(), vertex_names.data(), static_cast<int>(shader_code.size()));
 
     if (!shader.parse(&get_resources(), 0, false, messages, *get()->get_includer()))

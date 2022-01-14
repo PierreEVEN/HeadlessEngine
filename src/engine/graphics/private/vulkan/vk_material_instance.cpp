@@ -96,6 +96,13 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
 }
 
+void MaterialInstance_VK::bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
+{
+
+
+
+}
+
 const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const std::string& binding_name, const RenderPassID& render_pass) const
 {
     for (auto& binding : get_base()->get_vertex_reflection(render_pass).bindings)
@@ -107,9 +114,5 @@ const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const
             return &binding;
 
     return nullptr;
-}
-
-void MaterialInstance_VK::push_constants_internal(CommandBuffer* command_buffer, bool is_vertex_stage, const void* data, size_t data_size)
-{
 }
 } // namespace gfx::vulkan

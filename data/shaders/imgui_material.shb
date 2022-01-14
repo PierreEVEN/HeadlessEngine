@@ -38,7 +38,7 @@ vertex(ui_pass, resolve_pass)
 
 fragment(ui_pass, resolve_pass)
 [
-	Texture2D	 sTexture;;
+	Texture2D	 sTexture;
 	SamplerState sSampler;
 
 	float4 main(VsToFs input) : SV_TARGET

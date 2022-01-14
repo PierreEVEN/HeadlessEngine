@@ -39,6 +39,13 @@ void UICanvas::init(const Context& context)
 {
     imgui_draw_lock__.lock();
     ImGuiWrapper::begin_frame(context);
+
+    ImGui::Begin("test");
+    {
+        ImGui::Text("toto");
+    }
+    ImGui::End();
+    ImGui::ShowDemoWindow();
 }
 
 void UICanvas::submit(gfx::CommandBuffer* command_buffer)

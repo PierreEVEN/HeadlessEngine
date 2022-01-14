@@ -1,9 +1,9 @@
 
 
-#include "ui.h"
 #include "application/application.h"
 #include "application/inputs/input_mapping.h"
 #include "application/window.h"
+#include "ui.h"
 
 #include "gfx/gfx.h"
 
@@ -20,18 +20,23 @@ int main()
      */
     application::create();
     gfx::init();
-    application::window::Window*  window  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
-    gfx::Surface*                 surface = gfx::Surface::create_surface(window);
+    application::window::Window* window  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
+    gfx::Surface*                surface = gfx::Surface::create_surface(window);
 
-    std::unique_ptr<ui::UICanvas> canvas  = std::make_unique<ui::UICanvas>(nullptr);
+    std::unique_ptr<ui::UICanvas> canvas = std::make_unique<ui::UICanvas>(nullptr);
 
     surface->on_draw->add_lambda(
         [&](gfx::CommandBuffer* command_buffer)
         {
-            canvas->init(ui::UICanvas::Context{});
-            
+            canvas->init(ui::UICanvas::Context{
+                .draw_pos_x  = 0,
+                .draw_pos_y  = 0,
+                .draw_width  = 800,
+                .draw_height = 600,
+            });
+
             canvas->start_window("toto");
-            canvas->label("this is a text yay");            
+            canvas->label("this is a text yay");
             canvas->end_window();
 
             canvas->submit(command_buffer);

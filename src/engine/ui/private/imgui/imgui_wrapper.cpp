@@ -3,6 +3,7 @@
 #include "application/application.h"
 #include "application/inputs/input_codes.h"
 #include "application/inputs/input_manager.h"
+#include "gfx/StaticMesh.h"
 #include "gfx/materials/master_material.h"
 #include "gfx/materials/material_instance.h"
 
@@ -12,8 +13,7 @@ namespace ui
 {
 static ImGuiContext*                          imgui_context = nullptr;
 static std::shared_ptr<gfx::Texture>          font_texture;
-static gfx::Buffer*                           vertex_buffer;
-static gfx::Buffer*                           index_buffer;
+static gfx::DynamicMesh*                      mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
 
@@ -106,10 +106,13 @@ void ImGuiWrapper::init_internal()
 
     imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb");
     imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
+
+    mesh = new gfx::DynamicMesh("imgui mesh", std::vector<ImDrawVert>{}, {});
 }
 
 void ImGuiWrapper::destroy()
 {
+    delete mesh;
     imgui_base_material     = nullptr;
     imgui_material_instance = nullptr;
     ImGui::DestroyContext();
@@ -141,7 +144,7 @@ void ImGuiWrapper::begin_frame(const UICanvas::Context& context)
 void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
 {
     ImGui::EndFrame();
-
+    ImGui::Render();
     const auto* draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     const int fb_width  = static_cast<int>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -153,7 +156,7 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
      * BUILD VERTEX BUFFERS
      */
     // Get pointer to buffer data
-    vertex_buffer->set_data_lambda(
+    mesh->get_vertex_buffer()->set_data_lambda(
         [&](void* vertex_ptr)
         {
             auto* vertex_data = static_cast<uint8_t*>(vertex_ptr);
@@ -165,7 +168,7 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
             }
         });
 
-    index_buffer->set_data_lambda(
+    mesh->get_index_buffer()->set_data_lambda(
         [&](void* index_ptr)
         {
             auto index_data = static_cast<uint8_t*>(index_ptr);
@@ -180,10 +183,9 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
     /**
      * PREPARE MATERIALS
      */
-
+   
     float scale_x = 2.0f / draw_data->DisplaySize.x;
     float scale_y = -2.0f / draw_data->DisplaySize.y;
-
     const struct ConstantData
     {
         float scale_x;
@@ -196,9 +198,8 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
         .translate_x = -1.0f - draw_data->DisplayPos.x * scale_x,
         .translate_y = 1.0f - draw_data->DisplayPos.y * scale_y,
     };
-
-    command_buffer->push_constants(true, constant_data);
-
+    command_buffer->push_constant(true, imgui_material_instance.get(), constant_data);
+   
     /**
      * Draw meshs
      */
@@ -244,20 +245,12 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
                         .height   = static_cast<uint32_t>(clip_rect.w - clip_rect.y),
                     });
 
-                    // Bind descriptorset with font or user texture
-
-                    /*
-                    VkDescriptorSet desc_set[1] = {static_cast<VkDescriptorSet>(pcmd->TextureId)};
-                    if (!pcmd->TextureId)
-                        desc_set[1] = {static_cast<VkDescriptorSet>(
-                            TAssetPtr<ATexture>("default_texture")->get_imgui_handle(0, *TAssetPtr<AMaterialBase>("imgui_base_material")->get_pipeline("ui_render_pass")->get_descriptor_sets_layouts()))};
-                    vkCmdBindDescriptorSets(render_context.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline->get_pipeline_layout(), 0, 1, desc_set, 0, NULL);
-                    */
-                    imgui_material_instance->bind_texture("test", *static_cast<std::shared_ptr<gfx::Texture>*>(pcmd->TextureId));
-
-                    // command_buffer->draw_mesh();
-                    // Draw
-                    // vkCmdDrawIndexed(render_context.command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    // Bind descriptor set with font or user texture
+                    if (pcmd->TextureId)
+                        imgui_material_instance->bind_texture("test", nullptr); // TODO handle textures
+                    //@TODO : handle dynamic meshes
+                    command_buffer->draw_mesh(nullptr, imgui_material_instance.get(), pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, pcmd->ElemCount);
+                    LOG_WARNING("draw");
                 }
             }
         }

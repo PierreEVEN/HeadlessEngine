@@ -14,8 +14,9 @@
 
 namespace gfx::vulkan
 {
-Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access)
-    : Buffer(buffer_name, buffer_stride, elements, buffer_usage, in_buffer_access)
+Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access, EBufferType buffer_type)
+    : Buffer(buffer_name, buffer_stride, elements, buffer_usage, in_buffer_access, buffer_type),
+      frame_data(buffer_type == EBufferType::STATIC ? SwapchainImageResource<FrameData>::make_static() : SwapchainImageResource<FrameData>::make_dynamic())
 {
     VkBufferUsageFlags vk_usage = 0;
     switch (usage)
@@ -80,33 +81,40 @@ Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uin
         .pUserData      = nullptr,
     };
 
-    VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &buffer, &memory, nullptr), "failed to create buffer");
-    buffer_infos = VkDescriptorBufferInfo{
-        .buffer = buffer,
-        .offset = 0,
-        .range  = count() * stride,
-    };
+    for (auto& data : frame_data)
+    {
+
+        VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &data.buffer, &data.memory, nullptr), "failed to create buffer");
+        data.buffer_infos = VkDescriptorBufferInfo{
+            .buffer = data.buffer,
+            .offset = 0,
+            .range  = count() * stride,
+        };
+    }
 }
 
 void* Buffer_VK::get_ptr()
 {
     void* dst_ptr;
-    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), memory, &dst_ptr), "failed to map memory");
+    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), frame_data->memory, &dst_ptr), "failed to map memory");
     return dst_ptr;
 }
 
 void Buffer_VK::submit_data()
 {
-    vmaUnmapMemory(get_vma_allocator(), memory);
+    vmaUnmapMemory(get_vma_allocator(), frame_data->memory);
 }
 Buffer_VK::~Buffer_VK()
 {
     vkDeviceWaitIdle(get_device());
-    vmaDestroyBuffer(get_vma_allocator(), buffer, memory);
+    vmaDestroyBuffer(get_vma_allocator(), frame_data->buffer, frame_data->memory);
 }
 
-void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
+void Buffer_VK::set_data(const void* data, size_t data_length, size_t offset)
 {
+    if (type == EBufferType::STATIC)
+        vkDeviceWaitIdle(get_device());
+
     if (buffer_access == EBufferAccess::GPU_ONLY)
     {
         LOG_ERROR("cannot set data from CPU on a GPU only buffer");
@@ -126,23 +134,23 @@ void Buffer_VK::set_data(void* data, size_t data_length, size_t offset)
     }
 
     void* dst_ptr;
-    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), memory, &dst_ptr), "failed to map memory");
+    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), frame_data->memory, &dst_ptr), "failed to map memory");
 
     memcpy(dst_ptr, data, data_length);
 
-    vmaUnmapMemory(get_vma_allocator(), memory);
+    vmaUnmapMemory(get_vma_allocator(), frame_data->memory);
 }
 
 void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)
 {
     if (usage == EBufferUsage::INDEX_DATA)
     {
-        vkCmdBindIndexBuffer(command_buffer, buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(command_buffer, frame_data->buffer, 0, VK_INDEX_TYPE_UINT32);
     }
     else if (usage == EBufferUsage::VERTEX_DATA)
     {
         const VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer, offsets);
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &frame_data->buffer, offsets);
     }
 }
 } // namespace gfx::vulkan

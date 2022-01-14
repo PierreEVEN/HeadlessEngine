@@ -5,12 +5,11 @@
 #include "vk_buffer.h"
 #include "vk_helper.h"
 #include "vk_material.h"
+#include "gfx/StaticMesh.h"
 #include "vulkan/vk_command_pool.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_material_instance.h"
-
-#include "gfx/StaticMesh.h"
 
 namespace gfx::vulkan
 {
@@ -49,34 +48,25 @@ void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t v
     vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_material)
+void CommandBuffer_VK::draw_mesh(IMeshInterface* in_buffer, MaterialInstance* in_material, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
     bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
-    vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), instance_count, 0, 0, first_instance);
 }
 
-void CommandBuffer_VK::draw_mesh_indirect(StaticMesh* in_buffer, MaterialInstance* in_material)
+void CommandBuffer_VK::draw_mesh(IMeshInterface* in_buffer, MaterialInstance* in_material, uint32_t first_index, uint32_t vertex_offset, uint32_t index_count, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
     bind_material(in_material);
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
-    vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(cmd, std::min(index_count, in_buffer->get_index_buffer()->count() - first_index), instance_count, first_index, vertex_offset, first_instance);
 }
 
-void CommandBuffer_VK::draw_mesh_instanced(StaticMesh* in_buffer, MaterialInstance* in_material)
-{
-    const auto& cmd = *command_buffer;
-    bind_material(in_material);
-    dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
-    dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
-    vkCmdDrawIndexed(cmd, in_buffer->get_index_buffer()->count(), 1, 0, 0, 0);
-}
-
-void CommandBuffer_VK::draw_mesh_instanced_indirect(StaticMesh* in_buffer, MaterialInstance* in_material)
+void CommandBuffer_VK::draw_mesh_indirect(IMeshInterface* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
     bind_material(in_material);
@@ -102,9 +92,40 @@ void CommandBuffer_VK::set_scissor(const Scissor& scissors)
     vkCmdSetScissor(*command_buffer, 0, 1, &vk_scissor);
 }
 
-void CommandBuffer_VK::push_constant(bool is_vertex_buffer, MaterialInstance* material, void* data, uint32_t data_size)
+void CommandBuffer_VK::push_constant(bool is_vertex_buffer, const MaterialInstance* material, const void* data, uint32_t data_size)
 {
-    vkCmdPushConstants(*command_buffer, , is_vertex_buffer ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, 0, )//@TIDIa fa
+    const auto* material_base = static_cast<MasterMaterial_VK*>(material->get_base().get());
+
+    if (is_vertex_buffer)
+    {
+        const auto& push_constant = material_base->get_vertex_reflection(*render_pass).push_constant;
+        if (!push_constant)
+        {
+            LOG_ERROR("vertex stage does not have push constants");
+            return;
+        }
+        if (push_constant->structure_size != data_size)
+        {
+            LOG_ERROR("wrong push constant data size : %d Expected %d", data_size, push_constant->structure_size);
+            return;
+        }
+    }
+    else
+    {
+        const auto& push_constant = material_base->get_fragment_reflection(*render_pass).push_constant;
+        if (!push_constant)
+        {
+            LOG_ERROR("framgent stage does not have push constants");
+            return;
+        }
+        if (push_constant->structure_size != data_size)
+        {
+            LOG_ERROR("wrong push constant data size : %d Expected %d", data_size, push_constant->structure_size);
+            return;
+        }
+    }
+
+    vkCmdPushConstants(*command_buffer, *material_base->get_pipeline_layout(*render_pass), is_vertex_buffer ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, 0, data_size, data);
 }
 
 void CommandBuffer_VK::start()

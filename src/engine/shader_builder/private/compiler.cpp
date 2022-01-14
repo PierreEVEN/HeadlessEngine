@@ -103,7 +103,7 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
         return {};
     }
     std::string name       = "@";
-    auto        name_split = stringutils::split(variable->name, {'.'});
+    const auto  name_split = stringutils::split(variable->name, {'.'});
     for (int i = 1; i < name_split.size(); ++i)
         name += "." + name_split[i];
 

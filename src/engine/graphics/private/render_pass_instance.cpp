@@ -2,7 +2,6 @@
 
 #include "gfx/materials/master_material.h"
 #include "gfx/materials/material_instance.h"
-#include "gfx/StaticMesh.h"
 
 #if GFX_USE_VULKAN
 #include "vulkan/vk_render_pass_instance.h"
