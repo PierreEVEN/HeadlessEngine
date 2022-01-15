@@ -35,7 +35,11 @@ int main()
                 .draw_height = 600,
             });
 
-            canvas->start_window("a");
+            canvas->start_window("this is a test window");
+            canvas->label("this is a text yay");
+            canvas->end_window();
+
+            canvas->start_window("wintwo");
             //canvas->label("this is a text yay");
             canvas->end_window();
 

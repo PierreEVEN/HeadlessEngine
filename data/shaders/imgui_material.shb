@@ -1,4 +1,6 @@
 #pragma shader_language HLSL
+#pragma front_face 		CLOCKWISE
+#pragma alpha_mode		TRANSLUCENT
 
 global(ui_pass, resolve_pass)
 [
@@ -14,9 +16,9 @@ vertex(ui_pass, resolve_pass)
 [
 	struct VSInput
 	{
-		 float2 aPos 	: POSITION;
-		 float2 aUV 	: TEXCOORD;
-		float4 aColor 	: COLOR;
+		float2 aPos 	: POSITION;
+		float2 aUV 		: TEXCOORD;
+		float  aColor 	: COLOR;
 	};
 	
 	struct PushConsts 
@@ -29,7 +31,7 @@ vertex(ui_pass, resolve_pass)
 	VsToFs main(VSInput input)
 	{
 		VsToFs Out;
-		Out.Color 	= input.aColor;
+		Out.Color	= input.aColor;
 		Out.UV 		= input.aUV;
 		Out.Pos 	= float4(input.aPos * pc.uScale + pc.uTranslate, 0, 1);
 		return Out;
@@ -43,7 +45,7 @@ fragment(ui_pass, resolve_pass)
 
 	float4 main(VsToFs input) : SV_TARGET
 	{
-		return input.Color;// * sTexture.Sample(sSampler, input.UV);
+		return input.Color; // * sTexture.Sample(sSampler, input.UV);
 	}
 ]
 

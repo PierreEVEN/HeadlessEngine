@@ -62,9 +62,9 @@ std::shared_ptr<Texture> Texture::create(const uint32_t width, uint32_t height, 
 #endif
 }
 
-uint8_t Texture::get_channel_count()
+uint8_t Texture::get_format_channel_count(ETypeFormat format)
 {
-    switch (image_parameters.format)
+    switch (format)
     {
     case ETypeFormat::UNDEFINED:
         return 0;
@@ -285,9 +285,9 @@ uint8_t Texture::get_channel_count()
     }
 }
 
-uint8_t Texture::get_byte_per_pixel()
+uint8_t Texture::get_format_bytes_per_pixel(ETypeFormat format)
 {
-    switch (image_parameters.format)
+    switch (format)
     {
     case ETypeFormat::UNDEFINED:
         return 0;
@@ -500,6 +500,6 @@ uint8_t Texture::get_byte_per_pixel()
 
 uint32_t Texture::get_data_size()
 {
-    return width * height * depth * get_channel_count() * get_byte_per_pixel();
+    return width * height * depth * get_format_channel_count(image_parameters.format) * get_format_bytes_per_pixel(image_parameters.format);
 }
 } // namespace gfx

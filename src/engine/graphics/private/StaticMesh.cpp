@@ -25,7 +25,7 @@ void StaticMesh::set_data(void* vertex_data, uint32_t vertex_count, uint32_t* in
         });
 }
 
-StaticMesh::StaticMesh(const std::string& mesh_name, uint32_t vertex_count, uint32_t vertex_structure_size, uint32_t index_count, EBufferType buffer_type)
+StaticMesh::StaticMesh(const std::string& mesh_name, uint32_t vertex_structure_size, uint32_t vertex_count, uint32_t index_count, EBufferType buffer_type, EIndexBufferType index_buffer_type)
 {
     if (vertex_structure_size == 0)
         LOG_FATAL("cannot create a mesh with a zero sized vertex structure size")
@@ -34,7 +34,7 @@ StaticMesh::StaticMesh(const std::string& mesh_name, uint32_t vertex_count, uint
     if (index_count == 0)
         index_count = 1;
 
-    index_buffer  = Buffer::create(mesh_name + "_index_buffer", index_count, sizeof(uint32_t), EBufferUsage::INDEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
+    index_buffer  = Buffer::create(mesh_name + "_index_buffer", index_count, static_cast<uint32_t>(index_buffer_type), EBufferUsage::INDEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
     vertex_buffer = Buffer::create(mesh_name + "_vertex_buffer", vertex_count, vertex_structure_size, EBufferUsage::VERTEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
 }
 } // namespace gfx

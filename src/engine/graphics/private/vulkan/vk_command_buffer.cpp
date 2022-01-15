@@ -64,8 +64,6 @@ void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_mat
     dynamic_cast<Buffer_VK*>(in_buffer->get_vertex_buffer())->bind_buffer(cmd);
     dynamic_cast<Buffer_VK*>(in_buffer->get_index_buffer())->bind_buffer(cmd);
     vkCmdDrawIndexed(cmd, std::min(index_count, in_buffer->get_index_buffer()->count() - first_index), instance_count, first_index, vertex_offset, first_instance);
-
-    LOG_WARNING("draw %d indexes / frame %d", std::min(index_count, in_buffer->get_index_buffer()->count() - first_index), get_image_index());
 }
 
 void CommandBuffer_VK::draw_mesh_indirect(StaticMesh* in_buffer, MaterialInstance* in_material)

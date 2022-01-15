@@ -167,7 +167,6 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = vertex_reflection_data.push_constant->structure_size,
             });
-            LOG_WARNING("VS PC : %d", vertex_reflection_data.push_constant->structure_size);
         }
         if (fragment_reflection_data.push_constant)
         {
@@ -176,10 +175,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = fragment_reflection_data.push_constant->structure_size,
             });
-
-            LOG_WARNING("FS PC : %d", fragment_reflection_data.push_constant->structure_size);
         }
-
 
         VkDescriptorSetLayoutCreateInfo layout_infos{
             .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -205,7 +201,6 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             },
         };
 
-
         VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount         = 1,
@@ -215,22 +210,26 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         };
         VK_CHECK(vkCreatePipelineLayout(get_device(), &pipeline_layout_infos, nullptr, &pass_data->layout), "Failed to create pipeline layout");
 
-        VkVertexInputBindingDescription bindingDescription{
-            .binding   = 0,
-            .stride    = get_vertex_reflection(pass_data.id()).input_size,
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-        };
-
         std::vector<VkVertexInputAttributeDescription> vertex_attribute_description;
+        const auto                                     inputs = material_options.input_stage_override ? material_options.input_stage_override.value() : get_vertex_reflection(pass_data.id()).inputs;
 
-        for (const auto& input_property : get_vertex_reflection(pass_data.id()).inputs)
+        uint32_t vertex_input_size = 0;
+        for (const auto& input_property : inputs)
         {
             vertex_attribute_description.emplace_back(VkVertexInputAttributeDescription{
                 .location = input_property.location,
                 .format   = Texture_VK::vk_texture_format_to_engine(input_property.type.format),
                 .offset   = input_property.offset,
             });
+
+            vertex_input_size += Texture::get_format_channel_count(input_property.type.format) * Texture::get_format_bytes_per_pixel(input_property.type.format);
         }
+
+        VkVertexInputBindingDescription bindingDescription{
+            .binding   = 0,
+            .stride    = vertex_input_size,
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
 
         VkPipelineVertexInputStateCreateInfo vertex_input_state{
             .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

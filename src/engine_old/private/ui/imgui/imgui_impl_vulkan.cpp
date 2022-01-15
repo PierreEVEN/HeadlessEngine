@@ -162,7 +162,10 @@ void DynamicBuffer::create_or_resize(size_t data_size)
 
     VkMemoryRequirements requirements;
     vkGetBufferMemoryRequirements(Graphics::get()->get_logical_device(), buffer, &requirements);
-    alignment_requirement = (alignment_requirement > requirements.alignment) ? alignment_requirement : requirements.alignment;
+
+    if (alignment_requirement <= requirements.alignment)
+        alignment_requirement = requirements.alignment;
+
     VkMemoryAllocateInfo alloc_info{
         .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize  = requirements.size,

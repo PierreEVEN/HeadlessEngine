@@ -6,12 +6,17 @@
 
 namespace gfx
 {
+struct MaterialOptions
+{
+    std::optional<std::vector<shader_builder::Property>> input_stage_override;
+};
+
 class MasterMaterial
 {
   public:
     virtual ~MasterMaterial() = default;
-    static std::shared_ptr<MasterMaterial> create(const shader_builder::CompilationResult& compilation_results);
-    static std::shared_ptr<MasterMaterial> create(const std::filesystem::path& shader_path);
+    static std::shared_ptr<MasterMaterial> create(const shader_builder::CompilationResult& compilation_results, MaterialOptions options = {});
+    static std::shared_ptr<MasterMaterial> create(const std::filesystem::path& shader_path, MaterialOptions options = {});
 
     virtual void rebuild_material(const shader_builder::CompilationResult& compilation_results)
     {

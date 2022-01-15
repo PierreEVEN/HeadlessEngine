@@ -61,18 +61,17 @@ class Texture
 
     virtual void set_pixels(const std::vector<uint8_t>& data) = 0;
 
-    [[nodiscard]] uint8_t  get_channel_count();
-    [[nodiscard]] uint8_t  get_byte_per_pixel();
-    [[nodiscard]] uint32_t get_data_size();
+    [[nodiscard]] static uint8_t get_format_channel_count(ETypeFormat format);
+    [[nodiscard]] static uint8_t get_format_bytes_per_pixel(ETypeFormat format);
+    [[nodiscard]] uint32_t       get_data_size();
 
     static bool is_depth_format(ETypeFormat format)
     {
         return format == ETypeFormat::D24_UNORM_S8_UINT || format == ETypeFormat::D32_SFLOAT || format == ETypeFormat::D32_SFLOAT_S8_UINT;
     }
-    
+
   protected:
     Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters);
-
 
   protected:
     TextureParameter image_parameters;

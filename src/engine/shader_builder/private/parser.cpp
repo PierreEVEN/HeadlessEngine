@@ -370,6 +370,10 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
         }
     }
     result.shader_properties.shader_language = get_property(properties, "shader_language") == "GLSL" ? EShaderLanguage::GLSL : EShaderLanguage::HLSL;
+    result.shader_properties.front_face      = get_property(properties, "front_face") == "CLOCKWISE" ? EFrontFace::Clockwise : EFrontFace::CounterClockwise;
+    result.shader_properties.alpha_mode      = get_property(properties, "alpha_mode") == "TRANSLUCENT" ? EAlphaMode::Translucent
+                                               : get_property(properties, "alpha_mode") == "ADDITIVE"  ? EAlphaMode::Additive
+                                                                                                       : EAlphaMode::Opaque;
     return result;
 }
 

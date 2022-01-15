@@ -102,6 +102,7 @@ void Buffer_VK::create_or_recreate_buffer(FrameData& current_buffer)
     };
 
     VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &current_buffer.buffer, &current_buffer.memory, nullptr), "failed to create buffer");
+
     current_buffer.buffer_infos.buffer = current_buffer.buffer;
     current_buffer.buffer_infos.offset = 0;
     current_buffer.buffer_infos.range  = size();
@@ -109,7 +110,7 @@ void Buffer_VK::create_or_recreate_buffer(FrameData& current_buffer)
     if (previous_buffer != VK_NULL_HANDLE)
     {
         // Copy previous data
-        if (type != EBufferType::DYNAMIC && current_buffer.previous_allocated_count != 0) //@TODO : delay copy to avoid freeze
+        if (type == EBufferType::STATIC && current_buffer.previous_allocated_count != 0) //@TODO : delay copy to avoid freeze
         {
             OneTimeCommandBuffer copy_cmd;
             const VkBufferCopy   copy_region{
@@ -151,6 +152,7 @@ void Buffer_VK::resize(uint32_t in_element_count)
             }
         }
     }
+
     resize_current();
 }
 
@@ -212,11 +214,11 @@ void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)
 
     if (usage == EBufferUsage::INDEX_DATA)
     {
-        vkCmdBindIndexBuffer(command_buffer, frame_data->buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(command_buffer, frame_data->buffer, 0, stride() == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
     }
     else if (usage == EBufferUsage::VERTEX_DATA)
     {
-        const VkDeviceSize offsets[] = {0};
+        constexpr VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &frame_data->buffer, offsets);
     }
     else

@@ -9,10 +9,17 @@ namespace gfx
 {
 class Buffer;
 
+enum class EIndexBufferType
+{
+    UINT16 = sizeof(uint16_t),
+    UINT32 = sizeof(uint32_t),
+};
+
 class StaticMesh
 {
   public:
-    StaticMesh(const std::string& mesh_name, uint32_t vertex_count, uint32_t vertex_structure_size, uint32_t index_count = 0, EBufferType buffer_type = EBufferType::STATIC);
+    StaticMesh(const std::string& mesh_name, uint32_t vertex_structure_size, uint32_t vertex_count = 0, uint32_t index_count = 0, EBufferType buffer_type = EBufferType::STATIC,
+               EIndexBufferType index_buffer_type = EIndexBufferType::UINT32);
 
     virtual ~StaticMesh() = default;
 

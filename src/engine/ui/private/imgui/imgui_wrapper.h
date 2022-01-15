@@ -14,27 +14,30 @@ class ImGuiWrapper final
     ImGuiWrapper()  = delete;
     ~ImGuiWrapper() = delete;
 
-    __inline static void init()
+    static void init()
     {
         init_internal();
         make_context_current();
     }
     static void destroy();
 
-    __inline static void make_context_current()
+    static void make_context_current()
     {
         ImGui::SetCurrentContext(get_context());
     }
+
+    void require_texture(const std::shared_ptr<gfx::Texture>& required_texture);
 
     static void begin_frame(const UICanvas::Context& context);
     static void submit_frame(gfx::CommandBuffer* command_buffer);
 
     std::string clipboard_text;
-    
+
     inline static int usage_count = 0;
 
   private:
-    static void          init_internal();
-    static ImGuiContext* get_context();
+    std::vector<std::shared_ptr<gfx::Texture>> texture_table;
+    static void                                init_internal();
+    static ImGuiContext*                       get_context();
 };
 } // namespace ui

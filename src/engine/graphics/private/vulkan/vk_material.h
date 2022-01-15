@@ -10,16 +10,18 @@ namespace gfx::vulkan
 class MasterMaterial_VK final : public MasterMaterial
 {
   public:
-    MasterMaterial_VK() = default;
+    MasterMaterial_VK(MaterialOptions options) : material_options(options)
+    {
+    }
     ~MasterMaterial_VK() override;
 
     struct MaterialPassData
     {
         VkDescriptorSetLayout descriptor_set_layout;
-        VkPipeline                                    pipeline        = VK_NULL_HANDLE;
-        VkPipelineLayout                              layout          = VK_NULL_HANDLE;
-        VkShaderModule                                vertex_module   = VK_NULL_HANDLE;
-        VkShaderModule                                fragment_module = VK_NULL_HANDLE;
+        VkPipeline            pipeline        = VK_NULL_HANDLE;
+        VkPipelineLayout      layout          = VK_NULL_HANDLE;
+        VkShaderModule        vertex_module   = VK_NULL_HANDLE;
+        VkShaderModule        fragment_module = VK_NULL_HANDLE;
     };
 
     void rebuild_material(const shader_builder::CompilationResult& compilation_results) override;
@@ -73,10 +75,12 @@ class MasterMaterial_VK final : public MasterMaterial
             LOG_FATAL("unhandled case");
         }
     }
+
   private:
     void create_modules(const shader_builder::CompilationResult& compilation_results);
 
     void                             clear();
     RenderPassData<MaterialPassData> per_pass_data;
+    MaterialOptions                  material_options;
 };
 } // namespace gfx::vulkan

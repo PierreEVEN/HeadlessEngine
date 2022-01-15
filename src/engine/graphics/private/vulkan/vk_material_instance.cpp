@@ -99,8 +99,6 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
 void MaterialInstance_VK::bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
 {
 
-
-
 }
 
 const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const std::string& binding_name, const RenderPassID& render_pass) const
