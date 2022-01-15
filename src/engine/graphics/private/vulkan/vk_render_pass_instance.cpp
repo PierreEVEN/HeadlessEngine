@@ -60,6 +60,8 @@ void RenderPassInstance_VK::begin_pass()
     if (*render_finished_fence)
         VK_CHECK(vkWaitForFences(get_device(), 1, &*render_finished_fence, VK_TRUE, UINT64_MAX), "wait failed");
 
+    LOG_VALIDATE("wait succeeded");
+
     // Begin buffer record
     get_pass_command_buffer()->start();
 

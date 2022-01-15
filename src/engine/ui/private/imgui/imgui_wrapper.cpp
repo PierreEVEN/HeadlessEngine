@@ -13,7 +13,7 @@ namespace ui
 {
 static ImGuiContext*                          imgui_context = nullptr;
 static std::shared_ptr<gfx::Texture>          font_texture;
-static gfx::DynamicMesh*                      mesh;
+static gfx::StaticMesh*                       mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
 
@@ -107,7 +107,8 @@ void ImGuiWrapper::init_internal()
     imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb");
     imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
 
-    mesh = new gfx::DynamicMesh("imgui mesh", std::vector<ImDrawVert>{}, {});
+    mesh = new gfx::StaticMesh("imgui mesh", 0, sizeof(ImDrawVert), 0, gfx::EBufferType::IMMEDIATE);
+    static_assert(sizeof(ImDrawIdx) == sizeof(ImDrawIdx), "wrong index size");
 }
 
 void ImGuiWrapper::destroy()
@@ -156,34 +157,34 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
      * BUILD VERTEX BUFFERS
      */
     // Get pointer to buffer data
-    mesh->get_vertex_buffer()->set_data_lambda(
-        [&](void* vertex_ptr)
-        {
-            auto* vertex_data = static_cast<uint8_t*>(vertex_ptr);
-            for (int n = 0; n < draw_data->CmdListsCount; n++)
-            {
-                const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                memcpy(vertex_data, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                vertex_data += cmd_list->VtxBuffer.Size;
-            }
-        });
 
-    mesh->get_index_buffer()->set_data_lambda(
-        [&](void* index_ptr)
-        {
-            auto index_data = static_cast<uint8_t*>(index_ptr);
-            for (int n = 0; n < draw_data->CmdListsCount; n++)
-            {
-                const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                memcpy(index_data, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                index_data += cmd_list->IdxBuffer.Size;
-            }
-        });
+    LOG_WARNING("resize to vertex = %d, index = %d", draw_data->TotalVtxCount, draw_data->TotalIdxCount);
+    mesh->set_data(draw_data->TotalVtxCount, draw_data->TotalIdxCount,
+                   [&](void* vertex_ptr, void* index_ptr)
+                   {
+                       auto* vertex_data = static_cast<uint8_t*>(vertex_ptr);
+                       auto* index_data  = static_cast<uint8_t*>(index_ptr);
+                       for (int n = 0; n < draw_data->CmdListsCount; n++)
+                       {
+                           const ImDrawList* cmd_list = draw_data->CmdLists[n];
+                           memcpy(vertex_data, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+                           memcpy(index_data, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+                           LOG_DEBUG("addr 0 = %x", index_data);
+                           for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
+                           {
+                               LOG_INFO("=> %d", cmd_list->IdxBuffer[i]);
+                               LOG_WARNING("=> %d", (reinterpret_cast<uint32_t*>(index_data))[i]);
+                           }
+                           vertex_data += cmd_list->VtxBuffer.Size;
+                           index_data += cmd_list->IdxBuffer.Size;
+                       }
+                   });
+    LOG_WARNING("OUT SIZE vertex = %d, index = %d", mesh->get_vertex_buffer()->count(), mesh->get_index_buffer()->count());
 
     /**
      * PREPARE MATERIALS
      */
-   
+
     float scale_x = 2.0f / draw_data->DisplaySize.x;
     float scale_y = -2.0f / draw_data->DisplaySize.y;
     const struct ConstantData
@@ -199,7 +200,7 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
         .translate_y = 1.0f - draw_data->DisplayPos.y * scale_y,
     };
     command_buffer->push_constant(true, imgui_material_instance.get(), constant_data);
-   
+
     /**
      * Draw meshs
      */
@@ -246,11 +247,13 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
                     });
 
                     // Bind descriptor set with font or user texture
-                    if (pcmd->TextureId)
+                    if (pcmd->TextureId && false)
                         imgui_material_instance->bind_texture("test", nullptr); // TODO handle textures
-                    //@TODO : handle dynamic meshes
-                    command_buffer->draw_mesh(nullptr, imgui_material_instance.get(), pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, pcmd->ElemCount);
-                    LOG_WARNING("draw");
+
+                    LOG_WARNING("first index %d / vertex offset %d / index count %d", pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, pcmd->ElemCount);
+
+                    command_buffer->draw_mesh(mesh, imgui_material_instance.get(), pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, pcmd->ElemCount);
+                    return;
                 }
             }
         }

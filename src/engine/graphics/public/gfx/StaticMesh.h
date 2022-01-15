@@ -1,4 +1,6 @@
 #pragma once
+#include "buffer.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -7,73 +9,44 @@ namespace gfx
 {
 class Buffer;
 
-class IMeshInterface
+class StaticMesh
 {
   public:
-    IMeshInterface()                                        = default;
-    virtual ~IMeshInterface()                               = default;
-    [[nodiscard]] virtual Buffer* get_vertex_buffer() const = 0;
-    [[nodiscard]] virtual Buffer* get_index_buffer() const  = 0;
-};
+    StaticMesh(const std::string& mesh_name, uint32_t vertex_count, uint32_t vertex_structure_size, uint32_t index_count = 0, EBufferType buffer_type = EBufferType::STATIC);
 
-class StaticMesh final : IMeshInterface
-{
-  public:
-    template <typename Vertex_T>
-    StaticMesh(const std::string& mesh_name, std::vector<Vertex_T>& vertices, const std::vector<uint32_t>& indices) : StaticMesh(mesh_name, vertices.data(), vertices.size(), sizeof(Vertex_T), indices)
-    {
-    }
+    virtual ~StaticMesh() = default;
 
-    ~StaticMesh() override = default;
-
-    [[nodiscard]] Buffer* get_vertex_buffer() const override
+    [[nodiscard]] Buffer* get_vertex_buffer() const
     {
         return vertex_buffer.get();
     }
 
-    [[nodiscard]] Buffer* get_index_buffer() const override
+    [[nodiscard]] Buffer* get_index_buffer() const
     {
         return index_buffer.get();
     }
 
-  private:
-    StaticMesh(const std::string& mesh_name, void* vertex_data, uint32_t vertex_count, uint32_t vertex_structure_size, const std::vector<uint32_t>& indices);
-
-    std::shared_ptr<Buffer> vertex_buffer = nullptr;
-    std::shared_ptr<Buffer> index_buffer  = nullptr;
-};
-
-class DynamicMesh final : IMeshInterface
-{
-  public:
-    template <typename Vertex_T> DynamicMesh(const std::string& mesh_name, const std::vector<Vertex_T>& vertices, const std::vector<uint32_t>& indices) : DynamicMesh(mesh_name, vertices.size(), sizeof(Vertex_T), indices.size())
+    void set_data(void* vertex_data, uint32_t vertex_count, uint32_t* index_data, uint32_t index_count);
+    template <typename Vertex_T> void set_data(const std::vector<Vertex_T>& vertex_data, const std::vector<uint32_t>& index_data)
     {
-        set_data(vertices, indices);
+        set_data(vertex_data.data(), vertex_data.size(), index_data.data(), index_data.size());
     }
-
-    template <typename Vertex_T> DynamicMesh(const std::string& mesh_name) : DynamicMesh(mesh_name, 0, sizeof(Vertex_T), 0)
+    template <typename Lambda_T> void set_data(uint32_t vertex_count, uint32_t index_count, Lambda_T callback)
     {
-    }
-
-    template <typename Vertex_T> void set_data(const std::vector<Vertex_T>& vertices, const std::vector<uint32_t>& indices)
-    {
-        set_data(vertices.data(), vertices.size(), sizeof(Vertex_T), indices);
-    }
-
-    [[nodiscard]] Buffer* get_vertex_buffer() const override
-    {
-        return vertex_buffer.get();
-    }
-    [[nodiscard]] Buffer* get_index_buffer() const override
-    {
-        return index_buffer.get();
+        vertex_buffer->resize(vertex_count);
+        index_buffer->resize(index_count);
+        vertex_buffer->set_data(
+            [&](void* vertex_data)
+            {
+                index_buffer->set_data(
+                    [&](void* index_data)
+                    {
+                        callback(vertex_data, index_data);
+                    });
+            });
     }
 
   private:
-    void set_data(const void* vertices, uint32_t vertex_count, uint32_t vertex_size, const std::vector<uint32_t>& indices) const;
-
-    DynamicMesh(const std::string& mesh_name, uint32_t initial_vertex_count, uint32_t vertex_size, uint32_t initial_index_count);
-
     std::shared_ptr<Buffer> vertex_buffer = nullptr;
     std::shared_ptr<Buffer> index_buffer  = nullptr;
 };

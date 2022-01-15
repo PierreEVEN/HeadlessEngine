@@ -8,9 +8,10 @@ namespace gfx
 
 enum class EBufferType
 {
-    STATIC, // No update
-    DYNAMIC, // Regular updates
-    IMMEDIATE, // Update very frames
+    IMMUTABLE, // No allowed updates
+    STATIC,    // Pretty never updated. Updating data would cause some freezes
+    DYNAMIC,   // Data is stored internally, then automatically submitted. Can lead to a memory overhead depending on the buffer size.
+    IMMEDIATE, // Data need to be submitted every frames
 };
 
 enum class EBufferUsage
@@ -34,44 +35,48 @@ enum class EBufferAccess
 class Buffer
 {
   public:
-    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT, EBufferType buffer_type = EBufferType::STATIC);
-    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t buffer_size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT, EBufferType buffer_type = EBufferType::STATIC);
+    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT,
+                                          EBufferType buffer_type = EBufferType::IMMUTABLE);
+    static std::shared_ptr<Buffer> create(const std::string& buffer_name, uint32_t buffer_size, EBufferUsage usage, EBufferAccess buffer_access = EBufferAccess::DEFAULT, EBufferType buffer_type = EBufferType::IMMUTABLE);
 
     virtual ~Buffer();
 
-    [[nodiscard]] size_t get_size() const
+    // Get data total size
+    [[nodiscard]] size_t size() const
     {
-        return stride * element_count;
-    }
-    virtual void set_data(const void* data, size_t data_length, size_t offset = 0) = 0;
-    
-    template <typename T> void set_data(const T& data)
-    {
-        set_data(&data, sizeof(T));
+        return element_stride * element_count;
     }
 
-    template <typename Lambda> void set_data_lambda(Lambda data_lambda)
-    {
-        data_lambda(get_ptr());
-        void submit_data();
-    }
-
+    // Get buffer element count
     [[nodiscard]] uint32_t count() const
     {
         return element_count;
     }
 
-    [[nodiscard]] uint32_t get_stride() const
+    // Get per element size
+    [[nodiscard]] uint32_t stride() const
     {
-        return stride;
+        return element_stride;
     }
+
+
+    // Set data into a callback
+    template <typename Lambda = void> void set_data(Lambda callback)
+    {
+        callback(acquire_data_ptr());
+        submit_data();
+    }
+
+    // Resize the buffer
+    virtual void resize(uint32_t element_count) = 0;
+
   protected:
-    Buffer(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access = EBufferAccess::DEFAULT, EBufferType buffer_type = EBufferType::STATIC);
+    Buffer(const std::string& buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access, EBufferType buffer_type);
 
-    virtual void* get_ptr()     = 0;
-    virtual void  submit_data() = 0;
+    virtual void* acquire_data_ptr() = 0;
+    virtual void  submit_data()      = 0;
 
-    uint32_t      stride;
+    uint32_t      element_stride;
     uint32_t      element_count;
     std::string   buffer_name;
     EBufferAccess buffer_access;

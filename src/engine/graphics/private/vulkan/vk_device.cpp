@@ -1,12 +1,12 @@
 #include "vulkan/vk_device.h"
 
+#include "types/magic_enum.h"
 #include "vk_command_pool.h"
 #include "vk_helper.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_config.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_physical_device.h"
-#include "types/magic_enum.h"
 
 #include <cpputils/logger.hpp>
 #include <set>
@@ -38,12 +38,15 @@ void create()
         queue_create_infos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures device_features{
-        .geometryShader    = VK_TRUE,
-        .sampleRateShading = VK_TRUE, // Sample Shading
-        .fillModeNonSolid  = VK_TRUE, // Wireframe
-        .wideLines         = VK_TRUE,
-        .samplerAnisotropy = VK_TRUE,
+    VkPhysicalDeviceFeatures device_features
+    {
+#if ENABLE_VALIDATION_LAYER
+        .robustBufferAccess = VK_TRUE,
+#endif
+        .geometryShader       = VK_TRUE,
+        .sampleRateShading    = VK_TRUE, // Sample Shading
+            .fillModeNonSolid = VK_TRUE, // Wireframe
+            .wideLines = VK_TRUE, .samplerAnisotropy = VK_TRUE,
     };
 
     VkDeviceCreateInfo create_infos = {
@@ -96,7 +99,7 @@ void destroy()
     std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
     for (const auto& queue : queues)
         queue_fence_map[queue->queue_index] = queue->queue_submit_fence;
-    
+
     for (auto& [index, fence] : queue_fence_map)
         for (auto& item : fence)
             vkDestroyFence(get_device(), item, get_allocator());

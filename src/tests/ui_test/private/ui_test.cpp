@@ -35,8 +35,8 @@ int main()
                 .draw_height = 600,
             });
 
-            canvas->start_window("toto");
-            canvas->label("this is a text yay");
+            canvas->start_window("a");
+            //canvas->label("this is a text yay");
             canvas->end_window();
 
             canvas->submit(command_buffer);

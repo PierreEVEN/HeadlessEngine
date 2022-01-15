@@ -11,14 +11,18 @@
 namespace gfx
 {
 Buffer::Buffer(const std::string& in_buffer_name, uint32_t buffer_stride, uint32_t elements, EBufferUsage buffer_usage, EBufferAccess in_buffer_access, EBufferType buffer_type)
-    : stride(buffer_stride), element_count(elements), buffer_name(in_buffer_name), buffer_access(in_buffer_access), usage(buffer_usage), type(buffer_type)
+    : element_stride(buffer_stride), element_count(elements), buffer_name(in_buffer_name), buffer_access(in_buffer_access), usage(buffer_usage), type(buffer_type)
 {
     if (element_count <= 0)
+    {
         LOG_ERROR("cannot create an empty buffer");
-    element_count = 1;
-    if (stride <= 0)
-        LOG_ERROR("buffer stride cannot be zero");
-    stride = 1;
+        element_count = 1;
+    }
+    if (element_stride <= 0)
+    {
+        LOG_ERROR("buffer element_stride cannot be zero");
+        element_stride = 1;
+    }
 }
 
 std::shared_ptr<Buffer> Buffer::create(const std::string& buffer_name, uint32_t element_count, uint32_t stride, EBufferUsage usage, EBufferAccess buffer_access, EBufferType buffer_type)

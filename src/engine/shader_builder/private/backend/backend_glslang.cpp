@@ -41,7 +41,7 @@ class IoMapResolver : public glslang::TIoMapResolver
     {
         return -1;
     }
-    int resolveUniformLocation(EShLanguage, glslang::TVarEntryInfo& ent) override
+    int resolveUniformLocation(EShLanguage, glslang::TVarEntryInfo&) override
     {
         return -1;
     }
