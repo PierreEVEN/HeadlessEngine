@@ -12,7 +12,7 @@ namespace gfx::vulkan
 {
 class Texture_VK : public Texture
 {
-public:
+  public:
     Texture_VK(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters);
     Texture_VK(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images);
     virtual ~Texture_VK();
@@ -36,13 +36,20 @@ public:
         return static_cast<ETypeFormat>(format);
     }
 
-private:
+    [[nodiscard]] const VkDescriptorImageInfo& get_descriptor_image_infos() const
+    {
+        return *image_descriptor_info;
+    }
+
+  private:
     void create_views();
 
-    const bool                            use_external_images;
-    SwapchainImageResource<VkImageLayout> image_layout;
-    SwapchainImageResource<VkImage>       images;
-    SwapchainImageResource<VmaAllocation> allocation;
-    SwapchainImageResource<VkImageView>   views;
+    const bool                                    use_external_images;
+    SwapchainImageResource<VkDescriptorImageInfo> image_descriptor_info;
+    SwapchainImageResource<VkImageLayout>         image_layout;
+    SwapchainImageResource<VkImage>               images;
+    SwapchainImageResource<VmaAllocation>         allocation;
+    SwapchainImageResource<VkImageView>           views;
+    VkSampler                                     sampler = VK_NULL_HANDLE;
 };
 } // namespace gfx::vulkan

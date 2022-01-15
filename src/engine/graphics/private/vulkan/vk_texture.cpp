@@ -29,72 +29,71 @@ static VkImageUsageFlags vk_usage(const TextureParameter& texture_parameters)
     return usage_flags;
 }
 
-Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters)
-    : Texture(pixel_width, pixel_height, pixel_depth, parameters), use_external_images(false)
+Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : Texture(pixel_width, pixel_height, pixel_depth, parameters), use_external_images(false)
 {
     VkImageCreateInfo image_infos{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .format = vk_texture_format_to_engine(image_parameters.format),
-        .mipLevels = image_parameters.mip_level.value(),
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = vk_usage(image_parameters),
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .format        = vk_texture_format_to_engine(image_parameters.format),
+        .mipLevels     = image_parameters.mip_level.value(),
+        .samples       = VK_SAMPLE_COUNT_1_BIT,
+        .tiling        = VK_IMAGE_TILING_OPTIMAL,
+        .usage         = vk_usage(image_parameters),
+        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
     switch (image_parameters.image_type)
     {
     case EImageType::Texture_1D:
         image_infos.imageType = VK_IMAGE_TYPE_1D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = 1,
-            .depth = 1,
+            .depth  = 1,
         };
         image_infos.arrayLayers = 1;
         break;
     case EImageType::Texture_1D_Array:
         image_infos.imageType = VK_IMAGE_TYPE_1D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = 1,
-            .depth = 1,
+            .depth  = 1,
         };
         image_infos.arrayLayers = depth;
         break;
     case EImageType::Texture_2D:
         image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = height,
-            .depth = 1,
+            .depth  = 1,
         };
         image_infos.arrayLayers = 1;
         break;
     case EImageType::Texture_2D_Array:
         image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = height,
-            .depth = 1,
+            .depth  = 1,
         };
         image_infos.arrayLayers = depth;
         break;
     case EImageType::Texture_3D:
         image_infos.imageType = VK_IMAGE_TYPE_3D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = height,
-            .depth = depth,
+            .depth  = depth,
         };
         image_infos.arrayLayers = 1;
         break;
     case EImageType::Cubemap:
         image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent = {
-            .width = width,
+        image_infos.extent    = {
+            .width  = width,
             .height = height,
-            .depth = 1,
+            .depth  = 1,
         };
         image_infos.arrayLayers = 6;
         break;
@@ -105,11 +104,33 @@ Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pix
 
     if (parameters.read_only)
     {
-        image_layout = SwapchainImageResource<VkImageLayout>::make_static();
-        images       = SwapchainImageResource<VkImage>::make_static();
-        allocation   = SwapchainImageResource<VmaAllocation>::make_static();
-        views        = SwapchainImageResource<VkImageView>::make_static();
+        image_layout          = SwapchainImageResource<VkImageLayout>::make_static();
+        images                = SwapchainImageResource<VkImage>::make_static();
+        allocation            = SwapchainImageResource<VmaAllocation>::make_static();
+        views                 = SwapchainImageResource<VkImageView>::make_static();
+        image_descriptor_info = SwapchainImageResource<VkDescriptorImageInfo>::make_static();
     }
+
+    VkSamplerCreateInfo sampler_infos{
+        .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter               = VK_FILTER_LINEAR,
+        .minFilter               = VK_FILTER_LINEAR,
+        .mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .mipLodBias              = 0.0f, // Optional
+        .anisotropyEnable        = VK_TRUE,
+        .maxAnisotropy           = 16.0f,
+        .compareEnable           = VK_FALSE,
+        .compareOp               = VK_COMPARE_OP_ALWAYS,
+        .minLod                  = 0.0f,
+        .maxLod                  = static_cast<float>(image_infos.mipLevels),
+        .borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE,
+    };
+
+    VK_CHECK(vkCreateSampler(get_device(), &sampler_infos, get_allocator(), &sampler), "failed to create sampler");
 
     for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
     {
@@ -122,7 +143,7 @@ Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pix
 Texture_VK::Texture_VK(uint32_t image_width, uint32_t image_height, uint32_t image_depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images)
     : Texture(image_width, image_height, image_depth, parameters), use_external_images(true), images(existing_images)
 {
-    for (uint8_t i      = 0; i < images.get_max_instance_count(); ++i)
+    for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
         image_layout[i] = VK_IMAGE_LAYOUT_UNDEFINED;
 
     create_views();
@@ -135,7 +156,7 @@ void Texture_VK::set_pixels(const std::vector<uint8_t>& data)
 
     const VkBufferCreateInfo create_infos{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = data.size(),
+        .size  = data.size(),
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     };
 
@@ -156,16 +177,16 @@ void Texture_VK::set_pixels(const std::vector<uint8_t>& data)
     *image_layout = VK_IMAGE_LAYOUT_UNDEFINED;
     update_image_layout(**copy_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     const VkBufferImageCopy region = {
-        .bufferOffset = 0,
-        .bufferRowLength = 0,
+        .bufferOffset      = 0,
+        .bufferRowLength   = 0,
         .bufferImageHeight = 0,
         .imageSubresource =
-        {
-            .aspectMask = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
+            {
+                .aspectMask     = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
+                .mipLevel       = 0,
+                .baseArrayLayer = 0,
+                .layerCount     = 1,
+            },
         .imageOffset = {0, 0, 0},
         .imageExtent = {width, height, 1},
     };
@@ -178,20 +199,20 @@ void Texture_VK::set_pixels(const std::vector<uint8_t>& data)
 void Texture_VK::update_image_layout(VkCommandBuffer command_buffer, VkImageLayout new_layout)
 {
     VkImageMemoryBarrier barrier = VkImageMemoryBarrier{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .oldLayout = *image_layout,
-        .newLayout = new_layout,
+        .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .oldLayout           = *image_layout,
+        .newLayout           = new_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = *images,
+        .image               = *images,
         .subresourceRange =
-        VkImageSubresourceRange{
-            .aspectMask = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
-            .baseMipLevel = 0,
-            .levelCount = image_parameters.mip_level.value(),
-            .baseArrayLayer = 0,
-            .layerCount = image_parameters.image_type == EImageType::Cubemap ? 6u : 1u,
-        },
+            VkImageSubresourceRange{
+                .aspectMask     = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
+                .baseMipLevel   = 0,
+                .levelCount     = image_parameters.mip_level.value(),
+                .baseArrayLayer = 0,
+                .layerCount     = image_parameters.image_type == EImageType::Cubemap ? 6u : 1u,
+            },
     };
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags destination_stage;
@@ -225,17 +246,17 @@ void Texture_VK::update_image_layout(VkCommandBuffer command_buffer, VkImageLayo
 void Texture_VK::create_views()
 {
     VkImageViewCreateInfo image_view_infos{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .format = vk_texture_format_to_engine(image_parameters.format),
+        .sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .format     = vk_texture_format_to_engine(image_parameters.format),
         .components = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
         .subresourceRange =
-        {
-            .aspectMask = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
-            .baseMipLevel = 0,
-            .levelCount = image_parameters.mip_level.value(),
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
+            {
+                .aspectMask     = is_depth_format(image_parameters.format) ? static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_DEPTH_BIT) : static_cast<VkImageAspectFlags>(VK_IMAGE_ASPECT_COLOR_BIT),
+                .baseMipLevel   = 0,
+                .levelCount     = image_parameters.mip_level.value(),
+                .baseArrayLayer = 0,
+                .layerCount     = 1,
+            },
     };
 
     switch (image_parameters.image_type)
@@ -263,6 +284,13 @@ void Texture_VK::create_views()
     {
         image_view_infos.image = images[i];
         vkCreateImageView(get_device(), &image_view_infos, get_allocator(), &views[i]);
+
+        for (auto& infos : image_descriptor_info)
+        {
+            infos.sampler     = sampler;
+            infos.imageView   = views[i];
+            infos.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
     }
 }
 
@@ -270,6 +298,8 @@ Texture_VK::~Texture_VK()
 {
     for (const auto& view : views)
         vkDestroyImageView(get_device(), view, get_allocator());
+
+    vkDestroySampler(get_device(), sampler, get_allocator());
 
     if (!use_external_images)
         for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)

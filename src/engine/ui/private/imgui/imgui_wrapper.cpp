@@ -100,8 +100,10 @@ void ImGuiWrapper::init_internal()
     // Create font texture
     uint8_t* pixels;
     int      width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    font_texture    = gfx::Texture::create(width, height, gfx::TextureParameter{});
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = ETypeFormat::R8_UNORM});
+    font_texture->set_pixels(std::vector(pixels, pixels + width * height));
+
     io.Fonts->TexID = font_texture.get();
 
     std::vector vertex_attribute_overrides = {
@@ -237,6 +239,9 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
+
+    imgui_material_instance->bind_texture("sTexture", font_texture);
+
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];

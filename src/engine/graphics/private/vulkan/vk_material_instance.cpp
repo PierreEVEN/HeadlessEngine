@@ -8,6 +8,7 @@
 #include "vk_device.h"
 #include "vk_material.h"
 #include "vk_render_pass.h"
+#include "vk_texture.h"
 
 namespace gfx::vulkan
 {
@@ -38,6 +39,16 @@ void MaterialInstance_VK::bind_buffer(const std::string& binding_name, const std
     if (!in_buffer)
         return;
     write_buffers[binding_name] = in_buffer;
+    for (auto& pass : descriptor_sets)
+        for (auto& image : pass.write_descriptor_sets)
+            image.is_dirty = true;
+}
+
+void MaterialInstance_VK::bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
+{
+    if (!in_texture)
+        return;
+    write_textures[binding_name] = in_texture;
     for (auto& pass : descriptor_sets)
         for (auto& image : pass.write_descriptor_sets)
             image.is_dirty = true;
@@ -88,17 +99,32 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
             });
         }
 
+        for (const auto& texture : write_textures)
+        {
+            const auto* binding = find_binding(texture.first, command_buffer->get_render_pass());
+            if (!binding)
+                continue;
+            LOG_WARNING("test %s : %s :view=%x", texture.first.c_str(), magic_enum::enum_name(binding->descriptor_type).data(), dynamic_cast<Texture_VK*>(texture.second.get())->get_descriptor_image_infos().imageView);
+            desc_set.emplace_back(VkWriteDescriptorSet{
+                .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext            = nullptr,
+                .dstSet           = pass_data.descriptor_set,
+                .dstBinding       = binding->binding,
+                .dstArrayElement  = 0,
+                .descriptorCount  = 1,
+                .descriptorType   = MasterMaterial_VK::vk_descriptor_type(binding->descriptor_type),
+                .pImageInfo       = &dynamic_cast<Texture_VK*>(texture.second.get())->get_descriptor_image_infos(),
+                .pBufferInfo      = nullptr,
+                .pTexelBufferView = nullptr,
+            });
+        }
+        static_assert(false, "AJOUTER UN TYPE SAMPLER PUTAIN");
         vkUpdateDescriptorSets(get_device(), static_cast<uint32_t>(pass_data.write_descriptor_sets->write_descriptor_sets.size()), pass_data.write_descriptor_sets->write_descriptor_sets.data(), 0, nullptr);
 
         pass_data.write_descriptor_sets->is_dirty = false;
     }
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, &pass_data.descriptor_set, 0, nullptr);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
-}
-
-void MaterialInstance_VK::bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
-{
-
 }
 
 const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const std::string& binding_name, const RenderPassID& render_pass) const

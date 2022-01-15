@@ -40,12 +40,12 @@ vertex(ui_pass, resolve_pass)
 
 fragment(ui_pass, resolve_pass)
 [
-	//Texture2D	 sTexture;
-	//SamplerState sSampler;
+	Texture2D	 sTexture;
+	SamplerState sSampler;
 
 	float4 main(VsToFs input) : SV_TARGET
 	{
-		return input.Color; // * sTexture.Sample(sSampler, input.UV);
+		return input.Color * sTexture.Sample(sSampler, input.UV);
 	}
 ]
 
