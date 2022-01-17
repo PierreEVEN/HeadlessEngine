@@ -167,7 +167,6 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = vertex_reflection_data.push_constant->structure_size,
             });
-            LOG_WARNING("VS PC : %d", vertex_reflection_data.push_constant->structure_size);
         }
         if (fragment_reflection_data.push_constant)
         {
@@ -176,10 +175,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = fragment_reflection_data.push_constant->structure_size,
             });
-
-            LOG_WARNING("FS PC : %d", fragment_reflection_data.push_constant->structure_size);
         }
-
 
         VkDescriptorSetLayoutCreateInfo layout_infos{
             .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -204,7 +200,6 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .pName  = "main",
             },
         };
-
 
         VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -232,7 +227,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
 
         VkVertexInputBindingDescription bindingDescription{
             .binding   = 0,
-            .stride    = get_vertex_reflection(pass_data.id()).input_size,
+            .stride    = vertex_input_size,
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
 

@@ -2,7 +2,7 @@
 
 #include "gfx/buffer.h"
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #include "vulkan/vk_unit.h"
 

@@ -6,10 +6,13 @@
 #include <cpputils/logger.hpp>
 
 #include <Windows.h>
-#include <Windowsx.h>
+#include <windowsx.h>
 
 namespace application::inputs::win32
 {
+
+static uint64_t last_mouse_state = 0;
+
 void input_axis(uint32_t axis_code, int64_t scroll_param, int64_t pos_param)
 {
     switch (axis_code)
@@ -28,6 +31,35 @@ void input_axis(uint32_t axis_code, int64_t scroll_param, int64_t pos_param)
         LOG_WARNING("unhandled axis : 0x%x", axis_code);
     }
 }
+void update_mouse_buttons(uint64_t mouse_state)
+{
+    if (mouse_state & VK_LBUTTON && !(last_mouse_state & VK_LBUTTON))
+        InputManager::get().press_button(EButtons::Mouse_Left);
+    if (!(mouse_state & VK_LBUTTON) && last_mouse_state & VK_LBUTTON)
+        InputManager::get().release_button(EButtons::Mouse_Left);
+
+    if (mouse_state & VK_RBUTTON && !(last_mouse_state & VK_RBUTTON))
+        InputManager::get().press_button(EButtons::Mouse_Right);
+    if (!(mouse_state & VK_RBUTTON) && last_mouse_state & VK_RBUTTON)
+        InputManager::get().release_button(EButtons::Mouse_Right);
+
+    if (mouse_state & VK_MBUTTON && !(last_mouse_state & VK_MBUTTON))
+        InputManager::get().press_button(EButtons::Mouse_Middle);
+    if (!(mouse_state & VK_MBUTTON) && last_mouse_state & VK_MBUTTON)
+        InputManager::get().release_button(EButtons::Mouse_Middle);
+
+    if (mouse_state & VK_XBUTTON1 && !(last_mouse_state & VK_XBUTTON1))
+        InputManager::get().press_button(EButtons::Mouse_1);
+    if (!(mouse_state & VK_XBUTTON1) && last_mouse_state & VK_XBUTTON1)
+        InputManager::get().release_button(EButtons::Mouse_1);
+
+    if (mouse_state & VK_XBUTTON2 && !(last_mouse_state & VK_XBUTTON2))
+        InputManager::get().press_button(EButtons::Mouse_2);
+    if (!(mouse_state & VK_XBUTTON2) && last_mouse_state & VK_XBUTTON2)
+        InputManager::get().release_button(EButtons::Mouse_2);
+    
+    last_mouse_state = mouse_state;
+}
 
 void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
 {
@@ -35,21 +67,6 @@ void press_key(uint64_t key_code, bool extended, uint32_t scan_code)
     {
     case 0x00:
     case 0xFF:
-        break;
-    case VK_LBUTTON:
-        InputManager::get().press_button(EButtons::Mouse_Left);
-        break;
-    case VK_RBUTTON:
-        InputManager::get().press_button(EButtons::Mouse_Right);
-        break;
-    case VK_MBUTTON:
-        InputManager::get().press_button(EButtons::Mouse_Middle);
-        break;
-    case VK_XBUTTON1:
-        InputManager::get().press_button(EButtons::Mouse_1);
-        break;
-    case VK_XBUTTON2:
-        InputManager::get().press_button(EButtons::Mouse_2);
         break;
     case VK_BACK:
         InputManager::get().press_button(EButtons::Keyboard_Backspace);
@@ -449,21 +466,6 @@ void release_key(uint64_t key_code, bool extended, uint32_t scan_code)
     {
     case 0x00:
     case 0xFF:
-        break;
-    case VK_LBUTTON:
-        InputManager::get().release_button(EButtons::Mouse_Left);
-        break;
-    case VK_RBUTTON:
-        InputManager::get().release_button(EButtons::Mouse_Right);
-        break;
-    case VK_MBUTTON:
-        InputManager::get().release_button(EButtons::Mouse_Middle);
-        break;
-    case VK_XBUTTON1:
-        InputManager::get().release_button(EButtons::Mouse_1);
-        break;
-    case VK_XBUTTON2:
-        InputManager::get().release_button(EButtons::Mouse_2);
         break;
     case VK_BACK:
         InputManager::get().release_button(EButtons::Keyboard_Backspace);

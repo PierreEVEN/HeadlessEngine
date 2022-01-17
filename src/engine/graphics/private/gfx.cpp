@@ -24,7 +24,7 @@ void init()
     vulkan::device::create();
     vulkan::allocator::create();
 #else
-    LOG_ERROR("there is no supported graphic backend.");
+    static_assert(false, "backend not supported");
 #endif
 }
 

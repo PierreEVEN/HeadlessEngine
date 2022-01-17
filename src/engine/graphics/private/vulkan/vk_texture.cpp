@@ -110,28 +110,7 @@ Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pix
         views                 = SwapchainImageResource<VkImageView>::make_static();
         image_descriptor_info = SwapchainImageResource<VkDescriptorImageInfo>::make_static();
     }
-
-    VkSamplerCreateInfo sampler_infos{
-        .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter               = VK_FILTER_LINEAR,
-        .minFilter               = VK_FILTER_LINEAR,
-        .mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .mipLodBias              = 0.0f, // Optional
-        .anisotropyEnable        = VK_TRUE,
-        .maxAnisotropy           = 16.0f,
-        .compareEnable           = VK_FALSE,
-        .compareOp               = VK_COMPARE_OP_ALWAYS,
-        .minLod                  = 0.0f,
-        .maxLod                  = static_cast<float>(image_infos.mipLevels),
-        .borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-        .unnormalizedCoordinates = VK_FALSE,
-    };
-
-    VK_CHECK(vkCreateSampler(get_device(), &sampler_infos, get_allocator(), &sampler), "failed to create sampler");
-
+    
     for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
     {
         VK_CHECK(vmaCreateImage(get_vma_allocator(), &image_infos, &vma_allocation, &images[i], &allocation[i], nullptr), "failed to create images");
@@ -287,7 +266,7 @@ void Texture_VK::create_views()
 
         for (auto& infos : image_descriptor_info)
         {
-            infos.sampler     = sampler;
+            infos.sampler     = VK_NULL_HANDLE;
             infos.imageView   = views[i];
             infos.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
@@ -298,8 +277,6 @@ Texture_VK::~Texture_VK()
 {
     for (const auto& view : views)
         vkDestroyImageView(get_device(), view, get_allocator());
-
-    vkDestroySampler(get_device(), sampler, get_allocator());
 
     if (!use_external_images)
         for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)

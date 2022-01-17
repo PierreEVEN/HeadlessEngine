@@ -11,7 +11,7 @@ CommandBuffer* CommandBuffer::create(const std::string& name)
 #if GFX_USE_VULKAN
     return new vulkan::CommandBuffer_VK(name);
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 } // namespace gfx

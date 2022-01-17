@@ -58,7 +58,7 @@ std::shared_ptr<Texture> Texture::create(const uint32_t width, uint32_t height, 
 #if GFX_USE_VULKAN
     return std::make_shared<vulkan::Texture_VK>(width, height, depth, parameters);
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 

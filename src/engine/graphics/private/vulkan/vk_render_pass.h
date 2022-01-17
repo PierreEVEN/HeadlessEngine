@@ -3,7 +3,7 @@
 #include "vk_descriptor_pool.h"
 #include "gfx/render_pass.h"
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx
 {

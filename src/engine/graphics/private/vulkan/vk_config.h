@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::config
 {

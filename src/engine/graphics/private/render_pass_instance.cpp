@@ -15,7 +15,7 @@ std::shared_ptr<RenderPassInstance> RenderPassInstance::create(uint32_t width, u
 #if GFX_USE_VULKAN
     return std::make_shared<vulkan::RenderPassInstance_VK>(width, height, base, images);
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 

@@ -6,7 +6,7 @@
 #include "types/magic_enum.h"
 #include "vulkan/vk_unit.h"
 #include <cpputils/logger.hpp>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {
@@ -50,6 +50,5 @@ class Texture_VK : public Texture
     SwapchainImageResource<VkImage>               images;
     SwapchainImageResource<VmaAllocation>         allocation;
     SwapchainImageResource<VkImageView>           views;
-    VkSampler                                     sampler = VK_NULL_HANDLE;
 };
 } // namespace gfx::vulkan

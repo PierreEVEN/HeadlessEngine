@@ -2,7 +2,7 @@
 
 #include "gfx/render_pass_instance.h"
 #include "vulkan/vk_unit.h"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {

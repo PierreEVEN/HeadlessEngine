@@ -143,6 +143,11 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
         return resource_static;
     }
 
+    Resource_T* data() const
+    {
+        return items;
+    }
+
   private:
     void copy_from(const SwapchainResource_Base& other)
     {

@@ -6,7 +6,7 @@
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_texture.h"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {

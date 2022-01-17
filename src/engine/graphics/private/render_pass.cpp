@@ -39,7 +39,7 @@ RenderPass* RenderPass::declare_internal(const Config& frame_graph_config, bool 
     pass_ptr              = render_pass;
     return pass_ptr;
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 

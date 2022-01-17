@@ -5,7 +5,7 @@
 #include "vulkan/vk_physical_device.h"
 #include "vulkan/vk_instance.h"
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>

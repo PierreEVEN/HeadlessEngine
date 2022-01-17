@@ -374,6 +374,10 @@ ParserResult parser::parse_shader(const std::filesystem::path& file_path)
     result.shader_properties.alpha_mode      = get_property(properties, "alpha_mode") == "TRANSLUCENT" ? EAlphaMode::Translucent
                                                : get_property(properties, "alpha_mode") == "ADDITIVE"  ? EAlphaMode::Additive
                                                                                                        : EAlphaMode::Opaque;
+    result.shader_properties.culling      = get_property(properties, "cull") == "FRONT"  ? ECulling::Front
+                                               : get_property(properties, "cull") == "BOTH" ? ECulling::Both
+                                               : get_property(properties, "cull") == "NONE" ? ECulling::None
+                                                                                            : ECulling::Back;
     return result;
 }
 

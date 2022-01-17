@@ -31,7 +31,7 @@ Surface* Surface::create_surface(application::window::Window* container)
     surface->on_draw          = &surface->main_render_pass->on_draw_pass;
     return surface;
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 

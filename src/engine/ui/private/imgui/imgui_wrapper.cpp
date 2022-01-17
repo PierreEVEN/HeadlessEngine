@@ -13,6 +13,7 @@ namespace ui
 {
 static ImGuiContext*                          imgui_context = nullptr;
 static std::shared_ptr<gfx::Texture>          font_texture;
+static std::shared_ptr<gfx::Sampler>          global_sampler;
 static gfx::StaticMesh*                       mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
@@ -100,9 +101,9 @@ void ImGuiWrapper::init_internal()
     // Create font texture
     uint8_t* pixels;
     int      width, height;
-    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
-    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = ETypeFormat::R8_UNORM});
-    font_texture->set_pixels(std::vector(pixels, pixels + width * height));
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = ETypeFormat::R8G8B8A8_UNORM});
+    font_texture->set_pixels(std::vector(pixels, pixels + width * height * 4));
 
     io.Fonts->TexID = font_texture.get();
 
@@ -138,14 +139,15 @@ void ImGuiWrapper::init_internal()
 
     imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb", gfx::MaterialOptions{.input_stage_override = vertex_attribute_overrides});
     imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
-
-    mesh = new gfx::StaticMesh("imgui mesh", sizeof(ImDrawVert), 0, 0, gfx::EBufferType::IMMEDIATE, gfx::EIndexBufferType::UINT16);
+    global_sampler          = gfx::Sampler::create("imgui sampler", {});
+    mesh                    = new gfx::StaticMesh("imgui mesh", sizeof(ImDrawVert), 0, 0, gfx::EBufferType::IMMEDIATE, gfx::EIndexBufferType::UINT16);
     static_assert(sizeof(ImDrawIdx) == 2, "wrong index size");
 }
 
 void ImGuiWrapper::destroy()
 {
     delete mesh;
+    global_sampler          = nullptr;
     imgui_base_material     = nullptr;
     imgui_material_instance = nullptr;
     ImGui::DestroyContext();
@@ -241,14 +243,14 @@ void ImGuiWrapper::submit_frame(gfx::CommandBuffer* command_buffer)
     int global_idx_offset = 0;
 
     imgui_material_instance->bind_texture("sTexture", font_texture);
-
+    imgui_material_instance->bind_sampler("sSampler", global_sampler);
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback != NULL)
+            if (pcmd->UserCallback != nullptr)
                 pcmd->UserCallback(cmd_list, pcmd);
             else
             {
@@ -292,5 +294,4 @@ ImGuiContext* ImGuiWrapper::get_context()
 {
     return imgui_context;
 }
-
 } // namespace ui

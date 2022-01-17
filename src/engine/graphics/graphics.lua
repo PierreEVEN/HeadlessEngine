@@ -7,7 +7,7 @@ target("graphics")
 
 if GRAPHIC_BACKEND == "VULKAN" then
 	target("graphics")
-		add_packages("vulkan-hpp", "vulkan-loader", "vulkan-memory-allocator", "vulkan-validationlayers")
+		add_packages("vulkan-loader", "vulkan-memory-allocator", "vulkan-validationlayers")
 else 
 	target("graphics")
 		del_files("private/vulkan/**.cpp")

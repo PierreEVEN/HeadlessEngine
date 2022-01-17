@@ -1,6 +1,6 @@
 
 
-declare_module("ui", {"graphics", "imgui"}, {"cpputils", })
+declare_module("ui", {"graphics", "imgui"}, {"cpputils", "glm" })
 
 target("ui")
 	set_group("engine_new")

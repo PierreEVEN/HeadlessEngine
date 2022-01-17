@@ -2,9 +2,10 @@
 
 #include "vk_device.h"
 
+#include <array>
 #include <cpputils/logger.hpp>
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {

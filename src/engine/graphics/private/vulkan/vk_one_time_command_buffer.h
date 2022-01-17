@@ -2,7 +2,7 @@
 
 #include "vulkan/vk_physical_device.h"
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {

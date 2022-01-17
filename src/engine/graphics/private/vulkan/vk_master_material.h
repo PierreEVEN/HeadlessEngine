@@ -2,7 +2,7 @@
 #include "gfx/master_material.h"
 
 #include "vk_unit.h"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {
@@ -18,10 +18,10 @@ class MasterMaterial_VK final : public MasterMaterial
     struct MaterialPassData
     {
         VkDescriptorSetLayout descriptor_set_layout;
-        VkPipeline                                    pipeline        = VK_NULL_HANDLE;
-        VkPipelineLayout                              layout          = VK_NULL_HANDLE;
-        VkShaderModule                                vertex_module   = VK_NULL_HANDLE;
-        VkShaderModule                                fragment_module = VK_NULL_HANDLE;
+        VkPipeline            pipeline        = VK_NULL_HANDLE;
+        VkPipelineLayout      layout          = VK_NULL_HANDLE;
+        VkShaderModule        vertex_module   = VK_NULL_HANDLE;
+        VkShaderModule        fragment_module = VK_NULL_HANDLE;
     };
 
     void rebuild_material(const shader_builder::CompilationResult& compilation_results) override;
@@ -39,8 +39,8 @@ class MasterMaterial_VK final : public MasterMaterial
             return nullptr;
         return &per_pass_data[render_pass].pipeline;
     }
-
-    const VkDescriptorSetLayout& get_descriptor_set_layout(const RenderPassID& render_pass) const
+    
+    [[nodiscard]] const VkDescriptorSetLayout& get_descriptor_set_layouts(const RenderPassID& render_pass) const
     {
         return per_pass_data[render_pass].descriptor_set_layout;
     }
@@ -75,6 +75,7 @@ class MasterMaterial_VK final : public MasterMaterial
             LOG_FATAL("unhandled case");
         }
     }
+
   private:
     void create_modules(const shader_builder::CompilationResult& compilation_results);
 

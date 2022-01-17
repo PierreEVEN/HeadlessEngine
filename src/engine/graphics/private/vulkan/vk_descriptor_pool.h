@@ -4,7 +4,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #ifndef VK_MAX_DESCRIPTOR_PER_POOL
 #define VK_MAX_DESCRIPTOR_PER_POOL 64

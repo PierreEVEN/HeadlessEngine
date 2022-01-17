@@ -25,6 +25,8 @@ void fetch_physical_devices()
 
     for (const auto& device : found_devices)
         devices.emplace_back(std::make_unique<vulkan::PhysicalDevice_VK>(device));
+#else
+    static_assert(false, "backend not supported");
 #endif
 }
 

@@ -30,7 +30,7 @@ std::shared_ptr<Buffer> Buffer::create(const std::string& buffer_name, uint32_t 
 #if GFX_USE_VULKAN
     return std::make_shared<vulkan::Buffer_VK>(buffer_name, stride, element_count, usage, buffer_access, buffer_type);
 #else
-    return nullptr;
+    static_assert(false, "backend not supported");
 #endif
 }
 
