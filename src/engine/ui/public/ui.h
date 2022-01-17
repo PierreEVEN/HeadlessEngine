@@ -14,6 +14,7 @@ class UICanvas
 
     void start_window(const std::string& title);
     void end_window();
+    void demo_window();
 
     void label(const std::string& text);
 
@@ -29,6 +30,7 @@ class UICanvas
 
     void init(const Context& context);
     void submit(gfx::CommandBuffer* command_buffer);
+
 
   private:
     std::mutex imgui_draw_lock__;

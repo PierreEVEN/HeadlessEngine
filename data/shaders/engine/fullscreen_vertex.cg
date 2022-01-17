@@ -1,0 +1,8 @@
+VsToFsStruct main(uint vertex_index : SV_VertexID)
+{
+    VsToFsStruct output;
+    output.Uv = float2((vertex_index << 1) & 2, vertex_index & 2);
+    output.Pos = float4(output.Uv * 2.0f - 1.0f, 0.0f, 1.0f);
+    output.Uv *= float2(1, -1);
+    return output;
+}

@@ -35,11 +35,15 @@ void UICanvas::end_window()
     ImGui::End();
 }
 
+void UICanvas::demo_window()
+{
+    ImGui::ShowDemoWindow();
+}
+
 void UICanvas::init(const Context& context)
 {
     imgui_draw_lock__.lock();
     ImGuiWrapper::begin_frame(context);
-    ImGui::ShowDemoWindow();
 }
 
 void UICanvas::submit(gfx::CommandBuffer* command_buffer)

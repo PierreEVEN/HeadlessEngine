@@ -1,7 +1,6 @@
 
 
 #include "application/application.h"
-#include "application/inputs/input_mapping.h"
 #include "application/window.h"
 #include "ui.h"
 
@@ -40,7 +39,7 @@ int main()
             canvas->end_window();
 
             canvas->start_window("wintwo");
-            //canvas->label("this is a text yay");
+            // canvas->label("this is a text yay");
             canvas->end_window();
 
             canvas->submit(command_buffer);

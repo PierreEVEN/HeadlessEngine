@@ -68,10 +68,10 @@ void MaterialInstance_VK::bind_sampler(const std::string& binding_name, const st
             image.is_dirty = true;
 }
 
-void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
+bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
 {
     if (!descriptor_sets.contains(command_buffer->get_render_pass()))
-        return;
+        return false;
 
     const auto            base            = dynamic_cast<MasterMaterial_VK*>(get_base().get());
     const auto*           pipeline_layout = base->get_pipeline_layout(command_buffer->get_render_pass());
@@ -79,10 +79,16 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
     const VkCommandBuffer cmd             = **dynamic_cast<CommandBuffer_VK*>(command_buffer);
 
     if (!pipeline_layout)
-        return;
+    {
+        LOG_ERROR("pipeline layout is null");
+        return false;
+    }
 
     if (!pipeline)
-        return;
+    {
+        LOG_ERROR("pipeline is null");
+        return false;
+    }
 
     if (base->get_properties().line_width != 1.0f)
         vkCmdSetLineWidth(cmd, base->get_properties().line_width);
@@ -155,6 +161,7 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
     }
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, &pass_data->descriptor_set, 0, nullptr);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+    return true;
 }
 
 const shader_builder::BindingDescriptor* MaterialInstance_VK::find_binding(const std::string& binding_name, const RenderPassID& render_pass) const

@@ -12,7 +12,7 @@ class MaterialInstance_VK : public MaterialInstance
     MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base);
     void bind_buffer(const std::string& binding_name, const std::shared_ptr<Buffer>& in_buffer) override;
 
-    void bind_material(CommandBuffer* command_buffer) override;
+    bool bind_material(CommandBuffer* command_buffer) override;
     void bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture) override;
     void bind_sampler(const std::string& binding_name, const std::shared_ptr<Sampler>& in_sampler) override;
 

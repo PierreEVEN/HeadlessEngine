@@ -7,8 +7,6 @@
 #include <iostream>
 
 
-
-#include "config.h"
 #include <cpputils/logger.hpp>
 #include <cpputils/stringutils.hpp>
 
@@ -101,10 +99,10 @@ void Profiler::store_stats()
 	strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
 
 
-	std::filesystem::create_directories(config::profiler_storage_path);
+	std::filesystem::create_directories("saved/profiler");
 	
 	
-	std::ofstream output(std::string(config::profiler_storage_path) + "/Profiler-" + buf + ".csv");
+	std::ofstream output(std::string("saved/profiler/") + "/Profiler-" + buf + ".csv");
 	if (!output)
 	{ LOG_FATAL("cannot write profiler results ");
 	}
