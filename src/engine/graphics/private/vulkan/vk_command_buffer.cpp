@@ -2,9 +2,9 @@
 #include "vk_command_buffer.h"
 
 #include "gfx/buffer.h"
-#include "vk_buffer.h"
-#include "vk_helper.h"
-#include "vk_material.h"
+#include "vulkan/vk_buffer.h"
+#include "vulkan/vk_helper.h"
+#include "vulkan/vk_master_material.h"
 #include "gfx/StaticMesh.h"
 #include "vulkan/vk_command_pool.h"
 #include "vulkan/vk_device.h"

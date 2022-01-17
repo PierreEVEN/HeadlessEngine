@@ -1,4 +1,4 @@
-#include "gfx/materials/material_instance.h"
+#include "gfx/material_instance.h"
 
 #include "vulkan/vk_material_instance.h"
 

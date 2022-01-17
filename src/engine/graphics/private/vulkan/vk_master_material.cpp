@@ -1,4 +1,4 @@
-#include "vulkan/vk_material.h"
+#include "vulkan/vk_master_material.h"
 
 #include "vk_errors.h"
 #include "vk_render_pass.h"
@@ -167,6 +167,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = vertex_reflection_data.push_constant->structure_size,
             });
+            LOG_WARNING("VS PC : %d", vertex_reflection_data.push_constant->structure_size);
         }
         if (fragment_reflection_data.push_constant)
         {
@@ -175,9 +176,12 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
                 .offset     = 0,
                 .size       = fragment_reflection_data.push_constant->structure_size,
             });
+
+            LOG_WARNING("FS PC : %d", fragment_reflection_data.push_constant->structure_size);
         }
 
-        const VkDescriptorSetLayoutCreateInfo layout_infos{
+
+        VkDescriptorSetLayoutCreateInfo layout_infos{
             .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext        = nullptr,
             .flags        = 0,
@@ -186,7 +190,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         };
         VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &pass_data->descriptor_set_layout), "Failed to create descriptor set layout");
 
-        const std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
+        std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
             {
                 .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 .stage  = VK_SHADER_STAGE_VERTEX_BIT,
@@ -201,7 +205,8 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             },
         };
 
-        const VkPipelineLayoutCreateInfo pipeline_layout_infos{
+
+        VkPipelineLayoutCreateInfo pipeline_layout_infos{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount         = 1,
             .pSetLayouts            = &pass_data->descriptor_set_layout,
@@ -225,13 +230,13 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             vertex_input_size += Texture::get_format_channel_count(input_property.type.format) * Texture::get_format_bytes_per_pixel(input_property.type.format);
         }
 
-        const VkVertexInputBindingDescription bindingDescription{
+        VkVertexInputBindingDescription bindingDescription{
             .binding   = 0,
-            .stride    = vertex_input_size,
+            .stride    = get_vertex_reflection(pass_data.id()).input_size,
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
-        const VkPipelineVertexInputStateCreateInfo vertex_input_state{
+        VkPipelineVertexInputStateCreateInfo vertex_input_state{
             .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .vertexBindingDescriptionCount   = static_cast<uint32_t>(bindingDescription.stride > 0 ? 1 : 0),
             .pVertexBindingDescriptions      = bindingDescription.stride > 0 ? &bindingDescription : nullptr,
@@ -239,19 +244,19 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .pVertexAttributeDescriptions    = vertex_attribute_description.data(),
         };
 
-        const VkPipelineInputAssemblyStateCreateInfo input_assembly{
+        VkPipelineInputAssemblyStateCreateInfo input_assembly{
             .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .topology               = vk_topology(compilation_results.properties.topology),
             .primitiveRestartEnable = VK_FALSE,
         };
 
-        const VkPipelineViewportStateCreateInfo viewport_state{
+        VkPipelineViewportStateCreateInfo viewport_state{
             .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
             .viewportCount = 1,
             .scissorCount  = 1,
         };
 
-        const VkPipelineRasterizationStateCreateInfo rasterizer{
+        VkPipelineRasterizationStateCreateInfo rasterizer{
             .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .depthClampEnable        = VK_FALSE,
             .rasterizerDiscardEnable = VK_FALSE,
@@ -265,7 +270,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .lineWidth               = compilation_results.properties.line_width,
         };
 
-        const VkPipelineMultisampleStateCreateInfo multisampling{
+        VkPipelineMultisampleStateCreateInfo multisampling{
             .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT,
             .sampleShadingEnable   = VK_FALSE,
@@ -275,7 +280,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .alphaToOneEnable      = VK_FALSE,
         };
 
-        const VkPipelineDepthStencilStateCreateInfo depth_stencil{
+        VkPipelineDepthStencilStateCreateInfo depth_stencil{
             .sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .depthTestEnable       = compilation_results.properties.depth_test,
             .depthWriteEnable      = compilation_results.properties.depth_test,

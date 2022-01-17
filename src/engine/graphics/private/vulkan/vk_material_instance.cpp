@@ -6,7 +6,7 @@
 #include "vk_buffer.h"
 #include "vk_command_buffer.h"
 #include "vk_device.h"
-#include "vk_material.h"
+#include "vk_master_material.h"
 #include "vk_render_pass.h"
 #include "vk_texture.h"
 
@@ -118,7 +118,6 @@ void MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
                 .pTexelBufferView = nullptr,
             });
         }
-        static_assert(false, "AJOUTER UN TYPE SAMPLER PUTAIN");
         vkUpdateDescriptorSets(get_device(), static_cast<uint32_t>(pass_data.write_descriptor_sets->write_descriptor_sets.size()), pass_data.write_descriptor_sets->write_descriptor_sets.data(), 0, nullptr);
 
         pass_data.write_descriptor_sets->is_dirty = false;

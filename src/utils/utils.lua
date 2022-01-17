@@ -1,2 +1,2 @@
 
-declare_module("utils", {"config"}, {"cpputils"})
+declare_module("utils", {}, {"cpputils"})

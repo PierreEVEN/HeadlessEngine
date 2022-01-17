@@ -1,5 +1,5 @@
 #pragma once
-#include "gfx/materials/material_instance.h"
+#include "gfx/material_instance.h"
 
 #include "vulkan/vk_unit.h"
 #include <vulkan/vulkan.hpp>

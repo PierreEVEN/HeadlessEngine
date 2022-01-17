@@ -1,7 +1,7 @@
 #include "gfx/render_pass_instance.h"
 
-#include "gfx/materials/master_material.h"
-#include "gfx/materials/material_instance.h"
+#include "gfx/master_material.h"
+#include "gfx/material_instance.h"
 
 #if GFX_USE_VULKAN
 #include "vulkan/vk_render_pass_instance.h"

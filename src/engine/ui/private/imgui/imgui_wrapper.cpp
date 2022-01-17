@@ -4,8 +4,8 @@
 #include "application/inputs/input_codes.h"
 #include "application/inputs/input_manager.h"
 #include "gfx/StaticMesh.h"
-#include "gfx/materials/master_material.h"
-#include "gfx/materials/material_instance.h"
+#include "gfx/master_material.h"
+#include "gfx/material_instance.h"
 
 #include <imgui.h>
 
@@ -17,7 +17,7 @@ static gfx::StaticMesh*                       mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
 
-static const char* get_clipboard_text(void* user_data)
+static const char* get_clipboard_text([[maybe_unused]] void* user_data)
 {
     return "";
     /*
@@ -152,7 +152,7 @@ void ImGuiWrapper::destroy()
     font_texture = nullptr;
 }
 
-void ImGuiWrapper::require_texture(const std::shared_ptr<gfx::Texture>& required_texture)
+void ImGuiWrapper::require_texture([[maybe_unused]] const std::shared_ptr<gfx::Texture>& required_texture)
 {
 }
 

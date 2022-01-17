@@ -6,7 +6,7 @@
 
 namespace ui
 {
-UICanvas::UICanvas(const std::shared_ptr<gfx::RenderPassInstance>& render_pass)
+UICanvas::UICanvas([[maybe_unused]] const std::shared_ptr<gfx::RenderPassInstance>& render_pass)
 {
     if (ImGuiWrapper::usage_count == 0)
         ImGuiWrapper::init();

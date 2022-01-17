@@ -1,6 +1,6 @@
-#include "gfx/materials/master_material.h"
+#include "gfx/master_material.h"
 
-#include "vulkan/vk_material.h"
+#include "vulkan/vk_master_material.h"
 
 namespace gfx
 {
