@@ -1,33 +1,9 @@
 #include "application/application.h"
 #include "application/window.h"
-#include "gfx/materials/master_material.h"
-#include "gfx/materials/material_instance.h"
-#include "gfx/StaticMesh.h"
-#include "gfx/texture.h"
-#include "gfx/view.h"
 
 #include <gfx/gfx.h>
 
 #include <cpputils/logger.hpp>
-
-/***
- * ###########  SURFACE
- *
- * render() {
- *  // on_render.execute();
- *
- *  ecs.pre_render();
- *  ecs.render();
- * }
- *
- *
- */
-
-
-
-
-
-
 
 int main()
 {
