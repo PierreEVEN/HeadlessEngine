@@ -12,10 +12,10 @@
 
 namespace gfx::vulkan
 {
-RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images)
+RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images)
     : RenderPassInstance(width, height, base, images)
 {
-    resize(width, height);
+    resize(width, height, images);
 
     const VkSemaphoreCreateInfo semaphore_infos{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -31,6 +31,7 @@ RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, co
 
 RenderPassInstance_VK::~RenderPassInstance_VK()
 {
+    vkDeviceWaitIdle(get_device());
     for (const auto& framebuffer : framebuffers)
         vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
 
@@ -140,10 +141,17 @@ void RenderPassInstance_VK::submit()
     *render_finished_fence = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
 }
 
-void RenderPassInstance_VK::resize(uint32_t width, uint32_t height)
+void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
-    RenderPass_VK* base = static_cast<RenderPass_VK*>(get_base());
+    vkDeviceWaitIdle(get_device());
+    for (const auto& framebuffer : framebuffers)
+        vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
 
+    if (!surface_texture.empty())
+    {
+        framebuffers_images = surface_texture;
+    }
+    
     framebuffer_width  = width;
     framebuffer_height = height;
     for (uint8_t i = 0; i < framebuffers.get_max_instance_count(); ++i)
@@ -157,7 +165,7 @@ void RenderPassInstance_VK::resize(uint32_t width, uint32_t height)
 
         const VkFramebufferCreateInfo framebuffer_infos{
             .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass      = base->get(),
+            .renderPass      = dynamic_cast<RenderPass_VK*>(get_base())->get(),
             .attachmentCount = static_cast<uint32_t>(attachments.size()),
             .pAttachments    = attachments.data(),
             .width           = framebuffer_width,

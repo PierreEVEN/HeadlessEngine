@@ -52,18 +52,22 @@ int main()
     surface_1->link_dependency(g_buffer_graph_pass);
     surface_1->build_framegraph();
 
+    struct Vertex
+    {
+        glm::vec3 pos;
+    };
     auto glob_mat     = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
     auto mat_instance = gfx::MaterialInstance::create(glob_mat);
-    auto vertices     = std::vector{gfx::StaticMesh::Vertex{
+    auto vertices     = std::vector{Vertex{
                                     .pos = glm::vec3(0, 0, 0),
                                 },
-                                gfx::StaticMesh::Vertex{
+                                Vertex{
                                     .pos = glm::vec3(1, 0, 0),
                                 },
-                                gfx::StaticMesh::Vertex{
+                                Vertex{
                                     .pos = glm::vec3(1, 1, 0),
                                 },
-                                gfx::StaticMesh::Vertex{
+                                Vertex{
                                     .pos = glm::vec3(0, 1, 0),
                                 }};
     auto indices      = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};

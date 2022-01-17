@@ -21,7 +21,7 @@ struct Property
     std::string name;
     TypeInfo    type;
     uint32_t    offset   = 0;
-    uint32_t    location = 0;
+    int    location = 0;
 };
 
 enum class EBindingType

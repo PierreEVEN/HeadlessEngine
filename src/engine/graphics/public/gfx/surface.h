@@ -21,6 +21,7 @@ class Surface
     OnDrawPass* on_draw = nullptr;
 
   protected:
+
     Surface() = default;
     std::shared_ptr<RenderPassInstance> main_render_pass;
 };

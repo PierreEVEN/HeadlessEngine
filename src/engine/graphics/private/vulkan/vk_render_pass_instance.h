@@ -11,18 +11,16 @@ class RenderPassInstance_VK final : public RenderPassInstance
     friend class Surface_VK;
 
   public:
-    RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
+    RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images);
     ~RenderPassInstance_VK() override;
 
-    void resize(uint32_t width, uint32_t height) override;
+    void resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture) override;
 
   protected:
     void begin_pass() override;
     void submit() override;
 
   private:
-    uint32_t                              framebuffer_width                 = 0;
-    uint32_t                              framebuffer_height                = 0;
     SwapchainImageResource<VkFramebuffer> framebuffers                      = {};
     SwapchainImageResource<VkSemaphore>   render_finished_semaphore         = {};
     SwapchainImageResource<VkFence>       render_finished_fence             = {};

@@ -216,8 +216,11 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
         uint32_t vertex_input_size = 0;
         for (const auto& input_property : inputs)
         {
+            if (input_property.location == -1)
+                continue;
+
             vertex_attribute_description.emplace_back(VkVertexInputAttributeDescription{
-                .location = input_property.location,
+                .location = static_cast<uint32_t>(input_property.location),
                 .format   = Texture_VK::vk_texture_format_to_engine(input_property.type.format),
                 .offset   = input_property.offset,
             });

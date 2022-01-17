@@ -11,24 +11,7 @@ namespace gfx
 Surface* Surface::create_surface(application::window::Window* container)
 {
 #if GFX_USE_VULKAN
-
     const auto surface = new vulkan::Surface_VK(container);
-
-    if (!RenderPassID::exists("resolve_pass"))
-    {
-        RenderPass::declare_internal(
-            RenderPass::Config{
-                .pass_name         = "resolve_pass",
-                .color_attachments = {RenderPass::Config::Attachment{
-                    .attachment_name = "color",
-                    .image_format    = vulkan::Texture_VK::engine_texture_format_from_vk(surface->get_surface_format().format),
-                }},
-            },
-            true);
-    }
-
-    surface->main_render_pass = RenderPassInstance::create(container->absolute_width(), container->absolute_height(), RenderPassID::get("resolve_pass"), std::vector{surface->get_surface_render_texture()});
-    surface->on_draw          = &surface->main_render_pass->on_draw_pass;
     return surface;
 #else
     static_assert(false, "backend not supported");

@@ -119,7 +119,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
             // gameplay
             region.tick();
             // send gameplay to gfx
-            gfx::View camera;
+            gfx::ViewStr camera;
             region.pre_render(&camera);
         }
         // render everything

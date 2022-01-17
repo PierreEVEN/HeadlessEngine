@@ -76,8 +76,8 @@ void Window_Win32::set_name(const std::string& new_name)
 
 void Window_Win32::set_size(uint32_t width, uint32_t height)
 {
-    config.absolute_width  = width;
-    config.absolute_height = height;
+    config.framebuffer_width  = width;
+    config.framebuffer_height = height;
 
     RECT initial_area = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));

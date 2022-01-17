@@ -115,7 +115,7 @@ Property reflect_property(SpvReflectInterfaceVariable* variable, uint32_t& curre
         .name     = name,
         .type     = type,
         .offset   = offset,
-        .location = variable->location,
+        .location = static_cast<int>(variable->location),
     };
 }
 

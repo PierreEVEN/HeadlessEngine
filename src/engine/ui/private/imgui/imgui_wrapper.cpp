@@ -165,7 +165,6 @@ void ImGuiWrapper::begin_frame(const UICanvas::Context& context)
     // Setup display size (every frame to accommodate for start_window resizing)
     io.DisplaySize             = ImVec2(static_cast<float>(context.draw_width), static_cast<float>(context.draw_height));
     io.DisplayFramebufferScale = ImVec2(1.0, 1.0);
-
     io.DeltaTime = static_cast<float>(application::get()->delta_time());
 
     // Update mouse

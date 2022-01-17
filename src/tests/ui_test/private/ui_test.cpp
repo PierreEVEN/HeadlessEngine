@@ -31,8 +31,8 @@ int main()
             canvas->init(ui::UICanvas::Context{
                 .draw_pos_x  = 0,
                 .draw_pos_y  = 0,
-                .draw_width  = 800,
-                .draw_height = 600,
+                .draw_width  = window->absolute_width(),
+                .draw_height = window->absolute_height(),
             });
 
             canvas->start_window("this is a test window");

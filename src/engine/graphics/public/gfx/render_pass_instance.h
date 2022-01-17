@@ -13,11 +13,11 @@ DECLARE_DELEGATE_MULTICAST(OnDrawPass, CommandBuffer*);
 class RenderPassInstance
 {
   public:
-    static std::shared_ptr<RenderPassInstance> create(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images = {});
+    static std::shared_ptr<RenderPassInstance> create(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images = {});
 
     virtual ~RenderPassInstance();
 
-    virtual void resize(uint32_t width, uint32_t height) = 0;
+    virtual void resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture = {}) = 0;
     void         draw_pass();
 
     void link_dependency(const std::shared_ptr<RenderPassInstance>& render_pass);
@@ -51,20 +51,20 @@ class RenderPassInstance
     }
 
   protected:
-    RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::optional<std::vector<std::shared_ptr<Texture>>>& images);
+    RenderPassInstance(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images);
     virtual void begin_pass() = 0;
     virtual void submit()     = 0;
 
     std::vector<std::shared_ptr<RenderPassInstance>> children;
+    std::vector<std::shared_ptr<Texture>>            framebuffers_images;
+    bool                                             is_generated = false;
+    uint32_t                                         framebuffer_width;
+    uint32_t                                         framebuffer_height;
 
   private:
     CommandBuffer*                        command_buffer = nullptr;
-    std::vector<std::shared_ptr<Texture>> framebuffers_images;
     RenderPass*                           render_pass_base;
-    uint32_t                              framebuffer_width;
-    uint32_t                              framebuffer_height;
     std::vector<RenderPassInstance*>      parents;
-    bool                                  is_generated = false;
     std::vector<Texture*>                 available_images;
 };
 } // namespace gfx

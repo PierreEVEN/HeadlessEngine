@@ -37,4 +37,21 @@ StaticMesh::StaticMesh(const std::string& mesh_name, uint32_t vertex_structure_s
     index_buffer  = Buffer::create(mesh_name + "_index_buffer", index_count, static_cast<uint32_t>(index_buffer_type), EBufferUsage::INDEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
     vertex_buffer = Buffer::create(mesh_name + "_vertex_buffer", vertex_count, vertex_structure_size, EBufferUsage::VERTEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
 }
+
+StaticMesh::StaticMesh(const std::string& mesh_name, const void* vertex_data, uint32_t vertex_structure_size, uint32_t vertex_count, const void* index_data, uint32_t index_count, EBufferType buffer_type,
+                       EIndexBufferType index_buffer_type)
+{
+    index_buffer  = Buffer::create(mesh_name + "_index_buffer", index_count, static_cast<uint32_t>(index_buffer_type), EBufferUsage::INDEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
+    vertex_buffer = Buffer::create(mesh_name + "_vertex_buffer", vertex_count, vertex_structure_size, EBufferUsage::VERTEX_DATA, EBufferAccess::CPU_TO_GPU, buffer_type);
+    vertex_buffer->set_data(
+        [&](void* data)
+        {
+            memcpy(data, vertex_data, vertex_buffer->size());
+        });
+    index_buffer->set_data(
+        [&](void* data)
+        {
+            memcpy(data, index_data, index_buffer->size());
+        });
+}
 } // namespace gfx

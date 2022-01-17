@@ -182,9 +182,8 @@ void Surface_VK::render()
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        LOG_FATAL("framebuffer resizing is not implemented yet");
-        // recreate_swapchain();
-        // return;
+        recreate_swapchain();
+        return;
     }
 
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -213,8 +212,7 @@ void Surface_VK::render()
 
     if (submit_result == VK_ERROR_OUT_OF_DATE_KHR || submit_result == VK_SUBOPTIMAL_KHR)
     {
-        LOG_FATAL("framebuffer resizing is not implemented yet");
-        // recreate_swapchain();
+        recreate_swapchain();
     }
     else if (submit_result != VK_SUCCESS)
     {
@@ -276,6 +274,28 @@ void Surface_VK::recreate_swapchain()
                                                        .read_only              = false,
                                                    },
                                                    images);
+    if (main_render_pass)
+    {
+        main_render_pass->resize(get_container()->absolute_width(), get_container()->absolute_height(), std::vector{surface_texture});
+    }
+    else
+    {
+        if (!RenderPassID::exists("resolve_pass"))
+        {
+            RenderPass::declare_internal(
+                RenderPass::Config{
+                    .pass_name         = "resolve_pass",
+                    .color_attachments = {RenderPass::Config::Attachment{
+                        .attachment_name = "color",
+                        .image_format    = vulkan::Texture_VK::engine_texture_format_from_vk(get_surface_format().format),
+                    }},
+                },
+                true);
+        }
+
+        main_render_pass = RenderPassInstance::create(get_container()->absolute_width(), get_container()->absolute_height(), RenderPassID::get("resolve_pass"), std::vector{surface_texture});
+        on_draw          = &main_render_pass->on_draw_pass;
+    }
 }
 
 } // namespace gfx::vulkan

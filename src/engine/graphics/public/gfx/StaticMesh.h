@@ -18,8 +18,17 @@ enum class EIndexBufferType
 class StaticMesh
 {
   public:
-    StaticMesh(const std::string& mesh_name, uint32_t vertex_structure_size, uint32_t vertex_count = 0, uint32_t index_count = 0, EBufferType buffer_type = EBufferType::STATIC,
+    StaticMesh(const std::string& mesh_name, uint32_t vertex_structure_size, uint32_t vertex_count = 0, uint32_t index_count = 0, EBufferType buffer_type = EBufferType::IMMUTABLE,
                EIndexBufferType index_buffer_type = EIndexBufferType::UINT32);
+
+    StaticMesh(const std::string& mesh_name, const void* vertex_data, uint32_t vertex_structure_size, uint32_t vertex_count, const void* index_data, uint32_t index_count, EBufferType buffer_type = EBufferType::IMMUTABLE,
+               EIndexBufferType index_buffer_type = EIndexBufferType::UINT32);
+
+    template <typename Vertex_T>
+    StaticMesh(const std::string& mesh_name, std::vector<Vertex_T> vertices, std::vector<uint32_t> indices, EBufferType buffer_type = EBufferType::IMMUTABLE, EIndexBufferType index_buffer_type = EIndexBufferType::UINT32)
+        : StaticMesh(mesh_name, vertices.data(), sizeof(Vertex_T), static_cast<uint32_t>(vertices.size()), indices.data(), static_cast<uint32_t>(indices.size()), buffer_type, index_buffer_type)
+    {
+    }
 
     virtual ~StaticMesh() = default;
 
@@ -33,7 +42,7 @@ class StaticMesh
         return index_buffer.get();
     }
 
-    void set_data(void* vertex_data, uint32_t vertex_count, uint32_t* index_data, uint32_t index_count);
+    void                              set_data(void* vertex_data, uint32_t vertex_count, uint32_t* index_data, uint32_t index_count);
     template <typename Vertex_T> void set_data(const std::vector<Vertex_T>& vertex_data, const std::vector<uint32_t>& index_data)
     {
         set_data(vertex_data.data(), vertex_data.size(), index_data.data(), index_data.size());

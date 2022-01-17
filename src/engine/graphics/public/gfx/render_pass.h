@@ -58,12 +58,12 @@ class RenderPass
     {
         return render_pass_id;
     }
+    static RenderPass* declare_internal(const Config& frame_graph_config, bool present_pass);
 
   protected:
     RenderPass(const Config& frame_graph_config, bool in_present_pass);
 
   private:
-    static RenderPass* declare_internal(const Config& frame_graph_config, bool present_pass);
     RenderPassID       render_pass_id;
     const Config       config;
     bool               present_pass;
