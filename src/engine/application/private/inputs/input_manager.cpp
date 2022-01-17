@@ -27,7 +27,6 @@ void InputManager::release_button(EButtons key)
     buttons[key].first_pressed = false;
     buttons[key].pressed       = false;
     buttons[key].value_changed.execute();
-    LOG_INFO("%s", magic_enum::enum_name(key).data());
 }
 
 void InputManager::move_axis(EAxis key, float value)

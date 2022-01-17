@@ -17,8 +17,8 @@ static std::shared_ptr<gfx::Sampler>          global_sampler;
 static gfx::StaticMesh*                       mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
-
-static const char* get_clipboard_text([[maybe_unused]] void* user_data)
+static application::ECursorStyle              cursor_map[ImGuiMouseCursor_COUNT];
+static const char*                            get_clipboard_text([[maybe_unused]] void* user_data)
 {
     return "";
     /*
@@ -98,6 +98,16 @@ void ImGuiWrapper::init_internal()
     ImGuiViewport* main_viewport  = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = nullptr;
 
+    cursor_map[ImGuiMouseCursor_Arrow]      = application::ECursorStyle::ARROW;
+    cursor_map[ImGuiMouseCursor_TextInput]  = application::ECursorStyle::I_BEAM;
+    cursor_map[ImGuiMouseCursor_ResizeAll]  = application::ECursorStyle::SIZE_ALL;
+    cursor_map[ImGuiMouseCursor_ResizeNS]   = application::ECursorStyle::SIZE_NS;
+    cursor_map[ImGuiMouseCursor_ResizeEW]   = application::ECursorStyle::SIZE_WE;
+    cursor_map[ImGuiMouseCursor_ResizeNESW] = application::ECursorStyle::SIZE_NESW;
+    cursor_map[ImGuiMouseCursor_ResizeNWSE] = application::ECursorStyle::SIZE_NWSE;
+    cursor_map[ImGuiMouseCursor_Hand]       = application::ECursorStyle::HAND;
+    cursor_map[ImGuiMouseCursor_NotAllowed] = application::ECursorStyle::NOT_ALLOWED;
+
     // Create font texture
     uint8_t* pixels;
     int      width, height;
@@ -165,7 +175,7 @@ void ImGuiWrapper::begin_frame(const UICanvas::Context& context)
     // Setup display size (every frame to accommodate for start_window resizing)
     io.DisplaySize             = ImVec2(static_cast<float>(context.draw_width), static_cast<float>(context.draw_height));
     io.DisplayFramebufferScale = ImVec2(1.0, 1.0);
-    io.DeltaTime = static_cast<float>(application::get()->delta_time());
+    io.DeltaTime               = static_cast<float>(application::get()->delta_time());
 
     // Update mouse
     io.MouseDown[0]         = application::inputs::Key(application::inputs::EButtons::Mouse_Left).get_bool_value();
@@ -175,6 +185,12 @@ void ImGuiWrapper::begin_frame(const UICanvas::Context& context)
     io.MouseDown[4]         = application::inputs::Key(application::inputs::EButtons::Mouse_2).get_bool_value();
     io.MouseHoveredViewport = 0;
     io.MousePos             = ImVec2(application::inputs::Key(application::inputs::EAxis::Mouse_X).get_float_value(), application::inputs::Key(application::inputs::EAxis::Mouse_Y).get_float_value());
+
+    const ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (imgui_cursor != ImGuiMouseCursor_None)
+        application::get()->set_cursor(cursor_map[imgui_cursor]);
+    else
+        LOG_WARNING("//@TODO : handle none cursor");
 
     ImGui::NewFrame();
 }

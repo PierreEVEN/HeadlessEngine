@@ -111,6 +111,8 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
     const uint32_t scancode = (in_lparam & 0x00ff0000) >> 16;
     switch (in_msg)
     {
+    case WM_SETCURSOR:
+        break;
     case WM_DESTROY:
         destroy_window(this);
         return 0;
@@ -142,7 +144,6 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
         break;
     case WM_SYSKEYDOWN:
     case WM_KEYDOWN:
-        LOG_DEBUG("press AA : %x", in_wparam);
         inputs::win32::press_key(in_wparam, extended, scancode);
         break;
     case WM_LBUTTONUP:
@@ -153,7 +154,6 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
         break;
     case WM_SYSKEYUP:
     case WM_KEYUP:
-        LOG_DEBUG("release AA : %x", in_wparam);
         inputs::win32::release_key(in_wparam, extended, scancode);
         return 0;
     case WM_XBUTTONDBLCLK:

@@ -32,7 +32,6 @@ void UICanvas::start_window(const std::string& title)
 
 void UICanvas::end_window()
 {
-    ImGui::ShowDemoWindow();
     ImGui::End();
 }
 
@@ -40,6 +39,7 @@ void UICanvas::init(const Context& context)
 {
     imgui_draw_lock__.lock();
     ImGuiWrapper::begin_frame(context);
+    ImGui::ShowDemoWindow();
 }
 
 void UICanvas::submit(gfx::CommandBuffer* command_buffer)

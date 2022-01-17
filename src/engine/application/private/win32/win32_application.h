@@ -48,7 +48,9 @@ class Application_Win32 final : public Application
     {
         return reinterpret_cast<AppHandle>(application_handle);
     }
+    void set_cursor(ECursorStyle cursor_style) override;
   private:
+    HCURSOR   load_cursor(LPCSTR cursor);
     HINSTANCE application_handle;
 };
 

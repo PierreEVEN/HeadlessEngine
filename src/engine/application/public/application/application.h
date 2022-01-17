@@ -37,6 +37,24 @@ struct Monitor
     uint32_t work_height = 0;
 };
 
+enum class ECursorStyle
+{
+    DISABLED,
+    ARROW,
+    CROSSHAIR,
+    HAND,
+    HELP,
+    I_BEAM,
+    SIZE_ALL,
+    SIZE_NESW,
+    SIZE_NS,
+    SIZE_NWSE,
+    SIZE_WE,
+    VERT_ARROW,
+    WAIT,
+    NOT_ALLOWED,
+};
+
 class Application
 {
   public:
@@ -62,6 +80,8 @@ class Application
     }
 
     void next_frame();
+
+    virtual void set_cursor(ECursorStyle cursor_style) = 0;
 
   protected:
     std::vector<Monitor>                  available_monitors;

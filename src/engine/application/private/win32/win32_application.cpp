@@ -5,9 +5,13 @@
 #include <ShellScalingApi.h>
 #include <cpputils/logger.hpp>
 #include <cstdint>
+#include <unordered_map>
+#include <types/magic_enum.h>
 
 namespace application::win32
 {
+static std::unordered_map<LPCSTR, HCURSOR> cursor_map;
+
 Application_Win32::Application_Win32(HINSTANCE handle)
 {
     application_handle = handle;
@@ -57,6 +61,63 @@ void Application_Win32::on_register_internal()
 void Application_Win32::set_clipboard_data([[maybe_unused]] const std::vector<uint8_t>& clipboard_data)
 {
     LOG_ERROR("clipboard is not implemented");
+}
+
+HCURSOR Application_Win32::load_cursor(LPCSTR cursor)
+{
+    if (!cursor_map.contains(cursor))
+        WIN_CHECK(cursor_map[cursor] = LoadCursorA(nullptr, cursor));
+    return cursor_map[cursor];
+}
+
+void Application_Win32::set_cursor(ECursorStyle cursor_style)
+{
+    HCURSOR cursor = nullptr;
+    switch (cursor_style)
+    {
+    default:
+    case ECursorStyle::ARROW:
+        cursor = load_cursor(IDC_ARROW);
+        break;
+    case ECursorStyle::CROSSHAIR:
+        cursor = load_cursor(IDC_CROSS);
+        break;
+    case ECursorStyle::HAND:
+        cursor = load_cursor(IDC_HAND);
+        break;
+    case ECursorStyle::HELP:
+        cursor = load_cursor(IDC_HELP);
+        break;
+    case ECursorStyle::I_BEAM:
+        cursor = load_cursor(IDC_IBEAM);
+        break;
+    case ECursorStyle::SIZE_ALL:
+        cursor = load_cursor(IDC_SIZEALL);
+        break;
+    case ECursorStyle::SIZE_NESW:
+        cursor = load_cursor(IDC_SIZENESW);
+        break;
+    case ECursorStyle::SIZE_NS:
+        cursor = load_cursor(IDC_SIZENS);
+        break;
+    case ECursorStyle::SIZE_NWSE:
+        cursor = load_cursor(IDC_SIZENWSE);
+        break;
+    case ECursorStyle::SIZE_WE:
+        cursor = load_cursor(IDC_SIZEWE);
+        break;
+    case ECursorStyle::VERT_ARROW:
+        cursor = load_cursor(IDC_UPARROW);
+        break;
+    case ECursorStyle::WAIT:
+        cursor = load_cursor(IDC_WAIT);
+        break;
+    case ECursorStyle::NOT_ALLOWED:
+        cursor = load_cursor(IDC_NO);
+        break;
+    }
+    SetCursor(cursor);
+    //PrintWin32Error(ShowCursor(true));
 }
 
 std::vector<uint8_t> Application_Win32::get_clipboard_data()
