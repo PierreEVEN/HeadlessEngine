@@ -7,7 +7,7 @@
 #include "gfx/master_material.h"
 #include "gfx/material_instance.h"
 #include "gfx/render_pass.h"
-#include "gfx/StaticMesh.h"
+#include "gfx/Mesh.h"
 #include "gfx/texture.h"
 #include "gfx/view.h"
 

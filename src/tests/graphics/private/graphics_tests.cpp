@@ -71,7 +71,7 @@ int main()
                                     .pos = glm::vec3(0, 1, 0),
                                 }};
     auto indices      = std::vector<uint32_t>{0, 1, 2, 0, 2, 3};
-    auto glob_mesh    = std::make_shared<gfx::StaticMesh>("test_mesh", vertices, indices);
+    auto glob_mesh    = std::make_shared<gfx::Mesh>("test_mesh", vertices, indices);
     
     /**
      * 5° Application loop

@@ -334,7 +334,7 @@ template <typename E, typename... Args>
 [[noreturn]] ROBIN_HOOD(NOINLINE)
 #if ROBIN_HOOD(HAS_EXCEPTIONS)
     void doThrow(Args&&... args) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-world_bounds-array-to-pointer-decay)
     throw E(std::forward<Args>(args)...);
 }
 #else

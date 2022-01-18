@@ -5,7 +5,7 @@
 #include "vulkan/vk_buffer.h"
 #include "vulkan/vk_helper.h"
 #include "vulkan/vk_master_material.h"
-#include "gfx/StaticMesh.h"
+#include "gfx/Mesh.h"
 #include "vulkan/vk_command_pool.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
@@ -44,7 +44,7 @@ void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t v
     vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_material, uint32_t instance_count, uint32_t first_instance)
+void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
     if (in_material->bind_material(this))
@@ -55,7 +55,7 @@ void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_mat
     }
 }
 
-void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_material, uint32_t first_index, uint32_t vertex_offset, uint32_t index_count, uint32_t instance_count, uint32_t first_instance)
+void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material, uint32_t first_index, uint32_t vertex_offset, uint32_t index_count, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
     if (in_material->bind_material(this))
@@ -66,7 +66,7 @@ void CommandBuffer_VK::draw_mesh(StaticMesh* in_buffer, MaterialInstance* in_mat
     }
 }
 
-void CommandBuffer_VK::draw_mesh_indirect(StaticMesh* in_buffer, MaterialInstance* in_material)
+void CommandBuffer_VK::draw_mesh_indirect(Mesh* in_buffer, MaterialInstance* in_material)
 {
     const auto& cmd = *command_buffer;
     if (in_material->bind_material(this))

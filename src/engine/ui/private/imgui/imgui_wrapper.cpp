@@ -3,7 +3,7 @@
 #include "application/application.h"
 #include "application/inputs/input_codes.h"
 #include "application/inputs/input_manager.h"
-#include "gfx/StaticMesh.h"
+#include "gfx/Mesh.h"
 #include "gfx/master_material.h"
 #include "gfx/material_instance.h"
 
@@ -14,7 +14,7 @@ namespace ui
 static ImGuiContext*                          imgui_context = nullptr;
 static std::shared_ptr<gfx::Texture>          font_texture;
 static std::shared_ptr<gfx::Sampler>          global_sampler;
-static gfx::StaticMesh*                       mesh;
+static gfx::Mesh*                       mesh;
 static std::shared_ptr<gfx::MasterMaterial>   imgui_base_material;
 static std::shared_ptr<gfx::MaterialInstance> imgui_material_instance;
 static application::ECursorStyle              cursor_map[ImGuiMouseCursor_COUNT];
@@ -150,7 +150,7 @@ void ImGuiWrapper::init_internal()
     imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb", gfx::MaterialOptions{.input_stage_override = vertex_attribute_overrides});
     imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
     global_sampler          = gfx::Sampler::create("imgui sampler", {});
-    mesh                    = new gfx::StaticMesh("imgui mesh", sizeof(ImDrawVert), 0, 0, gfx::EBufferType::IMMEDIATE, gfx::EIndexBufferType::UINT16);
+    mesh                    = new gfx::Mesh("imgui mesh", sizeof(ImDrawVert), 0, 0, gfx::EBufferType::IMMEDIATE, gfx::EIndexBufferType::UINT16);
     static_assert(sizeof(ImDrawIdx) == 2, "wrong index size");
 }
 

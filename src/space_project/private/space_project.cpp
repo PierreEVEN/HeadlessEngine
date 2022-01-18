@@ -85,8 +85,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     auto region_combine_material_instance = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb"));
     auto resolve_material_instance        = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/engine/resolve.shb"));
 
-    auto ui_pass                          = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
-    auto gbuffer_combine_pass             = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("region_combine"));
+    auto ui_pass              = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
+    auto gbuffer_combine_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("region_combine"));
 
     gbuffer_combine_pass->on_draw_pass.add_lambda(
         [&region_combine_material_instance](gfx::CommandBuffer* command_buffer)
