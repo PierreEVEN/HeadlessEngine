@@ -18,7 +18,7 @@ class StaticMeshComponent
     }
 
     static void init_system();
-    static void init_system();
+    static void destroy_system();
   private:
     std::shared_ptr<MaterialInstance> material;
     std::shared_ptr<Mesh>             mesh;
