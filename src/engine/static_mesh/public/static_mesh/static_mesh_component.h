@@ -10,6 +10,15 @@ namespace gfx
 class StaticMeshComponent
 {
   public:
+    StaticMeshComponent()
+    {
+    }
+
+    void set_mesh(const std::shared_ptr<Mesh>& new_mesh)
+    {
+        mesh = new_mesh;
+    }
+
     static void add_systems(ecs::SystemFactory* factory);
 
     Bound& get_world_bounds()
@@ -19,6 +28,7 @@ class StaticMeshComponent
 
     static void init_system();
     static void destroy_system();
+
   private:
     std::shared_ptr<MaterialInstance> material;
     std::shared_ptr<Mesh>             mesh;
