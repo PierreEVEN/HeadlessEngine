@@ -19,6 +19,7 @@ DECLARE_DELEGATE_MULTICAST(OnRenderDelegate, gfx::View*);
 
 namespace ecs
 {
+class Actor;
 void ecs_test();
 
 template <typename T>
@@ -27,7 +28,7 @@ concept has_add_systems_function = requires(T& t)
     T::add_systems(nullptr);
 };
 
-class ECS final
+class ECS
 {
     friend ECS& singleton();
 
@@ -49,7 +50,7 @@ class ECS final
             Component_T::add_systems(&system_factory);
     }
 
-    void                                                              add_empty_actor(const ActorID actor_instance_id);
+    std::shared_ptr<Actor>                                            make_empty_actor();
     void                                                              remove_actor(const ActorID& removed_actor);
     template <class Component_T, typename... CtorArgs_T> Component_T* add_component(const ActorID& to_actor, CtorArgs_T&&... args);
     template <class Component_T> void                                 remove_component(const ActorID& from_actor);
@@ -76,9 +77,9 @@ class ECS final
         return actor_registry.size();
     }
 
-    void tick();
-    void pre_render(gfx::View* view);
-    void render(gfx::View* view);
+    virtual void tick();
+    virtual void pre_render(gfx::View* view);
+    virtual void render(gfx::View* view);
 
     OnTickDelegate on_tick;
     OnPreRenderDelegate on_pre_render;

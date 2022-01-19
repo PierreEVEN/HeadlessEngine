@@ -10,7 +10,7 @@ namespace ecs
 class Actor final
 {
   public:
-    Actor();
+    Actor(const ActorID& id);
     ~Actor();
 
     template <typename Component_T, typename... CtorArgs_T> Component_T* add_component(CtorArgs_T&&... ctor_args)
@@ -22,6 +22,8 @@ class Actor final
     {
         singleton().remove_component<Component_T>(actor_id);
     }
+
+    void move_to(ECS* target) {}
 
   private:
     ActorID actor_id;

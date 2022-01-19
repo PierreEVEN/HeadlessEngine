@@ -2,10 +2,9 @@
 
 #include "ecs/actor.h"
 
-ecs::Actor::Actor()
+ecs::Actor::Actor(const ActorID& id)
+    : actor_id(id)
 {
-    actor_id = singleton().make_new_actor_id();
-    singleton().add_empty_actor(actor_id);
 }
 
 ecs::Actor::~Actor()

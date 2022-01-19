@@ -1,0 +1,50 @@
+#pragma once
+#include "ecs/actor.h"
+#include "ecs/ecs.h"
+#include "physics/physic_scene.h"
+#include "transform.h"
+
+#include <glm/glm.hpp>
+
+namespace gfx
+{
+class CommandBuffer;
+}
+
+namespace scene
+{
+// No rigid body physics for global universe. Rigid body are only available for subscenes
+class Universe : public ecs::ECS
+{
+  public:
+    void pre_render()
+    {
+        pre_render(global_view);
+    }
+    void render(gfx::CommandBuffer* command_buffer)
+    {
+        render(command_buffer, global_view);
+    }
+
+  private:
+    gfx::View* global_view = nullptr;
+};
+
+class SubScene : public ecs::ECS
+{
+  public:
+    SubScene()
+    {
+    }
+
+    void tick() override
+    {
+        ECS::tick();
+        physic_scene->step();
+    }
+
+  private:
+    std::unique_ptr<physics::Scene> physic_scene;
+};
+
+} // namespace scene

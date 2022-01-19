@@ -1,7 +1,7 @@
 add_rules("mode.debug", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")
 
-set_project("HeadlessEngine")
+set_project("space_project")
 set_allowedmodes("debug", "release")
 set_defaultmode("release")
 set_warnings("allextra")
@@ -28,7 +28,7 @@ end
 set_runtimes(is_mode("debug") and "MTd" or "MT")
 		
 add_repositories("third_party deps", {rootdir = os.scriptdir()})
-add_requires("glslang", "glfw", "glm", "vulkan-loader", "vulkan-validationlayers", "vulkan-memory-allocator", "spirv-cross","spirv-reflect", "spirv-tools", "imgui docking", "imguizmo", "assimp", "stb", "glslang")
+add_requires("glslang", "glfw", "glm", "vulkan-loader", "vulkan-validationlayers", "vulkan-memory-allocator", "spirv-cross","spirv-reflect", "spirv-tools", "imgui docking", "imguizmo", "assimp", "stb", "glslang", "bullet3")
 add_requires("cpputils")
 
 function declare_module(module_name, deps, packages, is_executable)

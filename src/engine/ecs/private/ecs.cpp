@@ -29,13 +29,15 @@ ActorVariant* ECS::find_variant(std::vector<ComponentTypeID>& variant_spec)
     return new_variant;
 }
 
-void ECS::add_empty_actor(const ActorID actor_instance_id)
+std::shared_ptr<Actor> ECS::make_empty_actor()
 {
-    actor_registry.emplace(actor_instance_id, ActorMetaData{
-                                                  .variant    = nullptr,
-                                                  .data_index = 0,
-                                                  .actor_id   = actor_instance_id,
-                                              });
+    const ActorID actor_id = make_new_actor_id();
+    actor_registry.emplace(actor_id, ActorMetaData{
+                                         .variant    = nullptr,
+                                         .data_index = 0,
+                                         .actor_id   = actor_id,
+                                     });
+    return std::make_shared<Actor>(actor_id);
 }
 
 void ECS::remove_actor(const ActorID& removed_actor)
