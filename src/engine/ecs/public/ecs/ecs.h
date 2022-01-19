@@ -84,10 +84,10 @@ class ECS final
     OnPreRenderDelegate on_pre_render;
     OnRenderDelegate on_render;
 
+    ECS() = default;
+
   private:
     friend struct ActorVariant;
-
-    ECS() = default;
 
     robin_hood::unordered_map<ComponentTypeID, IComponent*> component_registry;
     robin_hood::unordered_map<ActorID, ActorMetaData>       actor_registry;
