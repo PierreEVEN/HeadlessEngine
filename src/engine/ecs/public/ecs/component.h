@@ -1,46 +1,24 @@
 #pragma once
+#include "ecs/common.h"
 #include "ecs_type.h"
 
 #include "method_runner.h"
 
 #include <algorithm>
 
-namespace gfx
-{
-class View;
-}
-
 namespace ecs
 {
-// Concept that test if given function is implemented
-template <typename T>
-concept has_pre_render_method = requires(T& t)
-{
-    t.pre_render();
-};
-template <typename T>
-concept has_render_method = requires(T& t)
-{
-    t.render(nullptr);
-};
-template <typename T>
-concept has_tick_method = requires(T& t)
-{
-    t.tick();
-};
 
 using ComponentTypeID   = EcsID;
 using ComponentDataType = uint8_t;
+class ECS;
 
-class IComponent
+class IComponentHelper
 {
   public:
-    IComponent() = default;
-    virtual ~IComponent()
+    IComponentHelper() = default;
+    virtual ~IComponentHelper()
     {
-        delete pre_render_runner;
-        delete render_runner;
-        delete tick_runner;
     }
 
     virtual void                 component_destroy(ComponentDataType* data) const                                = 0;
@@ -48,25 +26,25 @@ class IComponent
     [[nodiscard]] virtual size_t type_size() const                                                               = 0;
 
     // Different runner for each component's method
-    IMethodRunner<gfx::View*>* pre_render_runner = nullptr;
-    IMethodRunner<gfx::View*>* render_runner     = nullptr;
-    IMethodRunner<>*           tick_runner       = nullptr;
+    std::unique_ptr<IMethodRunner<gfx::View*>>                      pre_render_runner = nullptr;
+    std::unique_ptr<IMethodRunner<gfx::View*, gfx::CommandBuffer*>> render_runner     = nullptr;
+    std::unique_ptr<IMethodRunner<>>                                tick_runner       = nullptr;
+    std::unique_ptr<IMethodRunner<ECS*, ECS*>>                      move_runner       = nullptr;
 };
 
-template <typename Component_T> class TComponent final : public IComponent
+template <typename Component_T> class TComponentHelper final : public IComponentHelper
 {
   public:
-    TComponent()
+    TComponentHelper()
     {
-        // If tested component has a prerender/render/tick function, add a runner for this function
-        if constexpr (has_pre_render_method<Component_T>)
-            pre_render_runner = new TMethodRunner<Component_T>(&Component_T::pre_render);
-
-        if constexpr (has_render_method<Component_T>)
-            render_runner = new TMethodRunner<Component_T, gfx::View*>(&Component_T::render);
-
         if constexpr (has_tick_method<Component_T>)
-            tick_runner = new TMethodRunner<Component_T>(&Component_T::tick);
+            tick_runner = std::make_unique<new TMethodRunner<Component_T>>(&Component_T::tick);
+        if constexpr (has_pre_render_method<Component_T>)
+            pre_render_runner = std::make_unique<TMethodRunner<Component_T>>(&Component_T::pre_render);
+        if constexpr (has_render_method<Component_T>)
+            render_runner = std::make_unique<TMethodRunner<Component_T, gfx::View*, gfx::CommandBuffer*>>(&Component_T::render);
+        if constexpr (has_move_method<Component_T>)
+            move_runner = std::make_unique<TMethodRunner<Component_T, ECS*, ECS*>>(&Component_T::render);
     }
 
     void component_destroy(ComponentDataType* component_ptr) const override
@@ -82,8 +60,9 @@ template <typename Component_T> class TComponent final : public IComponent
 
     [[nodiscard]] static ComponentTypeID get_type_id()
     {
-        return TypeIdGenerator<IComponent>::get<Component_T>();
+        return TypeIdGenerator<IComponentHelper>::get<Component_T>();
     }
+
     [[nodiscard]] size_t type_size() const override
     {
         return sizeof(Component_T);

@@ -1,27 +1,33 @@
 #pragma once
-#include "component.h"
+#include "ecs/component.h"
 
 #include <vector>
 
 namespace ecs
 {
-struct ActorMetaData;
-
-struct ActorVariant
+struct ActorMetaData
 {
+    class ActorVariant* variant    = nullptr;
+    uint32_t            data_index = 0;
+    ActorID             actor_id;
+};
+
+class ActorVariant
+{
+  public:
     struct ComponentData
     {
         std::size_t                    type_size;
         std::vector<ComponentDataType> component_data;
         ComponentTypeID                type_id;
-        IComponent*                    component_type;
+        IComponentHelper*              component_type;
     };
 
     ActorVariant(const std::vector<ComponentTypeID>& in_specification);
 
     void add_actor(ActorMetaData* actor);
     void remove_actor(ActorMetaData* actor);
-    void move_actor_from(ActorMetaData* actor, ActorVariant* previous_variant);
+    void copy_to_this_variant(ActorMetaData* actor, ActorVariant* previous_variant);
 
     [[nodiscard]] ComponentDataType* get_last_element_memory(ComponentTypeID type_id);
 
@@ -39,12 +45,5 @@ struct ActorVariant
 
     std::vector<ComponentData> components;
     std::vector<ActorID>       linked_actors;
-};
-
-struct ActorMetaData
-{
-    ActorVariant* variant;
-    uint32_t      data_index;
-    ActorID       actor_id;
 };
 } // namespace ecs

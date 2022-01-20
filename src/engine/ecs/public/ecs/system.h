@@ -1,6 +1,6 @@
 #pragma once
 #include "actor_meta_data.h"
-#include "component.h"
+#include "ComponentHelper.h"
 
 #include <cpputils/logger.hpp>
 #include <functional>
@@ -77,7 +77,7 @@ template <typename... Component_T> class TSystemIterable
         size_t index = 0;
         for (const auto& component : variant->components)
         {
-            if (component.type_id == TComponent<CurrentComp_T>::get_type_id())
+            if (component.type_id == TComponentHelper<CurrentComp_T>::get_type_id())
             {
                 first_component_ptr = reinterpret_cast<CurrentComp_T*>(variant->components[index].component_data.data());
                 break;
@@ -86,7 +86,7 @@ template <typename... Component_T> class TSystemIterable
         }
 
         if (!first_component_ptr)
-            LOG_FATAL("system was run on an inconsistant variant : requiring %s", typeid(CurrentComp_T).name());
+            LOG_FATAL("system was run on an inconsistant family : requiring %s", typeid(CurrentComp_T).name());
 
         return first_component_ptr;
     }
@@ -128,7 +128,7 @@ template <typename... Component_T> class TSystemTick final : public ISystem
 
     [[nodiscard]] std::vector<ComponentTypeID> get_key() const override
     {
-        std::vector<ComponentTypeID> component_type = {{TComponent<Component_T>::get_type_id()...}};
+        std::vector<ComponentTypeID> component_type = {{TComponentHelper<Component_T>::get_type_id()...}};
         std::ranges::sort(component_type);
         return component_type;
     }
@@ -152,7 +152,7 @@ template <typename... Component_T> class TSystemRender final : public ISystem
 
     [[nodiscard]] std::vector<ComponentTypeID> get_key() const override
     {
-        std::vector<ComponentTypeID> component_type = {{TComponent<Component_T>::get_type_id()...}};
+        std::vector<ComponentTypeID> component_type = {{TComponentHelper<Component_T>::get_type_id()...}};
         std::ranges::sort(component_type);
         return component_type;
     }

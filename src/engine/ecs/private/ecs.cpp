@@ -4,14 +4,8 @@
 
 namespace ecs
 {
-std::unique_ptr<ECS> ecs_singleton;
 
-ECS& singleton()
-{
-    if (!ecs_singleton)
-        ecs_singleton = std::unique_ptr<ECS>(new ECS());
-    return *ecs_singleton;
-}
+static ActorID last_actor_id = 0;
 
 ECS::~ECS()
 {
@@ -29,15 +23,18 @@ ActorVariant* ECS::find_variant(std::vector<ComponentTypeID>& variant_spec)
     return new_variant;
 }
 
-std::shared_ptr<Actor> ECS::make_empty_actor()
+std::shared_ptr<Actor> ECS::new_actor()
 {
-    const ActorID actor_id = make_new_actor_id();
-    actor_registry.emplace(actor_id, ActorMetaData{
+    return std::shared_ptr<Actor>(new Actor(this, make_new_actor_id()));
+}
+
+void ECS::register_actor(const ActorID& actor)
+{
+    actor_registry.emplace(actor, ActorMetaData{
                                          .variant    = nullptr,
                                          .data_index = 0,
-                                         .actor_id   = actor_id,
+                                      .actor_id   = actor,
                                      });
-    return std::make_shared<Actor>(actor_id);
 }
 
 void ECS::remove_actor(const ActorID& removed_actor)
@@ -54,6 +51,20 @@ void ECS::remove_actor(const ActorID& removed_actor)
         actor_data.variant->remove_actor(&pair.second);
 
     actor_registry.erase(actor_it);
+}
+
+void ECS::move_actor(ActorID actor, ECS* old_context, ECS* new_context)
+{
+    old_context->remove_actor(actor);
+
+
+    //new_context
+    LOG_FATAL("NIY");
+}
+
+ActorID ECS::duplicate_actor(ActorID actor)
+{
+    LOG_FATAL("NIY");
 }
 
 ActorID ECS::make_new_actor_id()
@@ -81,13 +92,13 @@ void ECS::pre_render(gfx::View* view)
                 variant->components[i].component_type->pre_render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), view);
 }
 
-void ECS::render(gfx::View* view)
+void ECS::render(gfx::View* view, gfx::CommandBuffer* command_buffer)
 {
     for (const auto& variant : get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
             if (variant->components[i].component_type->render_runner) // Only if the component implement the render method
-                variant->components[i].component_type->render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), view);
-    system_factory.execute_render(view);
-    on_render.execute(view);
+                variant->components[i].component_type->render_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size(), view, command_buffer);
+    system_factory.execute_render(view, command_buffer);
+    on_render.execute(view, command_buffer);
 }
 } // namespace ecs

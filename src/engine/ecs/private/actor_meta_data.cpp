@@ -9,7 +9,7 @@ ActorVariant::ActorVariant(const std::vector<ComponentTypeID>& in_specification)
     components.resize(in_specification.size());
     for (size_t i = 0; i < in_specification.size(); ++i)
     {
-        IComponent* component = singleton().get_component_type(in_specification[i]);
+        IComponentHelper* component = singleton().get_component_type(in_specification[i]);
         if (!component)
             LOG_FATAL("component with id %lu is not registered", in_specification[i])
 
@@ -54,7 +54,7 @@ void ActorVariant::remove_actor(ActorMetaData* actor)
     actor->data_index = 0;
 }
 
-void ActorVariant::move_actor_from(ActorMetaData* actor, ActorVariant* previous_variant)
+void ActorVariant::copy_to_this_variant(ActorMetaData* actor, ActorVariant* previous_variant)
 {
     const size_t previous_data_index = actor->data_index;
     add_actor(actor);

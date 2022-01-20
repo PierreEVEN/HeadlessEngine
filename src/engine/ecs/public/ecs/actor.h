@@ -10,22 +10,29 @@ namespace ecs
 class Actor final
 {
   public:
-    Actor(const ActorID& id);
     ~Actor();
 
     template <typename Component_T, typename... CtorArgs_T> Component_T* add_component(CtorArgs_T&&... ctor_args)
     {
-        return singleton().add_component<Component_T, CtorArgs_T...>(actor_id, std::forward<CtorArgs_T>(ctor_args)...);
+        return context->add_component<Component_T, CtorArgs_T...>(actor_id, std::forward<CtorArgs_T>(ctor_args)...);
     }
 
     template <typename Component_T> void remove_component()
     {
-        singleton().remove_component<Component_T>(actor_id);
+        context->remove_component<Component_T>(actor_id);
     }
 
-    void move_to(ECS* target) {}
+    // Move this actor to another ECS context
+    void move_to(ECS* new_context);
+
+    // Make a copy of this actor (copy components too)
+    [[nodiscard]] std::shared_ptr<Actor> duplicate() const;
 
   private:
-    ActorID actor_id;
+    friend class ECS;
+    Actor(ECS* context, const ActorID& new_id);
+
+    const ActorID actor_id;
+    ECS*          context;
 };
 } // namespace ecs
