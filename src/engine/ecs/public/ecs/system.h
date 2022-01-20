@@ -1,6 +1,5 @@
 #pragma once
 #include "actor_meta_data.h"
-#include "ComponentHelper.h"
 
 #include <cpputils/logger.hpp>
 #include <functional>
@@ -79,7 +78,7 @@ template <typename... Component_T> class TSystemIterable
         {
             if (component.type_id == TComponentHelper<CurrentComp_T>::get_type_id())
             {
-                first_component_ptr = reinterpret_cast<CurrentComp_T*>(variant->components[index].component_data.data());
+                first_component_ptr = reinterpret_cast<CurrentComp_T*>(variant->components[index].component_data_buffer.data());
                 break;
             }
             index++;
@@ -105,13 +104,13 @@ template <typename... Component_T> class TSystemIterable
 class ISystem
 {
   public:
-    virtual void tick([[maybe_unused]] ActorVariant* variant)
+    virtual void tick(ActorVariant*)
     {
     }
-    virtual void pre_render([[maybe_unused]] ActorVariant* variant, [[maybe_unused]] gfx::View* view)
+    virtual void pre_render(ActorVariant*, gfx::View*)
     {
     }
-    virtual void render([[maybe_unused]] ActorVariant* variant, [[maybe_unused]] gfx::View* view)
+    virtual void render(ActorVariant*, gfx::View*, gfx::CommandBuffer*)
     {
     }
     [[nodiscard]] virtual std::vector<ComponentTypeID> get_key() const = 0;
@@ -141,12 +140,12 @@ template <typename... Component_T> class TSystemTick final : public ISystem
 
     TickFunction tick_func;
 };
-template <typename... Component_T> class TSystemRender final : public ISystem
+template <typename... Component_T> class TSystemPreRender final : public ISystem
 {
   public:
-    using RenderFunction = std::function<void(TSystemIterable<Component_T...>, gfx::View*)>;
+    using PreRenderFunc = std::function<void(TSystemIterable<Component_T...>, gfx::View*)>;
 
-    TSystemRender(RenderFunction tick_function) : render_func(std::move(tick_function))
+    TSystemPreRender(PreRenderFunc tick_function) : pre_render_func(std::move(tick_function))
     {
     }
 
@@ -159,17 +158,35 @@ template <typename... Component_T> class TSystemRender final : public ISystem
 
     void pre_render(ActorVariant* variant, gfx::View* view) override
     {
-        if (render_func)
-            render_func(TSystemIterable<Component_T...>(variant), view);
+        if (pre_render_func)
+            pre_render_func(TSystemIterable<Component_T...>(variant), view);
     }
 
-    void render(ActorVariant* variant, gfx::View* view) override
+    PreRenderFunc pre_render_func;
+};
+template <typename... Component_T> class TSystemRender final : public ISystem
+{
+  public:
+    using RenderFunc = std::function<void(TSystemIterable<Component_T...>, gfx::View*, gfx::CommandBuffer*)>;
+
+    TSystemRender(RenderFunc tick_function) : render_func(std::move(tick_function))
+    {
+    }
+
+    [[nodiscard]] std::vector<ComponentTypeID> get_key() const override
+    {
+        std::vector<ComponentTypeID> component_type = {{TComponentHelper<Component_T>::get_type_id()...}};
+        std::ranges::sort(component_type);
+        return component_type;
+    }
+
+    void pre_render(ActorVariant* variant, gfx::View* view, gfx::CommandBuffer* command_buffer) override
     {
         if (render_func)
-            render_func(TSystemIterable<Component_T...>(variant), view);
+            render_func(TSystemIterable<Component_T...>(variant), view, command_buffer);
     }
 
-    RenderFunction render_func;
+    RenderFunc render_func;
 };
 
 class SystemFactory
@@ -182,7 +199,7 @@ class SystemFactory
 
     template <typename... Component_T, typename Lambda> void pre_render(Lambda callback)
     {
-        pre_renders.emplace_back(new TSystemRender<Component_T...>(callback));
+        pre_renders.emplace_back(new TSystemPreRender<Component_T...>(callback));
     }
 
     template <typename... Component_T, typename Lambda> void render(Lambda callback)
@@ -190,9 +207,9 @@ class SystemFactory
         renders.emplace_back(new TSystemRender<Component_T...>(callback));
     }
 
-    void execute_tick() const;
-    void execute_pre_render(gfx::View* view) const;
-    void execute_render(gfx::View* view) const;
+    void execute_tick(ECS* context) const;
+    void execute_pre_render(ECS* context, gfx::View* view) const;
+    void execute_render(ECS* context, gfx::View* view, gfx::CommandBuffer* command_buffer) const;
 
   private:
     std::vector<std::unique_ptr<ISystem>> ticks;

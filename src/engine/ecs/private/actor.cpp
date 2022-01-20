@@ -10,6 +10,7 @@ ecs::Actor::Actor(ECS* new_context, const ActorID& new_id) : actor_id(new_id), c
 ecs::Actor::~Actor()
 {
     context->remove_actor(actor_id);
+    ECS::free_actor_id(actor_id);
 }
 
 void ecs::Actor::move_to(ECS* new_context)
@@ -20,5 +21,5 @@ void ecs::Actor::move_to(ECS* new_context)
 
 std::shared_ptr<ecs::Actor> ecs::Actor::duplicate() const
 {
-    return std::make_shared<Actor>(context, context->duplicate_actor(actor_id));
+    return std::shared_ptr<Actor>(new Actor(context, context->duplicate_actor(actor_id)));
 }

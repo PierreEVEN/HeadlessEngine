@@ -10,8 +10,8 @@ void universe_declaration_test()
     Universe universe;
 
     // Add planets
-    const auto earth = universe.make_empty_actor();
-    const auto mars  = universe.make_empty_actor();
+    const auto earth = universe.new_actor();
+    const auto mars  = universe.new_actor();
 
     // Add the ability to move planets
     earth->add_component<Transform>();
@@ -21,12 +21,12 @@ void universe_declaration_test()
     const auto mars_scene  = mars->add_component<SubScene>();
 
     // Add a space ship to earth environment
-    const auto my_ship = earth_scene->make_empty_actor();
+    const auto my_ship = earth_scene->new_actor();
     my_ship->add_component<Transform>();
     const auto ship_scene = my_ship->add_component<SubScene>(); // The ship is a subscene itself
 
     // Add thruster to the ship
-    const auto& thruster = ship_scene->make_empty_actor();
+    const auto& thruster = ship_scene->new_actor();
     thruster->add_component<Transform>();
 
     // Our ship moved near mars, so we need to make it change current scene

@@ -38,13 +38,13 @@ template <typename Component_T> class TComponentHelper final : public IComponent
     TComponentHelper()
     {
         if constexpr (has_tick_method<Component_T>)
-            tick_runner = std::make_unique<new TMethodRunner<Component_T>>(&Component_T::tick);
+            tick_runner = std::make_unique<TMethodRunner<Component_T>>(&Component_T::tick);
         if constexpr (has_pre_render_method<Component_T>)
-            pre_render_runner = std::make_unique<TMethodRunner<Component_T>>(&Component_T::pre_render);
+            pre_render_runner = std::make_unique<TMethodRunner<Component_T, gfx::View*>>(&Component_T::pre_render);
         if constexpr (has_render_method<Component_T>)
             render_runner = std::make_unique<TMethodRunner<Component_T, gfx::View*, gfx::CommandBuffer*>>(&Component_T::render);
         if constexpr (has_move_method<Component_T>)
-            move_runner = std::make_unique<TMethodRunner<Component_T, ECS*, ECS*>>(&Component_T::render);
+            move_runner = std::make_unique<TMethodRunner<Component_T, ECS*, ECS*>>(&Component_T::move);
     }
 
     void component_destroy(ComponentDataType* component_ptr) const override

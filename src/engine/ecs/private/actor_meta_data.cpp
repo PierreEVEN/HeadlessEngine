@@ -4,33 +4,35 @@
 
 namespace ecs
 {
-ActorVariant::ActorVariant(const std::vector<ComponentTypeID>& in_specification)
+
+ActorVariant::ActorVariant(ECS* context, const std::vector<ComponentTypeID>& in_specification) : specification(in_specification), owning_ecs(context)
 {
+    // Initialize component's memory
     components.resize(in_specification.size());
     for (size_t i = 0; i < in_specification.size(); ++i)
     {
-        IComponentHelper* component = singleton().get_component_type(in_specification[i]);
+        IComponentHelper* component = ECS::component_registry[in_specification[i]];
         if (!component)
             LOG_FATAL("component with id %lu is not registered", in_specification[i])
 
         components[i] = ComponentData{
-            .type_size      = component->type_size(),
-            .component_data = {},
-            .type_id        = in_specification[i],
-            .component_type = component,
+            .type_size             = component->type_size(),
+            .component_data_buffer = {},
+            .type_id               = in_specification[i],
+            .component_type        = component,
         };
     }
 }
 
-void ActorVariant::add_actor(ActorMetaData* actor)
+void ActorVariant::emplace_actor_back(ActorMetaData* actor)
 {
+    // Emplace new actor
     actor->variant    = this;
     actor->data_index = static_cast<uint32_t>(linked_actors.size());
-
     linked_actors.emplace_back(actor->actor_id);
 
-    for (auto& component : components)
-        component.component_data.resize(linked_actors.size() * component.type_size);
+    // Resize buffer memories
+    update_components_buffer_size();
 }
 
 void ActorVariant::remove_actor(ActorMetaData* actor)
@@ -39,50 +41,72 @@ void ActorVariant::remove_actor(ActorMetaData* actor)
 
     // Move last component's data into the removed one to erase it
     for (auto& component : components)
-        component.component_type->component_move(&component.component_data[actor->data_index * component.type_size], &component.component_data[(linked_actors.size() - 1) * component.type_size]);
+    {
+        const auto last_component_memory    = &component.component_data_buffer[actor->data_index * component.type_size];
+        const auto removed_component_memory = &component.component_data_buffer[(linked_actors.size() - 1) * component.type_size];
+        component.component_type->component_move(last_component_memory, removed_component_memory);
+    }
 
-    const auto last_ptr = linked_actors.end() - 1;
-
-    singleton().actor_registry[*last_ptr].data_index = removed_index;
-    linked_actors[removed_index]                    = *last_ptr;
+    // Update references
+    const ActorID& last_actor_id                         = *(linked_actors.end() - 1);
+    owning_ecs->actor_registry[last_actor_id].data_index = removed_index;
+    linked_actors[removed_index]                         = last_actor_id;
     linked_actors.pop_back();
 
-    for (auto& component : components)
-        component.component_data.resize(linked_actors.size() * component.type_size);
-
     actor->variant    = nullptr;
-    actor->data_index = 0;
+    actor->data_index = UINT32_MAX;
+
+    update_components_buffer_size();
 }
 
-void ActorVariant::copy_to_this_variant(ActorMetaData* actor, ActorVariant* previous_variant)
+void ActorVariant::move_actor_to_variant(ActorMetaData* actor, ActorVariant* from, ActorVariant* to)
 {
     const size_t previous_data_index = actor->data_index;
-    add_actor(actor);
-    const size_t new_data_index = actor->data_index;
+    const size_t new_data_index      = actor->data_index;
 
-    for (auto& new_component : components)
-        for (auto& old_component : previous_variant->components)
+    // Register into new variant
+    to->emplace_actor_back(actor);
+
+    // Move existing component data
+    for (auto& new_component : to->components)
+        for (auto& old_component : from->components)
             if (new_component.type_id == old_component.type_id)
             {
-                new_component.component_type->component_move(&old_component.component_data[previous_data_index * old_component.type_size], &new_component.component_data[new_data_index * new_component.type_size]);
+                new_component.component_type->component_move(&old_component.component_data_buffer[previous_data_index * old_component.type_size],
+                                                             &new_component.component_data_buffer[new_data_index * new_component.type_size]);
                 break;
             }
 
-    previous_variant->remove_actor(actor);
+    // Remove from the previous variant
+    from->remove_actor(actor);
 
-    actor->variant    = this;
+    // Update references
+    actor->variant    = to;
     actor->data_index = static_cast<uint32_t>(new_data_index);
 }
 
-ComponentDataType* ActorVariant::get_last_element_memory(ComponentTypeID type_id)
+void ActorVariant::duplicate_actor(const ActorMetaData* existing_actor, ActorMetaData* new_actor)
 {
+    // Emplace new actor
+    new_actor->variant    = this;
+    new_actor->data_index = static_cast<uint32_t>(linked_actors.size());
+    linked_actors.emplace_back(new_actor->actor_id);
+
+    // Resize buffer memories
+    update_components_buffer_size();
+
+    // Move last component's data into the removed one to erase it
     for (auto& component : components)
     {
-        if (component.type_id == type_id)
-        {
-            return &component.component_data[(linked_actors.size() - 1) * component.type_size];
-        }
+        const auto* existing_component_memory = &component.component_data_buffer[existing_actor->data_index * component.type_size];
+        auto*       new_component_memory      = &component.component_data_buffer[(linked_actors.size() - 1) * component.type_size];
+        memcpy(new_component_memory, existing_component_memory, sizeof(component.type_size));
     }
-    LOG_FATAL("failed to find component type with the given type_id");
+}
+
+void ActorVariant::update_components_buffer_size()
+{
+    for (auto& component : components)
+        component.component_data_buffer.resize(linked_actors.size() * component.type_size);
 }
 } // namespace ecs

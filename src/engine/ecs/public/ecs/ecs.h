@@ -1,9 +1,9 @@
 #pragma once
 #include "actor_meta_data.h"
 #include "component.h"
+#include "ecs/common.h"
 #include "ecs/system.h"
 #include "ecs_type.h"
-#include "ecs/common.h"
 
 #include <cpputils/logger.hpp>
 #include <types/robin_hood_map.h>
@@ -17,6 +17,32 @@ class ECS
   public:
     ECS() = default;
     virtual ~ECS();
+
+    std::shared_ptr<Actor> new_actor();
+
+    [[nodiscard]] size_t actor_count() const
+    {
+        return actor_registry.size();
+    }
+
+    // Propagate tick through components
+    virtual void tick();
+    // Propagate pre_render through components
+    virtual void pre_render(gfx::View* view);
+    // Propagate render through components
+    virtual void render(gfx::View* view, gfx::CommandBuffer* command_buffer);
+
+    // Event called on tick
+    OnTickDelegate on_tick;
+    // Event called on pre_render
+    OnPreRenderDelegate on_pre_render;
+    // Event called on render
+    OnRenderDelegate on_render;
+
+    [[nodiscard]] const std::vector<ActorVariant*>& get_variants() const
+    {
+        return variant_registry;
+    }
 
     template <class Component_T> static bool is_component_type_registered()
     {
@@ -34,42 +60,6 @@ class ECS
             Component_T::add_systems(&system_factory);
     }
 
-    std::shared_ptr<Actor> new_actor();
-
-    [[nodiscard]] const std::vector<ActorVariant*>& get_variants() const
-    {
-        return variant_registry;
-    }
-
-    [[nodiscard]] IComponentHelper* get_component_type(ComponentTypeID type_id)
-    {
-        return component_registry[type_id];
-    }
-
-    [[nodiscard]] SystemFactory* get_system_factory()
-    {
-        return &system_factory;
-    }
-
-    [[nodiscard]] size_t count_actors() const
-    {
-        return actor_registry.size();
-    }
-
-    // Propagate tick through components
-    virtual void tick();
-    // Propagate pre_render through components
-    virtual void pre_render(gfx::View* view);
-    // Propagate render through components
-    virtual void render(gfx::View* view, gfx::CommandBuffer* command_buffer);
-
-    // Event called on tick
-    OnTickDelegate      on_tick;
-    // Event called on pre_render
-    OnPreRenderDelegate on_pre_render;
-    // Event called on render
-    OnRenderDelegate    on_render;
-
   private:
     friend class Actor;
     friend class ActorVariant;
@@ -79,27 +69,27 @@ class ECS
     // Remove an actor from this ECS
     void remove_actor(const ActorID& removed_actor);
     // Move an actor to an other ECS (will call on_move in each components)
-    static void move_actor(ActorID actor, ECS* old_context, ECS* new_context);
+    static void move_actor(const ActorID& actor, ECS* old_context, ECS* new_context);
     // Duplicate an existing actor
-    ActorID     duplicate_actor(ActorID actor);
+    ActorID duplicate_actor(ActorID actor);
     // Create a global actor UID. This id is unique with all ECS.
     [[nodiscard]] static ActorID make_new_actor_id();
+    static void                  free_actor_id(const ActorID actor);
 
     // Add or remove components from an actor
     template <class Component_T, typename... CtorArgs_T> Component_T* add_component(const ActorID& to_actor, CtorArgs_T&&... args);
     template <class Component_T> void                                 remove_component(const ActorID& from_actor);
-    
+    template <class Component_T> Component_T*                         get_component(const ActorID& from_actor);
+
     [[nodiscard]] ActorVariant* find_variant(std::vector<ComponentTypeID>& variant_spec);
 
     // A list of existing component type that are in use
-    inline static robin_hood::unordered_map<ComponentTypeID, IComponentHelper*> component_registry;
+    inline static robin_hood::unordered_map<ComponentTypeID, IComponentHelper*> component_registry = {};
+    inline static SystemFactory                                                 system_factory     = {};
 
     // All the data relative to current ECS content
-    robin_hood::unordered_map<ActorID, ActorMetaData> actor_registry;
-    std::vector<ActorVariant*>                        variant_registry;
-    robin_hood::unordered_map<ActorID, uint32_t>      actor_links;
-
-    SystemFactory system_factory;
+    robin_hood::unordered_map<ActorID, ActorMetaData> actor_registry   = {};
+    std::vector<ActorVariant*>                        variant_registry = {};
 };
 
 template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_component(const ActorID& to_actor, CtorArgs_T&&... args)
@@ -109,18 +99,18 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
 
     // Retrieve initial context and type infos
     const ComponentTypeID new_component_type_id = TComponentHelper<Component_T>::get_type_id();
-    ActorMetaData*        actor_data              = &actor_registry[to_actor];
+    ActorMetaData*        actor_data            = &actor_registry[to_actor];
 
     // Actor doesn't have components
     if (!actor_data->variant)
     {
         // 1) Find an existing variant with given specs or create a new one
         std::vector new_variant_spec = {new_component_type_id};
-        auto*       new_variant    = find_variant(new_variant_spec);
+        auto*       new_variant      = find_variant(new_variant_spec);
 
         // Create and register actor
-        new_variant->add_actor(actor_data);
-        return new (new_variant->get_last_element_memory(new_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
+        new_variant->emplace_actor_back(actor_data);
+        return new (new_variant->get_component_memory(new_component_type_id, actor_data->data_index)) Component_T(std::forward<CtorArgs_T>(args)...);
     }
     else // We need to find an existing variant or to create a new one for the given actor
     {
@@ -130,8 +120,8 @@ template <class Component_T, typename... CtorArgs_T> Component_T* ECS::add_compo
         new_specifications.emplace_back(new_component_type_id);
         auto* final_variant = find_variant(new_specifications); // find or create variant with given specs
 
-        final_variant->copy_to_this_variant(actor_data, actor_data->variant);
-        return new (final_variant->get_last_element_memory(new_component_type_id)) Component_T(std::forward<CtorArgs_T>(args)...);
+        ActorVariant::move_actor_to_variant(actor_data, actor_data->variant, final_variant);
+        return new (final_variant->get_component_memory(new_component_type_id, actor_data->data_index)) Component_T(std::forward<CtorArgs_T>(args)...);
     }
 }
 
@@ -163,7 +153,13 @@ template <class Component_T> void ECS::remove_component(const ActorID& from_acto
     else
     {
         ActorVariant* final_variant = find_variant(final_variant_specs);
-        final_variant->copy_to_this_variant(actor_data, actor_data->variant);
+        ActorVariant::move_actor_to_variant(actor_data, actor_data->variant, final_variant);
     }
+}
+
+template <class Component_T> Component_T* ECS::get_component(const ActorID& from_actor)
+{
+    ActorMetaData* actor_data = &actor_registry[from_actor];
+    return static_cast<Component_T*>(actor_data->variant->get_component_memory(TComponentHelper<Component_T>::get_type_id(), actor_data->data_index));
 }
 } // namespace ecs

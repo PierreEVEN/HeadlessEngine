@@ -42,7 +42,7 @@ class Transform
     {
         return local_scale;
     }
-
+    
   private:
     Transform* parent;
     glm::dmat4 world_transform;

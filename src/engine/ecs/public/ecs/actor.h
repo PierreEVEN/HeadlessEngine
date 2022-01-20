@@ -17,6 +17,11 @@ class Actor final
         return context->add_component<Component_T, CtorArgs_T...>(actor_id, std::forward<CtorArgs_T>(ctor_args)...);
     }
 
+    template <typename Component_T> Component_T* get_component()
+    {
+        return context->get_component<Component_T>(actor_id);
+    }
+
     template <typename Component_T> void remove_component()
     {
         context->remove_component<Component_T>(actor_id);

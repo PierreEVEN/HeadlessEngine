@@ -8,35 +8,36 @@
 
 namespace ecs_bench
 {
-std::vector<ecs::Actor> actors;
+
+std::unique_ptr<ecs::ECS> instance;
+
+std::vector<std::shared_ptr<ecs::Actor>> actors;
 
 void create_entities()
 {
-    Profiler prof;
-    actors.resize(BENCH_ENTITIES);
+    instance = std::make_unique<ecs::ECS>();
+    const Profiler prof;
+    actors.reserve(BENCH_ENTITIES);
     for (int i = 0; i < BENCH_ENTITIES; ++i)
-        actors[i].add_component<FirstComponent>(10.f);
+    {
+        actors[i] = instance->new_actor();
+        actors[i]->add_component<FirstComponent>(10.f);
+    }
     LOG_INFO("CREATE : %lf ms", prof.get_ms());
 }
 
 void iterate_entities()
 {
-    Profiler prof1;
-    for (const auto& variant : ecs::singleton().get_variants())
-        for (size_t i = 0; i < variant->components.size(); ++i)
-            if (variant->components[i].component_type->tick_runner) // Only if the component implement the tick method
-                variant->components[i].component_type->tick_runner->execute(variant->components[i].component_data.data(), variant->linked_actors.size());
-    LOG_INFO("RUN SLOW : %lf ms", prof1.get_ms());
-
-    Profiler prof2;
-    ecs::singleton().get_system_factory()->execute_tick();
-    LOG_INFO("RUN FAST : %lf ms", prof2.get_ms());
+    const Profiler prof1;
+    instance->tick();
+    LOG_INFO("RUN : %lf ms", prof1.get_ms());
 }
 
 void destroy_entities()
 {
-    Profiler prof;
+    const Profiler prof;
     actors.clear();
+    instance = nullptr;
     LOG_INFO("DESTROY : %lf ms", prof.get_ms());
 }
 } // namespace ecs_bench
