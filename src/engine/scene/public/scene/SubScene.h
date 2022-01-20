@@ -19,13 +19,12 @@ class Universe : public ecs::ECS
   public:
     void pre_render()
     {
-        pre_render(global_view);
+        ECS::pre_render(global_view);
     }
     void render(gfx::CommandBuffer* command_buffer)
     {
-        render(command_buffer, global_view);
+        ECS::render(global_view, command_buffer);
     }
-
   private:
     gfx::View* global_view = nullptr;
 };
