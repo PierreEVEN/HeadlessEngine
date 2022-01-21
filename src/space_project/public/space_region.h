@@ -6,12 +6,8 @@
 #include <glm/detail/type_quat.hpp>
 #include <glm/glm.hpp>
 
-#include "gfx/Mesh.h"
-#include "gfx/buffer.h"
-#include "gfx/command_buffer.h"
-#include "gfx/master_material.h"
 #include "gfx/material_instance.h"
-#include "gfx/primitives.h"
+#include "scene/SubScene.h"
 
 namespace gfx
 {
@@ -26,70 +22,54 @@ class ViewStr
 };
 } // namespace gfx
 
-struct ECSInstance
-{
-    void pre_render()
-    {
-    }
-
-    void render([[maybe_unused]] gfx::CommandBuffer* command_buffer)
-    {
-    }
-
-    void tick()
-    {
-    }
-};
-
-class SpaceRegion
+class PlanetTransform : public scene::Transform
 {
   public:
-    SpaceRegion()
+    PlanetTransform(double distance_to_origin) : distance(distance_to_origin)
     {
-        test_mesh                  = gfx::primitive::cube(1);
-        test_material_base         = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
-        test_material              = gfx::MaterialInstance::create(test_material_base);
-        view_matrix_uniform_buffer = gfx::Buffer::create("test_ubo", 1, sizeof(gfx::ViewStr), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU);
-
-        gfx::ViewStr view = {};
-        view.proj_matrix  = (glm::perspective(glm::radians(45.f), 800.0f / 600.0f, 0.1f, 20.0f));
-        view.view_matrix  = (glm::lookAt(glm::vec3(-10, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)));
-        view.end          = 4.5f;
-        view_matrix_uniform_buffer->set_data(
-            [&](void* data)
-            {
-                memcpy(data, &view, sizeof(gfx::ViewStr));
-            });
-        test_material->bind_buffer("view_ubo", view_matrix_uniform_buffer);
-    }
-
-    void pre_render([[maybe_unused]] gfx::ViewStr* view_point)
-    {
-        ecs.pre_render();
-    }
-
-    void render(gfx::CommandBuffer* command_buffer)
-    {
-        command_buffer->draw_mesh(test_mesh.get(), test_material.get());
-        ecs.render(command_buffer);
     }
 
     void tick()
     {
-        ecs.tick();
+        rotation += 1 / 60.0;
+        set_world_position(glm::dvec3(cos(rotation) * distance, sin(rotation) * distance, 0));
+    }
+
+    void set_orbit_distance(double orbit_distance)
+    {
+        distance = orbit_distance;
     }
 
   private:
-    // Contains all the actors that are currently contained in the region
-    ECSInstance ecs;
+    double rotation;
+    double distance;
+};
 
-    std::shared_ptr<gfx::Buffer> view_matrix_uniform_buffer;
+class Planet : public ecs::Actor
+{
+  public:
+    Planet(double distance_to_origin)
+    {
+        add_component<PlanetTransform>(distance_to_origin);
+    }
 
-    std::shared_ptr<gfx::Mesh>             test_mesh;
-    std::shared_ptr<gfx::MaterialInstance> test_material;
-    std::shared_ptr<gfx::MasterMaterial>   test_material_base;
+    void set_orbit_distance(double orbit_distance)
+    {
+        get_component<PlanetTransform>()->set_orbit_distance(orbit_distance);
+    }
+};
 
-    double     region_radius; // for bound checking
-    glm::dquat region_global_rotation;
-    glm::dvec3 region_global_position;
+class CustomUniverse : public scene::Universe
+{
+  public:
+    CustomUniverse() : Universe()
+    {
+        hearth = new_actor<Planet>(10000);
+        mars   = hearth->duplicate<Planet>();
+        mars->set_orbit_distance(20000);
+    }
+
+  private:
+    std::shared_ptr<Planet> hearth;
+    std::shared_ptr<Planet> mars;
 };

@@ -2,10 +2,6 @@
 
 #include "ecs/actor.h"
 
-ecs::Actor::Actor(ECS* new_context, const ActorID& new_id) : actor_id(new_id), context(new_context)
-{
-    context->register_actor(actor_id);
-}
 
 ecs::Actor::~Actor()
 {
@@ -19,7 +15,3 @@ void ecs::Actor::move_to(ECS* new_context)
     context = new_context;
 }
 
-std::shared_ptr<ecs::Actor> ecs::Actor::duplicate() const
-{
-    return std::shared_ptr<Actor>(new Actor(context, context->duplicate_actor(actor_id)));
-}

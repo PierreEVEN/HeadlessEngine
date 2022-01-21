@@ -18,7 +18,13 @@ class ECS
     ECS() = default;
     virtual ~ECS();
 
-    std::shared_ptr<Actor> new_actor();
+    template <typename Actor_T = Actor, typename...Args_T> std::shared_ptr<Actor_T> new_actor(Args_T&&... args)
+    {
+        Actor_T* actor_memory = static_cast<Actor_T*>(malloc(sizeof(Actor_T)));
+        init_actor(actor_memory);
+        new (actor_memory) Actor_T(std::forward<Args_T>(args)...);
+        return std::shared_ptr<Actor_T>(actor_memory);
+    }
 
     [[nodiscard]] size_t actor_count() const
     {
@@ -61,9 +67,11 @@ class ECS
     }
 
   private:
+    template <typename Component_T> friend class ComponentReference;
     friend class Actor;
     friend class ActorVariant;
 
+    void init_actor(void* actor_memory);
     // Add an actor to this ECS
     void register_actor(const ActorID& actor);
     // Remove an actor from this ECS
@@ -160,6 +168,6 @@ template <class Component_T> void ECS::remove_component(const ActorID& from_acto
 template <class Component_T> Component_T* ECS::get_component(const ActorID& from_actor)
 {
     ActorMetaData* actor_data = &actor_registry[from_actor];
-    return static_cast<Component_T*>(actor_data->variant->get_component_memory(TComponentHelper<Component_T>::get_type_id(), actor_data->data_index));
+    return reinterpret_cast<Component_T*>(actor_data->variant->get_component_memory(TComponentHelper<Component_T>::get_type_id(), actor_data->data_index));
 }
 } // namespace ecs

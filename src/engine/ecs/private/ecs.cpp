@@ -42,9 +42,12 @@ ECS::~ECS()
         delete variant;
 }
 
-std::shared_ptr<Actor> ECS::new_actor()
+void ECS::init_actor(void* actor_memory)
 {
-    return std::shared_ptr<Actor>(new Actor(this, make_new_actor_id()));
+    Actor* actor    = static_cast<Actor*>(actor_memory);
+    actor->actor_id = make_new_actor_id();
+    actor->context  = this;
+    register_actor(actor->actor_id);
 }
 
 void ECS::register_actor(const ActorID& actor)

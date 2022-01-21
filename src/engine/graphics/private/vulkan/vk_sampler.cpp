@@ -40,6 +40,7 @@ Sampler_VK::Sampler_VK(const std::string& sampler_name, const SamplerOptions& op
 
 Sampler_VK::~Sampler_VK()
 {
+    vkDeviceWaitIdle(get_device());
     vkDestroySampler(get_device(), sampler, get_allocator());
 }
 } // namespace gfx::vulkan

@@ -21,6 +21,7 @@ void Collider::add_to_scene(Scene* scene)
 
 std::shared_ptr<Collider> Collider::create()
 {
-    return std::make_shared<BulletCollider>();
+    return nullptr;
+    //std::make_shared<BulletCollider>();
 }
 } // namespace physics

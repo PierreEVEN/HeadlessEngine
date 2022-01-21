@@ -28,15 +28,15 @@ class BulletScene : public Scene
   private:
     void step() override
     {
-        physic_scene->stepSimulation();
+        //physic_scene->stepSimulation();
     }
     void add_collider(Collider* collider) override
     {
-        physic_scene->addCollisionObject(collider);
+        //physic_scene->addCollisionObject(collider);
     }
     void remove_collider(Collider* collider) override
     {
-        physic_scene->removeCollisionObject(collider);
+        //physic_scene->removeCollisionObject(collider);
     }
 
 public:

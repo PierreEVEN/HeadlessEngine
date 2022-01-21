@@ -34,6 +34,7 @@ class SubScene : public ecs::ECS
   public:
     SubScene()
     {
+        physic_scene = physics::Scene::create();
     }
 
     void tick() override
@@ -43,7 +44,7 @@ class SubScene : public ecs::ECS
     }
 
   private:
-    std::unique_ptr<physics::Scene> physic_scene;
+    std::shared_ptr<physics::Scene> physic_scene;
 };
 
 } // namespace scene

@@ -25,10 +25,10 @@ template <typename Component_T> class ComponentReference
     Actor* owning_actor;
 };
 
-class Actor final
+class Actor
 {
   public:
-    ~Actor();
+    virtual ~Actor();
 
     template <typename Component_T, typename... CtorArgs_T> ComponentReference<Component_T> add_component(CtorArgs_T&&... ctor_args)
     {
@@ -50,16 +50,22 @@ class Actor final
     void move_to(ECS* new_context);
 
     // Make a copy of this actor (copy components too)
-    [[nodiscard]] std::shared_ptr<Actor> duplicate() const;
+    template <typename Actor_T = Actor> [[nodiscard]] std::shared_ptr<Actor_T> duplicate() const
+    {
+        Actor_T* new_actor = static_cast<Actor_T*>(malloc(sizeof(Actor_T)));
+        memcpy(new_actor, this, sizeof(Actor_T));
+        new_actor->actor_id = context->duplicate_actor(actor_id);
+        return std::shared_ptr<Actor_T>(new_actor);
+    }
+
+  protected:
+    Actor() = default;
 
   private:
-    template<typename Component_T>
-    friend class ComponentReference;
+    template <typename Component_T> friend class ComponentReference;
     friend class ECS;
-    Actor(ECS* context, const ActorID& new_id);
-
-    const ActorID actor_id;
-    ECS*          context;
+    ActorID actor_id;
+    ECS*    context;
 };
 
 template <typename Component_T> Component_T* ComponentReference<Component_T>::operator->() const

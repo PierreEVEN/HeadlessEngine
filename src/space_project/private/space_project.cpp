@@ -1,16 +1,11 @@
 
 
+#include "scene/SubScene.h"
 #include "space_region.h"
 #include "ui.h"
 
 #include <application/application.h>
 #include <gfx/gfx.h>
-
-std::vector<SpaceRegion> space_regions;
-
-void render()
-{
-}
 
 void declare_render_pass()
 {
@@ -47,7 +42,7 @@ void declare_render_pass()
         },
     };
     gfx::RenderPass::declare(gfx::RenderPass::Config{
-        .pass_name         = "region_combine",
+        .pass_name         = "deferred_combine",
         .color_attachments = region_combine_color_attachments,
     });
 
@@ -65,7 +60,6 @@ void declare_render_pass()
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
-
     Logger::get().enable_logs(Logger::LogType::LOG_LEVEL_INFO | Logger::LogType::LOG_LEVEL_DEBUG);
 
     application::create();
@@ -79,35 +73,32 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     auto* surface = gfx::Surface::create_surface(window);
     declare_render_pass();
 
-    space_regions.emplace_back(SpaceRegion{});
+    std::unique_ptr<scene::Universe> global_universe = std::make_unique<CustomUniverse>();
+    std::unique_ptr<ui::UICanvas>    canvas          = std::make_unique<ui::UICanvas>(nullptr);
+
+    auto gbuffer_pass          = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("gbuffer"));
+    auto deferred_combine_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("deferred_combine"));
+    auto ui_pass               = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
 
     auto resolve_sampler                  = gfx::Sampler::create("resolve sampler", {});
     auto region_combine_material_instance = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb"));
     auto resolve_material_instance        = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/engine/resolve.shb"));
+    resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
+    resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
+    resolve_material_instance->bind_sampler("ui_sampler", resolve_sampler);
 
-    auto ui_pass              = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
-    auto gbuffer_combine_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("region_combine"));
-
-    gbuffer_combine_pass->on_draw_pass.add_lambda(
+    // Pass render content
+    gbuffer_pass->on_draw_pass.add_lambda(
+        [&](gfx::CommandBuffer* command_buffer)
+        {
+            global_universe->render(command_buffer);
+        });
+    deferred_combine_pass->on_draw_pass.add_lambda(
         [&region_combine_material_instance](gfx::CommandBuffer* command_buffer)
         {
             std::vector<gfx::Texture> children_albedo;
-            // command_buffer->set_texture_array("albedo_buffers", children_albedo);
             command_buffer->draw_procedural(region_combine_material_instance.get(), 3);
         });
-    for (auto& region : space_regions)
-    {
-        auto gbuffer_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("gbuffer"));
-        gbuffer_pass->on_draw_pass.add_lambda(
-            [&region](gfx::CommandBuffer* command_buffer)
-            {
-                // This is a pass where we will render a region
-                region.render(command_buffer);
-            });
-        gbuffer_combine_pass->link_dependency(gbuffer_pass);
-    }
-
-    std::unique_ptr<ui::UICanvas> canvas = std::make_unique<ui::UICanvas>(nullptr);
     ui_pass->on_draw_pass.add_lambda(
         [&](gfx::CommandBuffer* command_buffer)
         {
@@ -117,53 +108,41 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
                 .draw_width  = window->absolute_width(),
                 .draw_height = window->absolute_height(),
             });
-
             canvas->start_window("this is a test window");
             canvas->label("this is a text yay");
             canvas->end_window();
 
             canvas->submit(command_buffer);
         });
-
-    surface->link_dependency(ui_pass);
-    surface->link_dependency(gbuffer_combine_pass);
-    surface->build_framegraph();
-
-    resolve_material_instance->bind_texture("combine_albedo", gbuffer_combine_pass->get_framebuffer_images()[0]);
-    resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
-    resolve_material_instance->bind_sampler("ui_sampler", resolve_sampler);
-
     surface->on_draw->add_lambda(
         [&](gfx::CommandBuffer* command_buffer)
         {
             command_buffer->draw_procedural(resolve_material_instance.get(), 3);
         });
 
+    deferred_combine_pass->link_dependency(gbuffer_pass);
+    surface->link_dependency(ui_pass);
+    surface->link_dependency(deferred_combine_pass);
+    surface->build_framegraph();
+
+    // Game loop
     while (application::window::Window::get_window_count() > 0)
     {
         gfx::next_frame();
-
-        // update main scene
-        for (auto& region : space_regions)
-        {
-            // gameplay
-            region.tick();
-            // send gameplay to gfx
-            gfx::ViewStr camera;
-            region.pre_render(&camera);
-        }
-        // render everything
+        global_universe->tick();
+        global_universe->pre_render();
         surface->render();
         window->update();
     }
 
-    space_regions.clear();
+    global_universe                  = nullptr;
+    gbuffer_pass                     = nullptr;
     resolve_sampler                  = nullptr;
     resolve_material_instance        = nullptr;
     ui_pass                          = nullptr;
     canvas                           = nullptr;
     region_combine_material_instance = nullptr;
-    gbuffer_combine_pass             = nullptr;
+    deferred_combine_pass            = nullptr;
     delete surface;
     gfx::destroy();
     application::destroy();
