@@ -3,77 +3,21 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
 #define GLM_FORCE_RADIANS
-#include "gfx/command_buffer.h"
+#include "application/inputs/input_mapping.h"
+#include "planet.h"
 
+#include "scene/SubScene.h"
 #include <glm/detail/type_quat.hpp>
 #include <glm/glm.hpp>
-
-#include "gfx/material_instance.h"
-#include "gfx/Mesh.h"
-#include "gfx/primitives.h"
-#include "gfx/view.h"
-#include "scene/SubScene.h"
-
-class PlanetRenderer
-{
-  public:
-
-      struct PlanetVertex
-      {
-          glm::dvec3 pos;
-      };
-
-    struct UboStructure
-    {
-        glm::dmat4 view_projection_matrix;
-    };
-
-    PlanetRenderer()
-    {
-        planet_material = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/planet/planet_material.shb"));
-
-        //std::vector<PlanetVertex> vertices;
-        //std::vector<uint32_t>     indices;
-        //test_mesh       = std::make_shared<gfx::Mesh>("test mesh", vertices, indices);
-        test_mesh = gfx::primitive::cube();
-        camera_ubo = gfx::Buffer::create("camera_ubo", 1, sizeof(UboStructure), gfx::EBufferUsage::UNIFORM_BUFFER, gfx::EBufferAccess::CPU_TO_GPU, gfx::EBufferType::IMMEDIATE);
-    }
-
-    void tick()
-    {
-    }
-
-    void pre_render(gfx::View* view)
-    {
-        camera_ubo->set_data(
-            [&view](void* data)
-            {
-                UboStructure ubo{
-                    .view_projection_matrix = view->get_view_matrix(),
-                };
-                memcpy(data, &ubo, sizeof(ubo));
-            });
-    }
-
-    void render(gfx::View* view, gfx::CommandBuffer* command_buffer)
-    {
-        planet_material->bind_buffer("camera_ubo", camera_ubo);        
-        command_buffer->draw_mesh(test_mesh.get(), planet_material.get());
-    }
-
-  private:
-    std::shared_ptr<gfx::Buffer>           camera_ubo;
-    std::shared_ptr<gfx::Mesh>             test_mesh;
-    std::shared_ptr<gfx::MaterialInstance> planet_material;
-};
+#include <glm/gtx/euler_angles.hpp>
 
 class Planet : public ecs::Actor
 {
   public:
-    Planet(double distance_to_origin)
+    Planet(double distance_to_origin, std::shared_ptr<gfx::MaterialInstance> planet_material)
     {
         add_component<PlanetTransform>(distance_to_origin);
-        add_component<PlanetRenderer>();
+        add_component<PlanetRenderer>(distance_to_origin, planet_material);
     }
 
     void set_orbit_distance(double orbit_distance)
@@ -114,12 +58,62 @@ class CustomUniverse : public scene::Universe
   public:
     CustomUniverse() : Universe()
     {
-        hearth = new_actor<Planet>(10000);
-        mars   = hearth->duplicate<Planet>();
-        mars->set_orbit_distance(20000);
+        planet_material = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/planet/planet_material.shb"));
+
+        planet_material->bind_buffer("camera_ubo", get_global_view()->get_buffer());
+
+        for (int i = 0; i < 1000; ++i)
+        {
+            planets.emplace_back(new_actor<Planet>(i * 5, planet_material));
+        }
+
+        move_forward  = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_Z);
+        move_backward = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_S);
+        move_right    = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_D);
+        move_left     = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_Q);
+        move_up       = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_Space);
+        move_down     = std::make_unique<application::inputs::ActionMapping>(application::inputs::EButtons::Keyboard_LeftShift);
+
+        look_right = std::make_unique<application::inputs::AxisMapping>(application::inputs::EAxis::Mouse_X);
+        look_up    = std::make_unique<application::inputs::AxisMapping>(application::inputs::EAxis::Mouse_Y);
+
+        position = glm::dvec3(-10, 0, 0);
+    }
+
+    void tick() override
+    {
+        Universe::tick();
+
+        // glm::dvec3 forward = forward_vector
+
+        glm::dquat rot = glm::eulerAngleYXZ(0.0, static_cast<double>(*look_up->value) * 0.01, static_cast<double>(*look_right->value) * 0.01);
+
+        glm::dvec3 forward = rot * glm::dvec3(1, 0, 0);
+
+        position += glm::dvec3(*move_forward->value ? 1 : *move_backward->value ? -1 : 0, *move_right->value ? -1 : *move_left->value ? 1 : 0, *move_up->value ? 1 : *move_down->value ? -1 : 0) * 0.5;
+
+        get_global_view()->set_viewport(800, 600, 45, 10000, 0.1f);
+        get_global_view()->set_view_point(position, forward, glm::dvec3(0, 1, 0));
+    }
+
+    void pre_render() override
+    {
+        Universe::pre_render();
+        get_global_view()->get_buffer();
     }
 
   private:
-    std::shared_ptr<Planet> hearth;
-    std::shared_ptr<Planet> mars;
+    std::shared_ptr<gfx::MaterialInstance> planet_material;
+    std::vector<std::shared_ptr<Planet>>   planets;
+
+    glm::dvec3                                          position;
+    glm::dvec3                                          forward_vector;
+    std::unique_ptr<application::inputs::ActionMapping> move_forward;
+    std::unique_ptr<application::inputs::ActionMapping> move_backward;
+    std::unique_ptr<application::inputs::ActionMapping> move_right;
+    std::unique_ptr<application::inputs::ActionMapping> move_left;
+    std::unique_ptr<application::inputs::ActionMapping> move_up;
+    std::unique_ptr<application::inputs::ActionMapping> move_down;
+    std::unique_ptr<application::inputs::AxisMapping>   look_up;
+    std::unique_ptr<application::inputs::AxisMapping>   look_right;
 };

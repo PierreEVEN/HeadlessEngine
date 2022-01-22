@@ -30,25 +30,29 @@ void ActorVariant::emplace_actor_back(ActorMetaData* actor)
     actor->variant    = this;
     actor->data_index = static_cast<uint32_t>(linked_actors.size());
     linked_actors.emplace_back(actor->actor_id);
-
     // Resize buffer memories
     update_components_buffer_size();
 }
 
-void ActorVariant::remove_actor(ActorMetaData* actor)
+void ActorVariant::remove_actor(ActorMetaData* actor, bool only_move)
 {
-    uint32_t removed_index = actor->data_index;
-
-    // Move last component's data into the removed one to erase it
     for (auto& component : components)
     {
-        const auto last_component_memory    = &component.component_data_buffer[actor->data_index * component.type_size];
         const auto removed_component_memory = &component.component_data_buffer[(linked_actors.size() - 1) * component.type_size];
+        if (!only_move)
+        {
+            // Call destructor
+            component.component_type->component_destroy(removed_component_memory);
+        }
+
+        // Move last component's data into the removed one to erase it
+        const auto last_component_memory    = &component.component_data_buffer[actor->data_index * component.type_size];
         component.component_type->component_move(last_component_memory, removed_component_memory);
     }
 
     // Update references
     const ActorID& last_actor_id                         = *(linked_actors.end() - 1);
+    uint32_t       removed_index                         = actor->data_index;
     owning_ecs->actor_registry[last_actor_id].data_index = removed_index;
     linked_actors[removed_index]                         = last_actor_id;
     linked_actors.pop_back();
@@ -62,7 +66,9 @@ void ActorVariant::remove_actor(ActorMetaData* actor)
 void ActorVariant::move_actor_to_variant(ActorMetaData* actor, ActorVariant* from, ActorVariant* to)
 {
     const size_t previous_data_index = actor->data_index;
-    const size_t new_data_index      = actor->data_index;
+    const size_t new_data_index      = to->linked_actors.size();
+
+    ActorMetaData old_actor_infos = *actor;
 
     // Register into new variant
     to->emplace_actor_back(actor);
@@ -78,7 +84,7 @@ void ActorVariant::move_actor_to_variant(ActorMetaData* actor, ActorVariant* fro
             }
 
     // Remove from the previous variant
-    from->remove_actor(actor);
+    from->remove_actor(&old_actor_infos, true);
 
     // Update references
     actor->variant    = to;
@@ -107,6 +113,8 @@ void ActorVariant::duplicate_actor(const ActorMetaData* existing_actor, ActorMet
 void ActorVariant::update_components_buffer_size()
 {
     for (auto& component : components)
+    {
         component.component_data_buffer.resize(linked_actors.size() * component.type_size);
+    }
 }
 } // namespace ecs

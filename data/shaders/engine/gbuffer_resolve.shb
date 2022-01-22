@@ -1,0 +1,26 @@
+#pragma shader_language HLSL
+#pragma CULL            NONE
+
+global(resolve_pass)
+[
+struct VsToFsStruct
+{
+    float4 Pos : SV_Position;
+    float2 Uv : TEXCOORD;
+};
+]
+
+vertex(resolve_pass) => "fullscreen_vertex.cg"
+
+fragment(resolve_pass)
+[
+Texture2D gbuffer_color;
+Texture2D gbuffer_normal;
+Texture2D gbuffer_velocity;
+SamplerState gbuffer_sampler;
+
+float4 main(VsToFsStruct input) : SV_Target
+{
+    return combine_albedo.Sample(gbuffer_color, input.Uv);
+}
+]

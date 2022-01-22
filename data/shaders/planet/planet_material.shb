@@ -1,37 +1,61 @@
 #pragma shader_language HLSL
+#pragma cull            NONE
 
-
-global(gbuffers) 
+global(gbuffer) 
 [
-
 struct VsToFs 
 {
+    float4 position : SV_POSITION;
 };
-
-
 ]
 
-
-vertex(gbuffers) 
+vertex(gbuffer) 
 [
-
 struct UBO
 {
-	float4x4 view_projection;
+    float4x4 view;
+	float4x4 projection;
 };
-cbuffer ubo { UBO ubo; }
-
+cbuffer camera_ubo
+{
+    UBO camera_ubo;
+}
 
 struct VsInput
 {
+    float3 position : POSITION;
 };
 
 VsToFs main(VsInput input) 
 {
-	VsToFs out;
+	VsToFs output;
 
+    output.position = mul(mul(camera_ubo.projection, camera_ubo.view), float4(input.position, 1));
 
-
-	return out;
+    return output;
 }
+]
+
+
+fragment(gbuffer) 
+[
+
+struct FsOutput
+{
+    float4 color : SV_TARGET0;
+    float4 normal : SV_TARGET1;
+    float4 velocity : SV_TARGET2;
+};
+
+FsOutput main(VsToFs input)
+{
+    FsOutput output;
+
+    output.color = float4(1, 0, 0, 1);    
+    output.normal = float4(1, 1, 0, 1);
+    output.velocity = float4(1, 0, 1, 1);
+
+    return output;
+}
+
 ]

@@ -10,16 +10,33 @@ struct VsToFsStruct
 };
 ]
 
-vertex(resolve_pass) => "fullscreen_vertex.cg"
+vertex(resolve_pass, deferred_combine) => "fullscreen_vertex.cg"
+
+fragment(resolve_pass, deferred_combine)
+[
+SamplerState ui_sampler;
+]
 
 fragment(resolve_pass)
 [
 Texture2D combine_albedo;
 Texture2D ui_result;
-SamplerState ui_sampler;
 
 float4 main(VsToFsStruct input) : SV_Target
 {
     return combine_albedo.Sample(ui_sampler, input.Uv) + ui_result.Sample(ui_sampler, input.Uv);
+}
+]
+
+
+fragment(deferred_combine)
+[
+Texture2D gbuffer_color;
+Texture2D gbuffer_normal;
+Texture2D gbuffer_velocity;
+
+float4 main(VsToFsStruct input) : SV_Target
+{
+    return gbuffer_color.Sample(ui_sampler, input.Uv);
 }
 ]

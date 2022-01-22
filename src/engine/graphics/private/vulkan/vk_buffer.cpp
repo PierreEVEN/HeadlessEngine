@@ -17,7 +17,7 @@ namespace gfx::vulkan
 {
 Buffer_VK::Buffer_VK(const std::string& buffer_name, uint32_t buffer_stride, uint32_t in_element_count, EBufferUsage buffer_usage, EBufferAccess in_buffer_access, EBufferType buffer_type)
     : Buffer(buffer_name, buffer_stride, in_element_count, buffer_usage, in_buffer_access, buffer_type), allocated_count(element_count),
-      frame_data(buffer_type == EBufferType::STATIC ? SwapchainImageResource<FrameData>::make_static() : SwapchainImageResource<FrameData>::make_dynamic())
+      frame_data(buffer_type == EBufferType::STATIC || buffer_type == EBufferType::IMMUTABLE ? SwapchainImageResource<FrameData>::make_static() : SwapchainImageResource<FrameData>::make_dynamic())
 {
     if (type == EBufferType::DYNAMIC)
         dynamic_data = new uint8_t[allocated_count * stride()];

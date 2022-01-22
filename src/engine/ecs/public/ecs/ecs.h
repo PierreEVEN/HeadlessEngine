@@ -143,7 +143,7 @@ template <class Component_T> void ECS::remove_component(const ActorID& from_acto
     if (!actor_registry.contains(from_actor))
         return;
 
-    const ComponentTypeID compTypeId = TComponentHelper<Component_T>::get_type_id();
+    const ComponentTypeID component_type_id = TComponentHelper<Component_T>::get_type_id();
     ActorMetaData*        actor_data = &actor_registry[from_actor];
 
     // The component list is already empty
@@ -152,7 +152,7 @@ template <class Component_T> void ECS::remove_component(const ActorID& from_acto
 
     // 1) Find an existing variant with given specs or create a new one
     std::vector<ComponentTypeID> final_variant_specs = actor_data->variant->get_specification();
-    final_variant_specs.erase(std::ranges::remove(final_variant_specs, compTypeId).begin(), final_variant_specs.end());
+    final_variant_specs.erase(std::ranges::remove(final_variant_specs, component_type_id).begin(), final_variant_specs.end());
 
     if (final_variant_specs.empty())
     {

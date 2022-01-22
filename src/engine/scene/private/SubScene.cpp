@@ -2,6 +2,7 @@
 #include "scene/SubScene.h"
 
 #include "gfx/command_buffer.h"
+#include "gfx/view.h"
 
 namespace scene
 {
@@ -56,5 +57,15 @@ void universe_declaration_test()
         universe.pre_render();
         universe.render(cmd);
     } while (false);
+}
+
+Universe::Universe() : ECS()
+{
+    global_view = new gfx::View();
+}
+
+Universe::~Universe()
+{
+    delete global_view;
 }
 } // namespace scene

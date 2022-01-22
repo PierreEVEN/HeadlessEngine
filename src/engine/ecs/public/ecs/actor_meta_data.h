@@ -20,13 +20,15 @@ class ActorVariant final
     ActorVariant(ECS* context, const std::vector<ComponentTypeID>& in_specification);
 
     void emplace_actor_back(ActorMetaData* actor);
-    void remove_actor(ActorMetaData* actor);
+    void remove_actor(ActorMetaData* actor, bool only_move);
 
     [[nodiscard]] ComponentDataType* get_component_memory(ComponentTypeID type_id, uint32_t element_index)
     {
         for (auto& component : components)
             if (component.type_id == type_id)
+            {
                 return &component.component_data_buffer[element_index * component.type_size];
+            }
 
         LOG_FATAL("failed to find component type with the given type_id");
     }

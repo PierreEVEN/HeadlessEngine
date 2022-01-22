@@ -17,15 +17,28 @@ namespace scene
 class Universe : public ecs::ECS
 {
   public:
-    void pre_render()
+
+      Universe();
+      virtual ~Universe() override;
+
+    virtual void pre_render()
     {
         ECS::pre_render(global_view);
     }
-    void render(gfx::CommandBuffer* command_buffer)
+    virtual void render(gfx::CommandBuffer* command_buffer)
     {
         ECS::render(global_view, command_buffer);
     }
+
+    [[nodiscard]] gfx::View* get_global_view() const
+    {
+        return global_view;
+    }
+
   private:
+
+
+
     gfx::View* global_view = nullptr;
 };
 

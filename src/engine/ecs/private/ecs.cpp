@@ -70,7 +70,7 @@ void ECS::remove_actor(const ActorID& removed_actor)
     const ActorMetaData&                      actor_data = pair.second;
 
     if (actor_data.variant)
-        actor_data.variant->remove_actor(&pair.second);
+        actor_data.variant->remove_actor(&pair.second, false);
 
     actor_registry.erase(actor_it);
 }
