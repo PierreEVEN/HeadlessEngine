@@ -1,0 +1,37 @@
+#pragma shader_language HLSL
+
+
+global(gbuffers) 
+[
+
+struct VsToFs 
+{
+};
+
+
+]
+
+
+vertex(gbuffers) 
+[
+
+struct UBO
+{
+	float4x4 view_projection;
+};
+cbuffer ubo { UBO ubo; }
+
+
+struct VsInput
+{
+};
+
+VsToFs main(VsInput input) 
+{
+	VsToFs out;
+
+
+
+	return out;
+}
+]
