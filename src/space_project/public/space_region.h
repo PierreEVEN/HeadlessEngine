@@ -58,11 +58,11 @@ class CustomUniverse : public scene::Universe
   public:
     CustomUniverse() : Universe()
     {
-        planet_material = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/planet/planet_material.shb"));
+        planet_material = gfx::MasterMaterial::create("data/shaders/planet/planet_material.shb");
 
-        planet_material->bind_buffer("camera_ubo", get_global_view()->get_buffer());
+        //planet_material->bind_buffer("camera_ubo", get_global_view()->get_buffer());
 
-        for (int i = 0; i < 1000; ++i)
+        for (int i = 0; i < 1; ++i)
         {
             planets.emplace_back(new_actor<Planet>(i * 5, planet_material));
         }
@@ -103,7 +103,7 @@ class CustomUniverse : public scene::Universe
     }
 
   private:
-    std::shared_ptr<gfx::MaterialInstance> planet_material;
+    std::shared_ptr<gfx::MasterMaterial> planet_material;
     std::vector<std::shared_ptr<Planet>>   planets;
 
     glm::dvec3                                          position;
