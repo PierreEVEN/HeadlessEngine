@@ -1,9 +1,10 @@
 
-declare_module("shader_builder", {"types"}, {"cpputils", "glm", "glslang", "spirv-reflect"})
+declare_module("shader_builder", {"types"}, {"cpputils", "glm", "glslang"})
 
 target("shader_builder")
 	set_group("engine_new")
 	add_headerfiles("private/(**.h)")
+	add_packages("spirv-reflect", { public = true })
 	
 	
 if GRAPHIC_BACKEND == "VULKAN" then

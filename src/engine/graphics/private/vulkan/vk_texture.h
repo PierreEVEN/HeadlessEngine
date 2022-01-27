@@ -26,15 +26,6 @@ class Texture_VK : public Texture
         return views;
     }
 
-    static VkFormat vk_texture_format_to_engine(ETypeFormat format)
-    {
-        return static_cast<VkFormat>(format);
-    }
-
-    static ETypeFormat engine_texture_format_from_vk(VkFormat format)
-    {
-        return static_cast<ETypeFormat>(format);
-    }
 
     [[nodiscard]] const VkDescriptorImageInfo& get_descriptor_image_infos() const
     {

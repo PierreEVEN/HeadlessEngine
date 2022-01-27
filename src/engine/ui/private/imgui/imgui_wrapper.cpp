@@ -112,7 +112,7 @@ void ImGuiWrapper::init_internal()
     uint8_t* pixels;
     int      width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = ETypeFormat::R8G8B8A8_UNORM});
+    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = gfx::ETypeFormat::R8G8B8A8_UNORM});
     font_texture->set_pixels(std::vector(pixels, pixels + width * height * 4));
 
     io.Fonts->TexID = font_texture.get();
@@ -122,7 +122,7 @@ void ImGuiWrapper::init_internal()
             .type =
                 {
                     .type_size = sizeof(ImDrawVert::pos),
-                    .format    = ETypeFormat::R32G32_SFLOAT,
+                    .format    = gfx::ETypeFormat::R32G32_SFLOAT,
                 },
             .offset   = offsetof(ImDrawVert, pos),
             .location = 0,
@@ -131,7 +131,7 @@ void ImGuiWrapper::init_internal()
             .type =
                 {
                     .type_size = sizeof(ImDrawVert::uv),
-                    .format    = ETypeFormat::R32G32_SFLOAT,
+                    .format    = gfx::ETypeFormat::R32G32_SFLOAT,
                 },
             .offset   = offsetof(ImDrawVert, uv),
             .location = 1,
@@ -140,7 +140,7 @@ void ImGuiWrapper::init_internal()
             .type =
                 {
                     .type_size = sizeof(ImDrawVert::col),
-                    .format    = ETypeFormat::R8G8B8A8_UNORM,
+                    .format    = gfx::ETypeFormat::R8G8B8A8_UNORM,
                 },
             .offset   = offsetof(ImDrawVert, col),
             .location = 2,

@@ -14,7 +14,7 @@
 class Planet : public ecs::Actor
 {
   public:
-    Planet(double distance_to_origin, std::shared_ptr<gfx::MaterialInstance> planet_material)
+    Planet(double distance_to_origin, std::shared_ptr<gfx::MasterMaterial> planet_material)
     {
         add_component<PlanetTransform>(distance_to_origin);
         add_component<PlanetRenderer>(distance_to_origin, planet_material);

@@ -3,6 +3,7 @@
 #include "vk_errors.h"
 #include "vk_render_pass.h"
 #include "vk_texture.h"
+#include "vk_types.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_device.h"
 
@@ -221,11 +222,11 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
 
             vertex_attribute_description.emplace_back(VkVertexInputAttributeDescription{
                 .location = static_cast<uint32_t>(input_property.location),
-                .format   = Texture_VK::vk_texture_format_to_engine(input_property.type.format),
+                .format   = vk_texture_format_to_engine(input_property.type.format),
                 .offset   = input_property.offset,
             });
 
-            vertex_input_size += Texture::get_format_channel_count(input_property.type.format) * Texture::get_format_bytes_per_pixel(input_property.type.format);
+            vertex_input_size += get_format_channel_count(input_property.type.format) * get_format_bytes_per_pixel(input_property.type.format);
         }
 
         VkVertexInputBindingDescription bindingDescription{

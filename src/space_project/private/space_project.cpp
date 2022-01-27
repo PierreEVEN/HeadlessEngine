@@ -20,13 +20,13 @@ void declare_render_pass()
         },
         {
             .attachment_name = "velocity",
-            .image_format    = ETypeFormat::R16G16B16A16_SFLOAT,
+            .image_format    = gfx::ETypeFormat::R16G16B16A16_SFLOAT,
             .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
         },
     };
     const auto gbuffer_depth = gfx::RenderPass::Config::Attachment{
         .attachment_name = "depth",
-        .image_format    = ETypeFormat::D32_SFLOAT,
+        .image_format    = gfx::ETypeFormat::D32_SFLOAT,
         .clear_value     = gfx::ClearValue{.depth = 1, .stencil = 0},
     };
     gfx::RenderPass::declare(gfx::RenderPass::Config{

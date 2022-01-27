@@ -32,15 +32,15 @@ class PlanetRenderer
         {
             for (uint32_t y = 0; y < subdivisions; ++y)
             {
-                uint32_t offset = (x + y * subdivisions) * 6;
+                uint32_t tris_offset = (x + y * subdivisions) * 6;
 
-                indices[offset]     = x + y * subd_vert;
-                indices[offset + 2] = x + 1 + y * subd_vert;
-                indices[offset + 1] = x + 1 + (y + 1) * subd_vert;
+                indices[tris_offset] = x + y * subd_vert;
+                indices[tris_offset + 2] = x + 1 + y * subd_vert;
+                indices[tris_offset + 1] = x + 1 + (y + 1) * subd_vert;
 
-                indices[offset + 4] = x + y * subd_vert;
-                indices[offset + 3] = x + 1 + (y + 1) * subd_vert;
-                indices[offset + 5] = x + (y + 1) * subd_vert;
+                indices[tris_offset + 4] = x + y * subd_vert;
+                indices[tris_offset + 3] = x + 1 + (y + 1) * subd_vert;
+                indices[tris_offset + 5] = x + (y + 1) * subd_vert;
             }
         }
     }
@@ -59,7 +59,7 @@ class PlanetRenderer
         glm::dvec3 offset;
     };
 
-    PlanetRenderer(float width, std::shared_ptr<gfx::MasterMaterial> planet_mat)
+    PlanetRenderer(float, std::shared_ptr<gfx::MasterMaterial> planet_mat)
     {
         const uint32_t subd = 2;
 
@@ -79,11 +79,11 @@ class PlanetRenderer
 
     uint32_t new_draw_count;
 
-    void pre_render(gfx::View* view)
+    void pre_render(gfx::View*)
     {
         int scales = 3;
 
-        new_draw_count          = 4 + pow(8, scales);
+        new_draw_count          = 4 + static_cast<uint32_t>(pow(8, scales));
         const double base_width = 1;
 
         draw_list->resize(new_draw_count);
@@ -126,7 +126,7 @@ class PlanetRenderer
             });
     }
 
-    void render(gfx::View* view, gfx::CommandBuffer* command_buffer)
+    void render(gfx::View*, gfx::CommandBuffer* command_buffer)
     {
         command_buffer->draw_mesh(test_mesh.get(), planet_material.get(), new_draw_count, 0);
     }

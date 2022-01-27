@@ -25,13 +25,13 @@ class Transform
         local_scale = scale;
     }
 
-    void set_world_position(const glm::dvec3& position)
+    void set_world_position([[maybe_unused]] const glm::dvec3& position)
     {
     }
-    void set_world_rotation(const glm::quat& rotation)
+    void set_world_rotation([[maybe_unused]] const glm::quat& rotation)
     {
     }
-    void set_world_scale(const glm::vec3& scale)
+    void set_world_scale([[maybe_unused]] const glm::vec3& scale)
     {
     }
 

@@ -6,6 +6,7 @@
 #include "vk_helper.h"
 #include "vk_render_pass.h"
 #include "vk_render_pass_instance.h"
+#include "vk_types.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_command_buffer.h"
 #include "vulkan/vk_command_pool.h"
@@ -265,7 +266,7 @@ void Surface_VK::recreate_swapchain()
     }
     surface_texture = std::make_shared<Texture_VK>(window_container->absolute_width(), window_container->absolute_height(), 1,
                                                    TextureParameter{
-                                                       .format                 = Texture_VK::engine_texture_format_from_vk(get_surface_format().format),
+                                                       .format                 = engine_texture_format_from_vk(get_surface_format().format),
                                                        .image_type             = EImageType::Texture_2D,
                                                        .transfer_capabilities  = ETextureTransferCapabilities::None,
                                                        .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
@@ -287,7 +288,7 @@ void Surface_VK::recreate_swapchain()
                     .pass_name         = "resolve_pass",
                     .color_attachments = {RenderPass::Config::Attachment{
                         .attachment_name = "color",
-                        .image_format    = vulkan::Texture_VK::engine_texture_format_from_vk(get_surface_format().format),
+                        .image_format    = engine_texture_format_from_vk(get_surface_format().format),
                     }},
                 },
                 true);

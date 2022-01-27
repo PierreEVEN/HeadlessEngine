@@ -2,6 +2,7 @@
 #include "vk_render_pass.h"
 
 #include "vk_helper.h"
+#include "vk_types.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
@@ -26,7 +27,7 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = Texture_VK::vk_texture_format_to_engine(col_attachment.image_format),
+            .format         = vk_texture_format_to_engine(col_attachment.image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = col_attachment.clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
@@ -51,7 +52,7 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = Texture_VK::vk_texture_format_to_engine(get_config().depth_attachment->image_format),
+            .format         = vk_texture_format_to_engine(get_config().depth_attachment->image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = get_config().depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,

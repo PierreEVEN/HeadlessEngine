@@ -1,5 +1,5 @@
 #pragma once
-#include "types/type_format.h"
+#include "gfx/types.h"
 
 #include "gfx/render_pass_reference.h"
 

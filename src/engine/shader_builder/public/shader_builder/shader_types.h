@@ -10,10 +10,10 @@ namespace shader_builder
 {
 struct TypeInfo
 {
-    std::string type_name;
-    void*       type_id;
-    size_t      type_size;
-    ETypeFormat format;
+    std::string      type_name;
+    void*            type_id;
+    size_t           type_size;
+    gfx::ETypeFormat format;
 };
 
 struct Property

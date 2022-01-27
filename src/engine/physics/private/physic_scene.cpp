@@ -30,11 +30,11 @@ class BulletScene : public Scene
     {
         //physic_scene->stepSimulation();
     }
-    void add_collider(Collider* collider) override
+    void add_collider([[maybe_unused]]Collider* collider) override
     {
         //physic_scene->addCollisionObject(collider);
     }
-    void remove_collider(Collider* collider) override
+    void remove_collider([[maybe_unused]] Collider* collider) override
     {
         //physic_scene->removeCollisionObject(collider);
     }

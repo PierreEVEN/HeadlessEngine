@@ -14,6 +14,6 @@ else
 end
 
 if APPLICATION_BACKEND ~= "WIN32" then
-target("graphics")
-	del_files("private/vulkan/win32/**.cpp")
+	target("graphics")
+		del_files("private/vulkan/win32/**.cpp")
 end

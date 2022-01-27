@@ -39,7 +39,7 @@ function declare_module(module_name, deps, packages, is_executable)
 		if is_executable then
 			set_kind("binary")
 		else
-			set_kind("static")
+			set_kind("shared")
 		end
 		add_includedirs("private", {public = false})
 		add_includedirs("public", {public = true})

@@ -1,5 +1,6 @@
 #include "vulkan/vk_texture.h"
 
+#include "vk_types.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"

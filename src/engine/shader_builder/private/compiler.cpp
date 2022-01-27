@@ -14,8 +14,7 @@
 
 namespace shader_builder
 {
-
-ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
+gfx::ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
 {
     size = 0;
     if (type->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT)
@@ -26,16 +25,16 @@ ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
             {
             case 1:
                 size = 4;
-                return ETypeFormat::R32_SFLOAT;
+                return gfx::ETypeFormat::R32_SFLOAT;
             case 2:
                 size = 8;
-                return ETypeFormat::R32G32_SFLOAT;
+                return gfx::ETypeFormat::R32G32_SFLOAT;
             case 3:
                 size = 12;
-                return ETypeFormat::R32G32B32_SFLOAT;
+                return gfx::ETypeFormat::R32G32B32_SFLOAT;
             case 4:
                 size = 16;
-                return ETypeFormat::R32G32B32A32_SFLOAT;
+                return gfx::ETypeFormat::R32G32B32A32_SFLOAT;
             default:
                 LOG_FATAL("unhandled type trait");
             }
@@ -43,7 +42,7 @@ ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
         else
         {
             size = 4;
-            return ETypeFormat::R32_SFLOAT;
+            return gfx::ETypeFormat::R32_SFLOAT;
         }
     }
     if (type->type_flags & SPV_REFLECT_TYPE_FLAG_INT)
@@ -54,16 +53,16 @@ ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
             {
             case 1:
                 size = 4;
-                return ETypeFormat::R32G32_SINT;
+                return gfx::ETypeFormat::R32G32_SINT;
             case 2:
                 size = 8;
-                return ETypeFormat::R32G32_SINT;
+                return gfx::ETypeFormat::R32G32_SINT;
             case 3:
                 size = 12;
-                return ETypeFormat::R32G32B32_SINT;
+                return gfx::ETypeFormat::R32G32B32_SINT;
             case 4:
                 size = 16;
-                return ETypeFormat::R32G32B32A32_SINT;
+                return gfx::ETypeFormat::R32G32B32A32_SINT;
             default:
                 LOG_FATAL("unhandled type trait");
             }
@@ -71,7 +70,7 @@ ETypeFormat get_type_format(SpvReflectTypeDescription* type, uint32_t& size)
         else
         {
             size = 4;
-            return ETypeFormat::R32G32_SINT;
+            return gfx::ETypeFormat::R32G32_SINT;
         }
     }
     LOG_FATAL("unhandled type trait");
@@ -84,8 +83,8 @@ TypeInfo get_type(SpvReflectTypeDescription* type)
         return {};
     }
 
-    uint32_t    type_size;
-    ETypeFormat format = get_type_format(type, type_size);
+    uint32_t         type_size;
+    gfx::ETypeFormat format = get_type_format(type, type_size);
 
     return TypeInfo{
         .type_name = type->type_name ? type->type_name : "",
@@ -154,7 +153,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
 {
     ReflectionResult       result;
     SpvReflectShaderModule shader_module;
-    if (spvReflectCreateShaderModule(spirv.size() * sizeof(uint32_t), spirv.data(), &shader_module) != SPV_REFLECT_RESULT_SUCCESS)
+    if (false);//spvReflectCreateShaderModule(spirv.size() * sizeof(uint32_t), spirv.data(), &shader_module) != SPV_REFLECT_RESULT_SUCCESS)
     {
         result.status.add_error({
             .column        = -1,
