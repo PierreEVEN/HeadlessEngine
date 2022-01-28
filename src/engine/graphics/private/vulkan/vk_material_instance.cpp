@@ -41,7 +41,10 @@ MaterialInstance_VK::MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& 
 void MaterialInstance_VK::bind_buffer(const std::string& binding_name, const std::shared_ptr<Buffer>& in_buffer)
 {
     if (!in_buffer)
+    {
+        LOG_WARNING("trying to bind a null buffer to %s", binding_name.c_str());
         return;
+    }
     write_buffers[binding_name] = in_buffer;
     for (auto& pass : descriptor_sets)
         for (auto& image : pass)

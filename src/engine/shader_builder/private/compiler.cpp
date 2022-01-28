@@ -153,7 +153,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
 {
     ReflectionResult       result;
     SpvReflectShaderModule shader_module;
-    if (false);//spvReflectCreateShaderModule(spirv.size() * sizeof(uint32_t), spirv.data(), &shader_module) != SPV_REFLECT_RESULT_SUCCESS)
+    if (spvReflectCreateShaderModule(spirv.size() * sizeof(uint32_t), spirv.data(), &shader_module) != SPV_REFLECT_RESULT_SUCCESS)
     {
         result.status.add_error({
             .column        = -1,
@@ -165,6 +165,7 @@ ReflectionResult build_reflection(const std::vector<uint32_t>& spirv)
     uint32_t offset    = 0;
     result.input_size  = 0;
     result.output_size = 0;
+
 
     if (shader_module.push_constant_block_count != 0)
         result.push_constant = PushConstant{

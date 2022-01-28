@@ -112,12 +112,12 @@ void ECS::tick()
 
 void ECS::pre_render(gfx::View* view)
 {
-    on_pre_render.execute(view);
-    system_factory.execute_pre_render(this, view);
     for (const auto& variant : get_variants())
         for (size_t i = 0; i < variant->components.size(); ++i)
             if (variant->components[i].component_type->pre_render_runner) // Only if the component implement the pre_render method
                 variant->components[i].component_type->pre_render_runner->execute(variant->components[i].component_data_buffer.data(), variant->linked_actors.size(), view);
+    system_factory.execute_pre_render(this, view);
+    on_pre_render.execute(view);
 }
 
 void ECS::render(gfx::View* view, gfx::CommandBuffer* command_buffer)

@@ -22,7 +22,7 @@ concept has_add_systems_function = requires(T& t)
 template <typename T>
 concept has_pre_render_method = requires(T& t)
 {
-    t.pre_render();
+    t.pre_render(nullptr);
 };
 template <typename T>
 concept has_render_method = requires(T& t)

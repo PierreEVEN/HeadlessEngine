@@ -13,6 +13,7 @@ set_rundir(".")
 --set_symbols("debug", "hidden")
 
 DEBUG = false;
+BUILD_MONOLITHIC = true;
 
 GRAPHIC_BACKEND = "NONE"
 APPLICATION_BACKEND = "NONE"
@@ -38,9 +39,12 @@ function declare_module(module_name, deps, packages, is_executable)
 	target(module_name)
 		if is_executable then
 			set_kind("binary")
+		elseif BUILD_MONOLITHIC then
+			set_kind("static")
 		else
 			set_kind("shared")
 		end
+		
 		add_includedirs("private", {public = false})
 		add_includedirs("public", {public = true})
 		for _, ext in ipairs({".c", ".cpp"}) do

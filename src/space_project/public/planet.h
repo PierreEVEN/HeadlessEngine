@@ -79,8 +79,10 @@ class PlanetRenderer
 
     uint32_t new_draw_count;
 
-    void pre_render(gfx::View*)
+    void pre_render(gfx::View* view)
     {
+        planet_material->bind_buffer("camera_ubo", view->get_buffer());
+
         int scales = 3;
 
         new_draw_count          = 4 + static_cast<uint32_t>(pow(8, scales));

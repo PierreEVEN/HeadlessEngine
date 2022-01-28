@@ -115,10 +115,14 @@ enum class ETypeFormat
     D32_SFLOAT_S8_UINT      = 130,
 };
 
-
-
-
 uint8_t get_format_channel_count(ETypeFormat format);
 uint8_t get_format_bytes_per_pixel(ETypeFormat format);
+
+
+class Test_Types
+{
+public:
+    void test();
+};
 
 } // namespace gfx

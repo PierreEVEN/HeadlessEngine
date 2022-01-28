@@ -22,7 +22,7 @@ class Universe : public ecs::ECS
       virtual ~Universe() override;
 
     virtual void pre_render()
-    {
+      {
         ECS::pre_render(global_view);
     }
     virtual void render(gfx::CommandBuffer* command_buffer)
@@ -54,6 +54,11 @@ class SubScene : public ecs::ECS
     {
         ECS::tick();
         physic_scene->step();
+    }
+
+    void pre_render(gfx::View* view) override
+    {
+        ECS::pre_render(view);
     }
 
   private:

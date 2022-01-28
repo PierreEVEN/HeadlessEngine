@@ -437,4 +437,10 @@ uint8_t get_format_bytes_per_pixel(ETypeFormat format)
         return 0;
     }
 }
+
+void Test_Types::test()
+{
+    static int test_val;
+    test_val++;
+}
 } // namespace gfx
