@@ -42,7 +42,7 @@ int main()
                                                          },
                                                      .depth_attachment = gfx::RenderPass::Config::Attachment{
                                                          .attachment_name = "depth",
-                                                         .image_format    = ETypeFormat::D32_SFLOAT,
+                                                         .image_format    = gfx::ETypeFormat::D32_SFLOAT,
                                                      }});
 
     /**

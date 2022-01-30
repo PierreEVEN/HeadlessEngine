@@ -1,62 +1,71 @@
 #pragma once
 
-#include <cstdint>
+#include "resource/device.h"
+#include "resource/gpu_resource.h"
 #include <string>
 #include <vector>
 
 namespace gfx
 {
-using Handle = uint64_t;
+/**
+ * \brief ///////// ENTER VK API
+ */
 
-using MatHandle = Handle;
-
-
-
-class Device
+class BufferVK_H
 {
 public:
-private:
-    std::vector<MatHandle> materials;
+    BufferVK_H(const std::string&)
+    {
+    }
 };
 
-Handle make_mat()
+class CommandBuffer_VK
 {
-    return reinterpret_cast<MatHandle>(new std::string());
-}
+  public:
+    CommandBuffer_VK(const std::string&) {}
+    void begin();
+    void release();
 
-void delete_mat(MatHandle handle)
-{
-    delete reinterpret_cast<std::string*>(handle);
-}
-
-
-
-
-template <typename Resource_T> class TResourcehandle
-{
-public:
-
-    void destroy()
-    {
-        should_destroy = true;
-        if (!acquired)
-            ; // destroy handle
-    }
-
-    void acquire()
-    {
-        acquired = true;
-    }
-
-    void release()
-    {
-        acquired = false;
-        if (should_destroy)
-            destroy();
-    }
+    void bind_buffer(BufferHandle handle);
 
   private:
-    bool should_destroy = false;
-    bool acquired = false;
+    void acquire_resource(ResourceHandle handle)
+    {
+        acquired_resources.emplace_back(handle);
+    }
+
+    std::vector<IGpuResource*> acquired_resources;
 };
+
+/**
+ * \brief ///////// EXIT VK API
+ */
+
+inline void renderer_test_vk()
+{
+    Device device;
+
+    // Init
+    const BufferHandle        buff = device.create_buffer({});
+    const CommandBufferHandle cmd  = device.create_command_buffer({});
+
+    /**
+     * \brief /////// ENTER VK API
+     */
+
+    // Begin frame
+    handle_cast<CommandBuffer_VK>(cmd)->use().begin();
+
+    // Draw frame
+    handle_cast<CommandBuffer_VK>(cmd)->use().bind_buffer(buff);
+
+    // Release resources
+    handle_cast<CommandBuffer_VK>(cmd)->use().release();
+    handle_cast<CommandBuffer_VK>(cmd)->release();
+
+    /**
+     * \brief ///////// EXIT VK API
+     */
+}
+
 } // namespace gfx
