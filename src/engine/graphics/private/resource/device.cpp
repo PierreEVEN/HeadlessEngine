@@ -28,4 +28,24 @@ void Device::destroy_device()
     delete device_instance;
     device_instance = nullptr;
 }
+
+
+void Device::destroy_resource(ResourceHandle resource_handle)
+{
+    delete resource_handle;
+    resources.erase(resource_handle);
+}
+
+Device::~Device()
+{
+    if (!resources.empty())
+        LOG_ERROR("some objects have not been destroyed yet");
+
+    for (const auto& item : resources)
+    {
+        LOG_WARNING("destroy resource %s", item->name.c_str());
+        item->release(0xFF);
+        item->destroy();
+    }
+}
 } // namespace gfx

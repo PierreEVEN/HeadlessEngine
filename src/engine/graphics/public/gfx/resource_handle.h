@@ -53,16 +53,6 @@ inline void renderer_test_vk()
      * \brief /////// ENTER VK API
      */
 
-    // Begin frame
-    handle_cast<CommandBuffer_VK>(cmd)->use().begin();
-
-    // Draw frame
-    handle_cast<CommandBuffer_VK>(cmd)->use().bind_buffer(buff);
-
-    // Release resources
-    handle_cast<CommandBuffer_VK>(cmd)->use().release();
-    handle_cast<CommandBuffer_VK>(cmd)->release();
-
     /**
      * \brief ///////// EXIT VK API
      */

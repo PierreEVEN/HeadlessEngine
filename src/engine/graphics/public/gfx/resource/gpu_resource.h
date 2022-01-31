@@ -1,4 +1,6 @@
 #pragma once
+#include "device.h"
+
 #include <string>
 #include <cpputils/logger.hpp>
 
@@ -6,12 +8,28 @@ namespace gfx
 {
 class IGpuResource
 {
+    friend class Device;
   public:
-    IGpuResource(std::string resource_name) : used(false), should_destroy(false), name(std::move(resource_name))
+    IGpuResource(std::string resource_name) : usage(0), should_destroy(false), name(std::move(resource_name))
     {
     }
     virtual ~IGpuResource() = default;
-    void destroy();
+
+    void destroy()
+    {
+        std::lock_guard(safe_lock);
+        should_destroy = true;
+        if (usage == 0)
+            Device::get().destroy_resource(this);
+    }
+
+    void release(uint8_t frame)
+    {
+        std::lock_guard(safe_lock);
+        usage &= !frame;
+        if (should_destroy)
+            destroy();
+    }
 
     IGpuResource(const IGpuResource&)  = delete;
     IGpuResource(const IGpuResource&&) = delete;
@@ -19,9 +37,10 @@ class IGpuResource
     void          operator=(IGpuResource&&) = delete;
 
   protected:
-    bool              used;
     bool              should_destroy;
     const std::string name;
+    uint8_t           usage;
+    std::mutex        safe_lock;
 };
 
 template <typename Resource_T> class TGpuResource final : public IGpuResource
@@ -33,35 +52,37 @@ template <typename Resource_T> class TGpuResource final : public IGpuResource
 
     ~TGpuResource() override = default;
 
-    Resource_T& use()
+    Resource_T* use()
     {
-        used = true;
-        return resource;
-    }
-
-    Resource_T& modify()
-    {
-        if (used)
+        std::lock_guard(safe_lock);
+        const auto frame_id = Device::get().get_frame_id();
+        if (!(usage & frame_id))
         {
-            LOG_ERROR("resource already in use");
-            return nullptr;
+            usage |= frame_id;
+            Device::get().acquire_resource(this);
         }
-        return resource;
+        return &resource;
     }
 
-    void release()
+    Resource_T* try_modify()
     {
-        used = false;
-        if (should_destroy)
-            destroy();
+        std::lock_guard(safe_lock);
+        if (usage != 0)
+            return nullptr;
+        return &resource;
     }
     
   private:
     Resource_T resource;
 };
 
-template <typename Resource_T, typename Handle_T> TGpuResource<Resource_T>* handle_cast(const Handle_T handle)
+template <typename Resource_T, typename Handle_T> Resource_T* use_resource(const Handle_T handle)
 {
-    return dynamic_cast<TGpuResource<Resource_T>*>(handle);
+    return dynamic_cast<TGpuResource<Resource_T>*>(handle)->use();
+}
+
+template <typename Resource_T, typename Handle_T> Resource_T* try_modify_resource(const Handle_T handle)
+{
+    return dynamic_cast<TGpuResource<Resource_T>*>(handle)->try_modify();
 }
 }
