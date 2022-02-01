@@ -17,8 +17,8 @@ namespace gfx
 void init()
 {
 #if GFX_USE_VULKAN
-    vulkan::set_image_count(3);
     vulkan::instance::create();
+    Device::create_device<vulkan::Device_VK>(3);
     fetch_physical_devices();
     select_physical_device(find_best_physical_device(get_physical_devices()));
     vulkan::device::create();
@@ -35,6 +35,7 @@ void next_frame()
 void destroy()
 {
     RenderPass::destroy_passes();
+    Device::destroy_device();
 #if GFX_USE_VULKAN
     vulkan::allocator::destroy();
     vulkan::device::destroy();

@@ -42,7 +42,7 @@ void MaterialInstance_VK::bind_buffer(const std::string& binding_name, const std
 {
     if (!in_buffer)
     {
-        LOG_WARNING("trying to bind a null buffer to %s", binding_name.c_str());
+        LOG_WARNING("trying to bind a null get to %s", binding_name.c_str());
         return;
     }
     write_buffers[binding_name] = in_buffer;

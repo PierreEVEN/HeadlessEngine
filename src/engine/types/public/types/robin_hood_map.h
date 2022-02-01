@@ -443,7 +443,7 @@ public:
             ROBIN_HOOD_LOG("std::free")
             std::free(ptr);
         } else {
-            ROBIN_HOOD_LOG("add to buffer")
+            ROBIN_HOOD_LOG("add to get")
             add(ptr, numBytes);
         }
     }
@@ -796,14 +796,14 @@ struct hash<T*> {
 template <class T>
 struct hash<std::unique_ptr<T>> {
     size_t operator()(std::unique_ptr<T> const& ptr) const noexcept {
-        return hash_int(reinterpret_cast<detail::SizeT>(ptr.get()));
+        return hash_int(reinterpret_cast<detail::SizeT>(ptr.buffer()));
     }
 };
 
 template <class T>
 struct hash<std::shared_ptr<T>> {
     size_t operator()(std::shared_ptr<T> const& ptr) const noexcept {
-        return hash_int(reinterpret_cast<detail::SizeT>(ptr.get()));
+        return hash_int(reinterpret_cast<detail::SizeT>(ptr.buffer()));
     }
 };
 

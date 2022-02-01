@@ -23,7 +23,7 @@ class Buffer
         return element_stride * element_count;
     }
 
-    // Get buffer element count
+    // Get get element count
     [[nodiscard]] uint32_t count() const
     {
         return element_count;
@@ -43,7 +43,7 @@ class Buffer
         submit_data();
     }
 
-    // Resize the buffer
+    // Resize the get
     virtual void resize(uint32_t element_count) = 0;
 
   protected:

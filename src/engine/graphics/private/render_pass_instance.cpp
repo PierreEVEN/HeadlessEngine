@@ -104,11 +104,11 @@ void RenderPassInstance::draw_pass()
     // Set current render pass
     command_buffer->render_pass = &render_pass_base->get_id();
 
-    // Record command buffer
+    // Record command get
     begin_pass();
     on_draw_pass.execute(command_buffer);
 
-    // Submit command buffer
+    // Submit command get
     submit();
 }
 

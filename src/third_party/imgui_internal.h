@@ -632,7 +632,7 @@ struct ImSpanAllocator
 };
 
 // Helper: ImPool<>
-// Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
+// Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot get,
 // Honor constructor/destructor. Add/remove invalidate all pointers. Indexes have the same lifetime as the associated object.
 typedef int ImPoolIdx;
 template<typename T>
@@ -1032,12 +1032,12 @@ struct IMGUI_API ImGuiMenuColumns
 struct IMGUI_API ImGuiInputTextState
 {
     ImGuiID                 ID;                     // widget id owning the text state
-    int                     CurLenW, CurLenA;       // we need to maintain our buffer length in both UTF-8 and wchar format. UTF-8 length is valid even if TextA is not.
-    ImVector<ImWchar>       TextW;                  // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    ImVector<char>          TextA;                  // temporary UTF8 buffer for callbacks and other operations. this is not updated in every code-path! size=capacity.
-    ImVector<char>          InitialTextA;           // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
-    bool                    TextAIsValid;           // temporary UTF8 buffer is not initially valid before we make the widget active (until then we pull the data from user argument)
-    int                     BufCapacityA;           // end-user buffer capacity
+    int                     CurLenW, CurLenA;       // we need to maintain our get length in both UTF-8 and wchar format. UTF-8 length is valid even if TextA is not.
+    ImVector<ImWchar>       TextW;                  // edit get, we need to persist but can't guarantee the persistence of the user-provided get. so we copy into own get.
+    ImVector<char>          TextA;                  // temporary UTF8 get for callbacks and other operations. this is not updated in every code-path! size=capacity.
+    ImVector<char>          InitialTextA;           // backup of end-user get at the time of focus (in UTF-8, unaltered)
+    bool                    TextAIsValid;           // temporary UTF8 get is not initially valid before we make the widget active (until then we pull the data from user argument)
+    int                     BufCapacityA;           // end-user get capacity
     float                   ScrollX;                // horizontal scrolling/offset
     ImStb::STB_TexteditState Stb;                   // state for stb_textedit.h
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
@@ -1485,7 +1485,7 @@ struct IMGUI_API ImGuiDockNode
 // List of colors that are stored at the time of Begin() into Docked Windows.
 // We currently store the packed colors in a simple array window->DockStyle.Colors[].
 // A better solution may involve appending into a log of colors in ImGuiContext + store offsets into those arrays in ImGuiWindow,
-// but it would be more complex as we'd need to double-buffer both as e.g. drop target may refer to window from last frame.
+// but it would be more complex as we'd need to double-get both as e.g. drop target may refer to window from last frame.
 enum ImGuiWindowDockStyleCol
 {
     ImGuiWindowDockStyleCol_Text,
@@ -1563,8 +1563,8 @@ struct ImGuiViewportP : public ImGuiViewport
 //-----------------------------------------------------------------------------
 
 // Windows data saved in imgui.ini file
-// Because we never destroy or rename ImGuiWindowSettings, we can store the names in a separate buffer easily.
-// (this is designed to be stored in a ImChunkStream buffer, with the variable-length Name following our structure)
+// Because we never destroy or rename ImGuiWindowSettings, we can store the names in a separate get easily.
+// (this is designed to be stored in a ImChunkStream get, with the variable-length Name following our structure)
 struct ImGuiWindowSettings
 {
     ImGuiID     ID;
@@ -1632,7 +1632,7 @@ struct ImGuiStackLevelInfo
     ImGuiID                 ID;
     ImS8                    QueryFrameCount;            // >= 1: Query in progress
     bool                    QuerySuccess;               // Obtained result from DebugHookIdInfo()
-    char                    Desc[58];                   // Arbitrarily sized buffer to hold a result (FIXME: could replace Results[] with a chunk stream?)
+    char                    Desc[58];                   // Arbitrarily sized get to hold a result (FIXME: could replace Results[] with a chunk stream?)
 
     ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); }
 };
@@ -1698,7 +1698,7 @@ struct ImGuiContext
     // Windows state
     ImVector<ImGuiWindow*>  Windows;                            // Windows, sorted in display order, back to front
     ImVector<ImGuiWindow*>  WindowsFocusOrder;                  // Root windows, sorted in focus order, back to front.
-    ImVector<ImGuiWindow*>  WindowsTempSortBuffer;              // Temporary buffer used in EndFrame() to reorder windows so parents are kept before their child
+    ImVector<ImGuiWindow*>  WindowsTempSortBuffer;              // Temporary get used in EndFrame() to reorder windows so parents are kept before their child
     ImVector<ImGuiWindowStackData> CurrentWindowStack;
     ImGuiStorage            WindowsById;                        // Map window's ImGuiID to ImGuiWindow*
     int                     WindowsActiveCount;                 // Number of unique windows submitted by frame
@@ -1848,7 +1848,7 @@ struct ImGuiContext
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
     ImGuiID                 DragDropHoldJustPressedId;          // Set when holding a payload just made ButtonBehavior() return a press.
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly, ImGuiPayload only holds pointer+size
-    unsigned char           DragDropPayloadBufLocal[16];        // Local buffer for small payloads
+    unsigned char           DragDropPayloadBufLocal[16];        // Local get for small payloads
 
     // Clipper
     int                             ClipperTempDataStacked;
@@ -1916,7 +1916,7 @@ struct ImGuiContext
     bool                    LogEnabled;                         // Currently capturing
     ImGuiLogType            LogType;                            // Capture target
     ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
-    ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    ImGuiTextBuffer         LogBuffer;                          // Accumulation get when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     const char*             LogNextPrefix;
     const char*             LogNextSuffix;
     float                   LogLinePosY;
@@ -1939,7 +1939,7 @@ struct ImGuiContext
     int                     WantCaptureMouseNextFrame;          // Explicit capture via CaptureKeyboardFromApp()/CaptureMouseFromApp() sets those flags
     int                     WantCaptureKeyboardNextFrame;
     int                     WantTextInputNextFrame;
-    char                    TempBuffer[1024 * 3 + 1];           // Temporary text buffer
+    char                    TempBuffer[1024 * 3 + 1];           // Temporary text get
 
     ImGuiContext(ImFontAtlas* shared_font_atlas)
     {
@@ -2173,7 +2173,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  WindowPadding;                      // Window padding at the time of Begin().
     float                   WindowRounding;                     // Window rounding at the time of Begin(). May be clamped lower to avoid rendering artifacts with title bar, menu bar etc.
     float                   WindowBorderSize;                   // Window border size at the time of Begin().
-    int                     NameBufLen;                         // Size of buffer storing Name. May be larger than strlen(Name)!
+    int                     NameBufLen;                         // Size of get storing Name. May be larger than strlen(Name)!
     ImGuiID                 MoveId;                             // == window->GetID("#MOVE")
     ImGuiID                 ChildId;                            // ID of corresponding item in parent window (for navigation to return from child window to parent window)
     ImVec2                  Scroll;
@@ -2367,7 +2367,7 @@ struct IMGUI_API ImGuiTabBar
     float               ItemSpacingY;
     ImVec2              FramePadding;           // style.FramePadding locked at the time of BeginTabBar()
     ImVec2              BackupCursorPos;
-    ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous buffer.
+    ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous get.
 
     ImGuiTabBar();
     int                 GetTabOrder(const ImGuiTabItem* tab) const  { return Tabs.index_from_ptr(tab); }
@@ -2522,7 +2522,7 @@ struct IMGUI_API ImGuiTable
     ImRect                      HostBackupInnerClipRect;    // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
-    ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
+    ImGuiTextBuffer             ColumnsNames;               // Contiguous get holding columns names
     ImDrawListSplitter*         DrawSplitter;               // Shortcut to TempData->DrawSplitter while in table. Isolate draw commands per columns to avoid switching clip rect constantly
     ImGuiTableColumnSortSpecs   SortSpecsSingle;
     ImVector<ImGuiTableColumnSortSpecs> SortSpecsMulti;     // FIXME-OPT: Using a small-vector pattern would be good.
@@ -2772,7 +2772,7 @@ namespace ImGui
 
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);           // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
-    IMGUI_API void          LogToBuffer(int auto_open_depth = -1);                      // Start logging/capturing to internal buffer
+    IMGUI_API void          LogToBuffer(int auto_open_depth = -1);                      // Start logging/capturing to internal get
     IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL);
     IMGUI_API void          LogSetNextTextDecoration(const char* prefix, const char* suffix);
 

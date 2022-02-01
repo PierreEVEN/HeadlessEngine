@@ -30,7 +30,7 @@ void ActorVariant::emplace_actor_back(ActorMetaData* actor)
     actor->variant    = this;
     actor->data_index = static_cast<uint32_t>(linked_actors.size());
     linked_actors.emplace_back(actor->actor_id);
-    // Resize buffer memories
+    // Resize get memories
     update_components_buffer_size();
 }
 
@@ -98,7 +98,7 @@ void ActorVariant::duplicate_actor(const ActorMetaData* existing_actor, ActorMet
     new_actor->data_index = static_cast<uint32_t>(linked_actors.size());
     linked_actors.emplace_back(new_actor->actor_id);
 
-    // Resize buffer memories
+    // Resize get memories
     update_components_buffer_size();
 
     // Move last component's data into the removed one to erase it

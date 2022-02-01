@@ -2,6 +2,7 @@
 
 #include "gfx/command_buffer.h"
 #include "gfx/render_pass_reference.h"
+#include "gfx/resource/resource_list.h"
 
 #include "vulkan/vk_unit.h"
 
@@ -35,6 +36,16 @@ class CommandBuffer_VK : public CommandBuffer
     SwapchainImageResource<VkCommandBuffer> command_buffer;
 
   public:
+};
+
+class CommandBufferResource_VK final
+{
+  public:
+    CommandBufferResource_VK(const std::string& name, const CI_CommandBuffer& create_infos);
+    ~CommandBufferResource_VK();
+
+  private:
+    VkCommandBuffer command_buffer;
 };
 
 } // namespace gfx::vulkan

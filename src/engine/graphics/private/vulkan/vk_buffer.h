@@ -1,6 +1,8 @@
 #pragma once
 
 #include "gfx/buffer.h"
+#include "gfx/resource/resource_list.h"
+
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -31,8 +33,7 @@ class Buffer_VK final : public Buffer
     struct FrameData
     {
         VkDescriptorBufferInfo buffer_infos             = {};
-        VkBuffer               buffer                   = VK_NULL_HANDLE;
-        VmaAllocation          memory                   = VK_NULL_HANDLE;
+        BufferHandle           buffer                   = GPU_NULL_HANDLE;
         bool                   dirty                    = false;
         uint32_t               allocated_count          = 0;
         uint32_t               previous_allocated_count = 0;
@@ -44,6 +45,27 @@ class Buffer_VK final : public Buffer
 
     void create_or_recreate_buffer(FrameData& frame_data);
     void resize_current();
+};
+
+class BufferResource_VK final
+{
+  public:
+    BufferResource_VK(const std::string& name, const CI_Buffer& create_infos);
+    ~BufferResource_VK();
+
+    [[nodiscard]] VkBuffer& get_buffer()
+    {
+        return buffer;
+    }
+
+    [[nodiscard]] VmaAllocation& get_allocation()
+    {
+        return memory;
+    }
+
+  private:
+    VkBuffer      buffer = VK_NULL_HANDLE;
+    VmaAllocation memory = VK_NULL_HANDLE;
 };
 
 } // namespace gfx::vulkan

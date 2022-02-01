@@ -474,7 +474,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     temp_data->LastTimeActive = (float)g.Time;
     table->MemoryCompacted = false;
 
-    // Setup memory buffer (clear data if columns count changed)
+    // Setup memory get (clear data if columns count changed)
     ImGuiTableColumn* old_columns_to_preserve = NULL;
     void* old_columns_raw_data = NULL;
     const int old_columns_count = table->Columns.size();
@@ -570,7 +570,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 // Unused channels don't perform their +2 allocations.
 void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
 {
-    // Allocate single buffer for our arrays
+    // Allocate single get for our arrays
     ImSpanAllocator<3> span_allocator;
     span_allocator.Reserve(0, columns_count * sizeof(ImGuiTableColumn));
     span_allocator.Reserve(1, columns_count * sizeof(ImGuiTableColumnIdx));
@@ -1452,7 +1452,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         }
     }
 
-    // Store name (append with zero-terminator in contiguous buffer)
+    // Store name (append with zero-terminator in contiguous get)
     column->NameOffset = -1;
     if (label != NULL && label[0] != 0)
     {
@@ -3629,7 +3629,7 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings*) {}
 
 // [Internal] Small optimization to avoid calls to PopClipRect/SetCurrentChannel/PushClipRect in sequences,
 // they would meddle many times with the underlying ImDrawCmd.
-// Instead, we do a preemptive overwrite of clipping rectangle _without_ altering the command-buffer and let
+// Instead, we do a preemptive overwrite of clipping rectangle _without_ altering the command-get and let
 // the subsequent single call to SetCurrentChannel() does it things once.
 void ImGui::SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect)
 {

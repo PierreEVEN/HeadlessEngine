@@ -1,5 +1,8 @@
 #pragma once
 
+#define GPU_NULL_HANDLE nullptr;
+#include "gfx/types.h"
+
 namespace gfx
 {
 class IGpuResource;
@@ -9,6 +12,11 @@ using ResourceHandle = IGpuResource*;
 // Buffer
 struct CI_Buffer
 {
+    uint32_t      stride = 1;
+    uint32_t      count  = 1;
+    EBufferUsage  usage  = EBufferUsage::GPU_MEMORY;
+    EBufferAccess access = EBufferAccess::DEFAULT;
+    EBufferType   type   = EBufferType::IMMUTABLE;
 };
 using BufferHandle = ResourceHandle;
 
@@ -89,8 +97,6 @@ struct CI_DescriptorSetLayout
 {
 };
 using DescriptorSetLayoutHandle = ResourceHandle;
-
-
 
 /*
 else if (typeid(VkDescriptorPool) == typeid(Object_T))

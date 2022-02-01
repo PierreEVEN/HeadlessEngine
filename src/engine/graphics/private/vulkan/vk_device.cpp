@@ -1,5 +1,6 @@
 #include "vulkan/vk_device.h"
 
+#include "vk_command_buffer.h"
 #include "types/magic_enum.h"
 #include "vk_command_pool.h"
 #include "vk_helper.h"

@@ -61,7 +61,7 @@ void RenderPassInstance_VK::begin_pass()
     if (*render_finished_fence)
         VK_CHECK(vkWaitForFences(get_device(), 1, &*render_finished_fence, VK_TRUE, UINT64_MAX), "wait failed");
 
-    // Begin buffer record
+    // Begin get record
     get_pass_command_buffer()->start();
 
     const auto*            base = dynamic_cast<RenderPass_VK*>(get_base());
@@ -113,14 +113,14 @@ void RenderPassInstance_VK::submit()
 {
     const VkCommandBuffer& cmd = **dynamic_cast<CommandBuffer_VK*>(get_pass_command_buffer());
 
-    // End command buffer
+    // End command get
     vkCmdEndRenderPass(cmd);
     debug_end_marker(cmd);
 
-    // End buffer record
+    // End get record
     get_pass_command_buffer()->end();
 
-    // Submit buffer (wait children completion using children_semaphores)
+    // Submit get (wait children completion using children_semaphores)
     std::vector<VkSemaphore> children_semaphores;
     for (const auto& child : children)
         children_semaphores.emplace_back(*dynamic_cast<RenderPassInstance_VK*>(child.get())->render_finished_semaphore);

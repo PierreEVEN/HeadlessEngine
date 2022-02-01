@@ -1,15 +1,19 @@
 #pragma once
 
+#include "gfx/resource/device.h"
+
 #include <cstdint>
 
 #include <cpputils/logger.hpp>
 
 namespace gfx::vulkan
 {
+/*
 void    set_image_count(uint8_t image_count);
 void    set_frame(uint8_t new_image_index);
 uint8_t get_image_index();
 uint8_t get_image_count();
+*/
 
 template <typename Resource_T> class SwapchainResourceIterator
 {
@@ -173,12 +177,12 @@ struct SwapchainResourceImageCountHelper
 {
     static uint8_t get()
     {
-        return get_image_count();
+        return Device::get().get_frame_count();
     }
 
     static uint8_t get_current_image()
     {
-        return get_image_index();
+        return Device::get().get_current_frame();
     }
 };
 

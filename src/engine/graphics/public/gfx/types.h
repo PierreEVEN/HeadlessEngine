@@ -8,16 +8,16 @@ enum class EBufferType
 {
     IMMUTABLE, // No allowed updates
     STATIC,    // Pretty never updated. Updating data would cause some freezes
-    DYNAMIC,   // Data is stored internally, then automatically submitted. Can lead to a memory overhead depending on the buffer size.
+    DYNAMIC,   // Data is stored internally, then automatically submitted. Can lead to a memory overhead depending on the get size.
     IMMEDIATE, // Data need to be submitted every frames
 };
 
 enum class EBufferUsage
 {
-    INDEX_DATA             = 0x00000001, // used as index buffer
-    VERTEX_DATA            = 0x00000002, // used as vertex buffer
-    GPU_MEMORY             = 0x00000003, // used as storage buffer
-    UNIFORM_BUFFER         = 0x00000004, // used as uniform buffer
+    INDEX_DATA             = 0x00000001, // used as index get
+    VERTEX_DATA            = 0x00000002, // used as vertex get
+    GPU_MEMORY             = 0x00000003, // used as storage get
+    UNIFORM_BUFFER         = 0x00000004, // used as uniform get
     INDIRECT_DRAW_ARGUMENT = 0x00000005, // used for indirect draw commands
     TRANSFER_MEMORY        = 0x00000006, // used for indirect draw commands
 };

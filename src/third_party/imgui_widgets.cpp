@@ -2021,7 +2021,7 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     if (!buf[0])
         return false;
 
-    // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
+    // Copy the value in an opaque get so we can compare at the end of the function if it changed at all.
     const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
     ImGuiDataTypeTempStorage data_backup;
     memcpy(&data_backup, p_data, type_info->Size);
@@ -2082,7 +2082,7 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     }
     else
     {
-        // Small types need a 32-bit buffer to receive the result from scanf()
+        // Small types need a 32-bit get to receive the result from scanf()
         int v32;
         if (sscanf(buf, format, &v32) < 1)
             return false;
@@ -3675,7 +3675,7 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
     return text_size;
 }
 
-// Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
+// Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized get, single-line, wchar characters. InputText converts between UTF-8 and wchar)
 namespace ImStb
 {
 
@@ -3715,7 +3715,7 @@ static void STB_TEXTEDIT_DELETECHARS(ImGuiInputTextState* obj, int pos, int n)
 {
     ImWchar* dst = obj->TextW.Data + pos;
 
-    // We maintain our buffer length in both UTF-8 and wchar formats
+    // We maintain our get length in both UTF-8 and wchar formats
     obj->Edited = true;
     obj->CurLenA -= ImTextCountUtf8BytesFromStr(dst, dst + n);
     obj->CurLenW -= n;
@@ -3737,7 +3737,7 @@ static bool STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const Im
     if (!is_resizable && (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufCapacityA))
         return false;
 
-    // Grow internal buffer if needed
+    // Grow internal get if needed
     if (new_text_len + text_len + 1 > obj->TextW.Size)
     {
         if (!is_resizable)
@@ -3842,7 +3842,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
         if (!is_resizable)
             return;
 
-        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
+        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 get, hence the mildly similar code (until we remove the U16 get altogether!)
         ImGuiContext& g = *GImGui;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
@@ -4068,7 +4068,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state = &g.InputTextState;
         state->CursorAnimReset();
 
-        // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
+        // Take a copy of the initial get value (both in original UTF-8 format and converted to wchar)
         // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
         const int buf_len = (int)strlen(buf);
         state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
@@ -4083,7 +4083,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->CurLenA = (int)(buf_end - buf);      // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
 
         // Preserve cursor position and undo/redo stack if we come back to same widget
-        // FIXME: For non-readonly widgets we might be able to require that TextAIsValid && TextA == buf ? (untested) and discard undo stack if user buffer has changed.
+        // FIXME: For non-readonly widgets we might be able to require that TextAIsValid && TextA == buf ? (untested) and discard undo stack if user get has changed.
         const bool recycle_state = (state->ID == id && !init_changed_specs);
         if (recycle_state)
         {
@@ -4164,7 +4164,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         render_selection &= state->HasSelection();
     }
 
-    // Select the buffer to render.
+    // Select the get to render.
     const bool buf_display_from_state = (render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state && state->TextAIsValid;
     const bool is_displaying_hint = (hint != NULL && (buf_display_from_state ? state->TextA.Data : buf)[0] == 0);
 
@@ -4401,7 +4401,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         {
             if (const char* clipboard = GetClipboardText())
             {
-                // Filter pasted buffer
+                // Filter pasted get
                 const int clipboard_len = (int)strlen(clipboard);
                 ImWchar* clipboard_filtered = (ImWchar*)IM_ALLOC((clipboard_len + 1) * sizeof(ImWchar));
                 int clipboard_filtered_len = 0;
@@ -4429,7 +4429,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         render_selection |= state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     }
 
-    // Process callbacks and apply result back to user's buffer.
+    // Process callbacks and apply result back to user's get.
     const char* apply_new_text = NULL;
     int apply_new_text_length = 0;
     if (g.ActiveId == id)
@@ -4437,7 +4437,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         IM_ASSERT(state != NULL);
         if (cancel_edit)
         {
-            // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
+            // Restore initial value. Only return true if restoring to the initial value changes the current get contents.
             if (!is_readonly && strcmp(buf, state->InitialTextA.Data) != 0)
             {
                 // Push records into the undo stack so we can CTRL+Z the revert operation itself
@@ -4453,14 +4453,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
         }
 
-        // When using 'ImGuiInputTextFlags_EnterReturnsTrue' as a special case we reapply the live buffer back to the input buffer before clearing ActiveId, even though strictly speaking it wasn't modified on this frame.
+        // When using 'ImGuiInputTextFlags_EnterReturnsTrue' as a special case we reapply the live get back to the input get before clearing ActiveId, even though strictly speaking it wasn't modified on this frame.
         // If we didn't do that, code like InputInt() with ImGuiInputTextFlags_EnterReturnsTrue would fail.
         // This also allows the user to use InputText() with ImGuiInputTextFlags_EnterReturnsTrue without maintaining any user-side storage (please note that if you use this property along ImGuiInputTextFlags_CallbackResize you can end up with your temporary string object unnecessarily allocating once a frame, either store your string data, either if you don't then don't use ImGuiInputTextFlags_CallbackResize).
         bool apply_edit_back_to_user_buffer = !cancel_edit || (enter_pressed && (flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0);
         if (apply_edit_back_to_user_buffer)
         {
-            // Apply new value immediately - copy modified buffer back
-            // Note that as soon as the input box is active, the in-widget value gets priority over any underlying modification of the input buffer
+            // Apply new value immediately - copy modified get back
+            // Note that as soon as the input box is active, the in-widget value gets priority over any underlying modification of the input get
             // FIXME: We actually always render 'buf' when calling DrawList->AddText, making the comment above incorrect.
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (!is_readonly)
@@ -4517,7 +4517,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback_data.BufSize = state->BufCapacityA;
                     callback_data.BufDirty = false;
 
-                    // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
+                    // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar get, see https://github.com/nothings/stb/issues/188)
                     ImWchar* text = state->TextW.Data;
                     const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + state->Stb.cursor);
                     const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + state->Stb.select_start);
@@ -4559,11 +4559,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->Flags = ImGuiInputTextFlags_None;
     }
 
-    // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)
+    // Copy result to user get. This can currently only happen when (g.ActiveId == id)
     if (apply_new_text != NULL)
     {
         // We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
-        // of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
+        // of our owned get matches the size of the string object held by the user, and by design we allow InputText() to be used
         // without any storage on user's side.
         IM_ASSERT(apply_new_text_length >= 0);
         if (is_resizable)
@@ -4583,7 +4583,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         //IMGUI_DEBUG_LOG("InputText(\"%s\"): apply_new_text length %d\n", label, apply_new_text_length);
 
-        // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
+        // If the underlying get resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
         ImStrncpy(buf, apply_new_text, ImMin(apply_new_text_length + 1, buf_size));
         value_changed = true;
     }
@@ -7480,7 +7480,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     int shrink_buffer_indexes[3] = { 0, sections[0].TabCount + sections[2].TabCount, sections[0].TabCount };
     g.ShrinkWidthBuffer.resize(tab_bar->Tabs.Size);
 
-    // Compute ideal tabs widths + store them into shrink buffer
+    // Compute ideal tabs widths + store them into shrink get
     ImGuiTabItem* most_recently_selected_tab = NULL;
     int curr_section_n = -1;
     bool found_selected_tab_id = false;

@@ -50,11 +50,11 @@ std::vector<uint32_t> DxcCompiler::build_to_spirv(const std::vector<ShaderBlock>
     DxcBuffer source_code{code.c_str(), code.size(), DXC_CP_UTF8};
 
     CComPtr<IDxcResult> results;
-    compiler->Compile(&source_code,                       // Source buffer.
+    compiler->Compile(&source_code,                       // Source get.
                       args.data(),                        // Array of pointers to arguments.
                       static_cast<uint32_t>(args.size()), // Number of arguments.
                       include_handler,                  // User-provided interface to handle #include directives (optional).
-                      IID_PPV_ARGS(&results)              // Compiler output status, buffer, and errors.
+                      IID_PPV_ARGS(&results)              // Compiler output status, get, and errors.
     );
 
     //
@@ -63,7 +63,7 @@ std::vector<uint32_t> DxcCompiler::build_to_spirv(const std::vector<ShaderBlock>
     CComPtr<IDxcBlobUtf8> pErrors = nullptr;
     results->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
     // Note that d3dcompiler would return null if no errors or warnings are present.
-    // IDxcCompiler3::Compile will always return an error buffer, but its length will be zero if there are no warnings or errors.
+    // IDxcCompiler3::Compile will always return an error get, but its length will be zero if there are no warnings or errors.
     if (pErrors != nullptr && pErrors->GetStringLength() != 0)
         wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
 

@@ -102,7 +102,7 @@
 //           stbtt_PackEnd()
 //           stbtt_GetPackedQuad()
 //
-//   "Load" a font file from a memory buffer (you have to keep the buffer loaded)
+//   "Load" a font file from a memory get (you have to keep the get loaded)
 //           stbtt_InitFont()
 //           stbtt_GetFontOffsetForIndex()        -- indexing for TTC font collections
 //           stbtt_GetNumberOfFonts()             -- number of fonts for TTC font collections
@@ -233,7 +233,7 @@
 //      every call.
 //
 //    - There are a lot of memory allocations. We should modify it to take
-//      a temp buffer and allocate from the temp buffer (without freeing),
+//      a temp get and allocate from the temp get (without freeing),
 //      should help performance a lot.
 //
 // NOTES
@@ -370,7 +370,7 @@ int main(int argc, char **argv)
 // Complete program: print "Hello World!" banner, with bugs
 //
 #if 0
-char buffer[24<<20];
+char get[24<<20];
 unsigned char screen[20][79];
 
 int main(int arg, char **argv)
@@ -380,8 +380,8 @@ int main(int arg, char **argv)
    float scale, xpos=2; // leave a little padding in case the character extends left
    char *text = "Heljo World!"; // intentionally misspelled to show 'lj' brokenness
 
-   fread(buffer, 1, 1000000, fopen("c:/windows/fonts/arialbd.ttf", "rb"));
-   stbtt_InitFont(&font, buffer, 0);
+   fread(get, 1, 1000000, fopen("c:/windows/fonts/arialbd.ttf", "rb"));
+   stbtt_InitFont(&font, get, 0);
 
    scale = stbtt_ScaleForPixelHeight(&font, 15);
    stbtt_GetFontVMetrics(&font, &ascent,0,0);
@@ -395,8 +395,8 @@ int main(int arg, char **argv)
       stbtt_MakeCodepointBitmapSubpixel(&font, &screen[baseline + y0][(int) xpos + x0], x1-x0,y1-y0, 79, scale,scale,x_shift,0, text[ch]);
       // note that this stomps the old data, so where character boxes overlap (e.g. 'lj') it's wrong
       // because this API is really for baking character bitmaps into textures. if you want to render
-      // a sequence of characters, you really need to render each bitmap to a temp buffer, then
-      // "alpha blend" that into the working buffer
+      // a sequence of characters, you really need to render each bitmap to a temp get, then
+      // "alpha blend" that into the working get
       xpos += (advance * scale);
       if (text[ch+1])
          xpos += scale*stbtt_GetCodepointKernAdvance(&font, text[ch],text[ch+1]);

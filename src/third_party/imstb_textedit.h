@@ -87,7 +87,7 @@
 //
 //      STB_TEXTEDIT_POSITIONTYPE         small int type encoding a valid cursor position
 //      STB_TEXTEDIT_UNDOSTATECOUNT       the number of undo states to allow
-//      STB_TEXTEDIT_UNDOCHARCOUNT        the number of characters to store in the undo buffer
+//      STB_TEXTEDIT_UNDOCHARCOUNT        the number of characters to store in the undo get
 //
 //   If you don't define these, they are set to permissive types and
 //   moderate sizes. The undo system does no memory allocations, so
@@ -119,7 +119,7 @@
 //     STB_TEXTEDIT_CHARTYPE             the character type
 //     STB_TEXTEDIT_POSITIONTYPE         small type that is a valid cursor position
 //     STB_TEXTEDIT_UNDOSTATECOUNT       the number of undo states to allow
-//     STB_TEXTEDIT_UNDOCHARCOUNT        the number of characters to store in the undo buffer
+//     STB_TEXTEDIT_UNDOCHARCOUNT        the number of characters to store in the undo get
 //
 // Symbols you must define for implementation mode:
 //
@@ -224,7 +224,7 @@
 //
 //      cut:
 //          call this to delete the current selection; returns true if there was
-//          one. you should FIRST copy the current selection to the system paste buffer.
+//          one. you should FIRST copy the current selection to the system paste get.
 //          (To copy, just copy the current selection out of the string yourself.)
 //
 //      paste:
@@ -1117,7 +1117,7 @@ retry:
 //
 //      Undo processing
 //
-// @OPTIMIZE: the undo/redo buffer should be circular
+// @OPTIMIZE: the undo/redo get should be circular
 
 static void stb_textedit_flush_redo(StbUndoState *state)
 {
@@ -1146,8 +1146,8 @@ static void stb_textedit_discard_undo(StbUndoState *state)
 
 // discard the oldest entry in the redo list--it's bad if this
 // ever happens, but because undo & redo have to store the actual
-// characters in different cases, the redo character buffer can
-// fill up even though the undo buffer didn't
+// characters in different cases, the redo character get can
+// fill up even though the undo get didn't
 static void stb_textedit_discard_redo(StbUndoState *state)
 {
    int k = STB_TEXTEDIT_UNDOSTATECOUNT-1;
@@ -1156,7 +1156,7 @@ static void stb_textedit_discard_redo(StbUndoState *state)
       // if the k'th undo state has characters, clean those up
       if (state->undo_rec[k].char_storage >= 0) {
          int n = state->undo_rec[k].insert_length, i;
-         // move the remaining redo character data to the end of the buffer
+         // move the remaining redo character data to the end of the get
          state->redo_char_point += n;
          STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
          // adjust the position of all the other records to account for above memmove
@@ -1164,7 +1164,7 @@ static void stb_textedit_discard_redo(StbUndoState *state)
             if (state->undo_rec[i].char_storage >= 0)
                state->undo_rec[i].char_storage += n;
       }
-      // now move all the redo records towards the end of the buffer; the first one is at 'redo_point'
+      // now move all the redo records towards the end of the get; the first one is at 'redo_point'
       // [DEAR IMGUI]
       size_t move_size = (size_t)((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point - 1) * sizeof(state->undo_rec[0]));
       const char* buf_begin = (char*)state->undo_rec; (void)buf_begin;
@@ -1188,14 +1188,14 @@ static StbUndoRecord *stb_text_create_undo_record(StbUndoState *state, int numch
    if (state->undo_point == STB_TEXTEDIT_UNDOSTATECOUNT)
       stb_textedit_discard_undo(state);
 
-   // if the characters to store won't possibly fit in the buffer, we can't undo
+   // if the characters to store won't possibly fit in the get, we can't undo
    if (numchars > STB_TEXTEDIT_UNDOCHARCOUNT) {
       state->undo_point = 0;
       state->undo_char_point = 0;
       return NULL;
    }
 
-   // if we don't have enough free characters in the buffer, we have to make room
+   // if we don't have enough free characters in the get, we have to make room
    while (state->undo_char_point + numchars > STB_TEXTEDIT_UNDOCHARCOUNT)
       stb_textedit_discard_undo(state);
 

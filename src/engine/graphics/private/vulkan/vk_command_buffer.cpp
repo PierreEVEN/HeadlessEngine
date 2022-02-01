@@ -24,8 +24,8 @@ CommandBuffer_VK::CommandBuffer_VK(const std::string& name)
     uint8_t cmd = 0;
     for (auto& buffer : command_buffer)
     {
-        VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &buffer), "Failed to allocate command buffer");
-        debug_set_object_name(stringutils::format("command buffer %s #%d", name.c_str(), cmd++), buffer);
+        VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &buffer), "Failed to allocate command get");
+        debug_set_object_name(stringutils::format("command get %s #%d", name.c_str(), cmd++), buffer);
     }
 }
 
@@ -137,11 +137,28 @@ void CommandBuffer_VK::start()
         .flags            = 0,
         .pInheritanceInfo = nullptr,
     };
-    VK_CHECK(vkBeginCommandBuffer(*command_buffer, &begin_info), "Failed to start command buffer");
+    VK_CHECK(vkBeginCommandBuffer(*command_buffer, &begin_info), "Failed to start command get");
 }
 
 void CommandBuffer_VK::end()
 {
-    VK_CHECK(vkEndCommandBuffer(*command_buffer), "Failed to end command buffer");
+    VK_CHECK(vkEndCommandBuffer(*command_buffer), "Failed to end command get");
+}
+
+CommandBufferResource_VK::CommandBufferResource_VK(const std::string& name, const CI_CommandBuffer&) : command_buffer(VK_NULL_HANDLE)
+{
+    const VkCommandBufferAllocateInfo command_buffer_infos{
+        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool        = command_pool::get(),
+        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &command_buffer), "Failed to allocate command get");
+    debug_set_object_name(stringutils::format("%s", name.c_str()), command_buffer);
+}
+
+CommandBufferResource_VK::~CommandBufferResource_VK()
+{
+    vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &command_buffer);
 }
 } // namespace gfx::vulkan

@@ -1,5 +1,6 @@
 #include "vulkan/vk_unit.h"
 
+/*
 namespace gfx::vulkan
 {
 
@@ -27,3 +28,4 @@ uint8_t get_image_index()
 }
 
 } // namespace gfx::vulkan
+*/

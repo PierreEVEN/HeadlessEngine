@@ -51,7 +51,7 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     for ([[maybe_unused]] const auto& queueFamily : queueFamilies)
     {
         VkBool32 presentSupport = false;
-        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(GET_VK_PHYSICAL_DEVICE(), i, surface, &presentSupport), "failed to get physical device present support");
+        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(GET_VK_PHYSICAL_DEVICE(), i, surface, &presentSupport), "failed to buffer physical device present support");
         if (presentSupport)
         {
             present_queue_family = i;
@@ -179,7 +179,9 @@ void Surface_VK::render()
     // Retrieve the next available images ID
     uint32_t       image_index;
     const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
-    set_frame(static_cast<uint8_t>(image_index));
+    Device::get().set_frame(static_cast<uint8_t>(image_index));
+
+    Device::get().release_frame(static_cast<uint8_t>(image_index));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -234,7 +236,7 @@ void Surface_VK::recreate_swapchain()
         .pNext                 = nullptr,
         .flags                 = 0,
         .surface               = surface,
-        .minImageCount         = get_image_count(),
+        .minImageCount         = Device::get().get_frame_count(),
         .imageFormat           = surface_format.format,
         .imageColorSpace       = surface_format.colorSpace,
         .imageExtent           = VkExtent2D{window_container->absolute_width(), window_container->absolute_height()},
@@ -254,8 +256,8 @@ void Surface_VK::recreate_swapchain()
 
     debug_set_object_name(stringutils::format("surface %s : swapchain", window_container->name().c_str()), swapchain);
 
-    uint32_t             swapchain_image_count = get_image_count();
-    std::vector<VkImage> swapchain_images(get_image_count(), VK_NULL_HANDLE);
+    uint32_t             swapchain_image_count = Device::get().get_frame_count();
+    std::vector<VkImage> swapchain_images(swapchain_image_count, VK_NULL_HANDLE);
     vkGetSwapchainImagesKHR(get_device(), swapchain, &swapchain_image_count, swapchain_images.data());
 
     SwapchainImageResource<VkImage> images{};

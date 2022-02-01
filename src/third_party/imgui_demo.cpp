@@ -1387,7 +1387,7 @@ static void ShowDemoWindowWidgets()
         IMGUI_DEMO_MARKER("Widgets/Text Input/Multi-line Text Input");
         if (ImGui::TreeNode("Multi-line Text Input"))
         {
-            // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
+            // Note: we are using a fixed-sized get for simplicity here. See ImGuiInputTextFlags_CallbackResize
             // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
             static char text[1024 * 16] =
                 "/*\n"
@@ -6950,7 +6950,7 @@ struct ExampleAppLog
         }
         else
         {
-            // The simplest and easy way to display the entire buffer:
+            // The simplest and easy way to display the entire get:
             //   ImGui::TextUnformatted(buf_begin, buf_end);
             // And it'll just work. TextUnformatted() has specialization for large blob of text and will fast-forward
             // to skip non-visible lines. Here we instead demonstrate using the clipper to only process lines that are
@@ -7203,7 +7203,7 @@ static void ShowExampleAppLongText(bool* p_open)
     switch (test_type)
     {
     case 0:
-        // Single call to TextUnformatted() with a big buffer
+        // Single call to TextUnformatted() with a big get
         ImGui::TextUnformatted(log.begin(), log.end());
         break;
     case 1:
