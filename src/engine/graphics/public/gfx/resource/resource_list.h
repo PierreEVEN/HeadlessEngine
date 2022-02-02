@@ -56,55 +56,75 @@ struct CI_Texture
 };
 using TextureHandle = ResourceHandle;
 
-// Texture View
+// Texture view
 struct CI_TextureView
 {
 };
 using TextureViewHandle = ResourceHandle;
 
-// Texture View
+// Shader
 struct CI_Shader
 {
 };
 using ShaderHandle = ResourceHandle;
 
-// Texture View
+// Render pass
 struct CI_RenderPass
 {
 };
 using RenderPassHandle = ResourceHandle;
 
-// Texture View
+// Pipeline layout
 struct CI_PipelineLayout
 {
 };
 using PipelineLayoutHandle = ResourceHandle;
 
-// Texture View
+// Sampler
 struct CI_Sampler
 {
 };
-using Sampler_Handle = ResourceHandle;
+using SamplerHandle = ResourceHandle;
 
-// Texture View
+// Pipeline
 struct CI_Pipeline
 {
 };
 using PipelineHandle = ResourceHandle;
 
-// Texture View
+// Descriptor set layout
 struct CI_DescriptorSetLayout
 {
 };
 using DescriptorSetLayoutHandle = ResourceHandle;
 
-/*
-else if (typeid(VkDescriptorPool) == typeid(Object_T))
-else if (typeid(VkDescriptorPool) == typeid(Object_T))
-else if (typeid(VkFramebuffer) == typeid(Object_T))
-else if (typeid(VkCommandPool) == typeid(Object_T))
-else if (typeid(VkSurfaceKHR) == typeid(Object_T))
-else if (typeid(VkSwapchainKHR) == typeid(Object_T))
-*/
+// Framebuffer
+struct CI_Framebuffer
+{
+};
+using FramebufferHandle = ResourceHandle;
 
+// Command pool
+struct CI_CommandPool
+{
+};
+using CommandPoolHandle = ResourceHandle;
+
+// Descriptor pool
+struct CI_DescriptorPool
+{
+};
+using DescriptorPoolHandle = ResourceHandle;
+
+// Texture surface
+struct CI_Surface
+{
+};
+using SurfaceHandle = ResourceHandle;
+
+// Texture swapchain
+struct CI_Swapchain
+{
+};
+using SwapchainHandle = ResourceHandle;
 } // namespace gfx

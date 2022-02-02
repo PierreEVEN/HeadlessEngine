@@ -1,7 +1,9 @@
 #include "vulkan/vk_device.h"
+#include "gfx/resource/gpu_resource.h"
 
-#include "vk_command_buffer.h"
 #include "types/magic_enum.h"
+#include "vk_buffer.h"
+#include "vk_command_buffer.h"
 #include "vk_command_pool.h"
 #include "vk_helper.h"
 #include "vulkan/vk_allocator.h"
@@ -115,5 +117,15 @@ VkDevice get_device()
         LOG_FATAL("logical device must be initialized first");
 
     return logical_device;
+}
+
+BufferHandle Device_VK::create_buffer(const std::string& name, const CI_Buffer& create_infos)
+{
+    return new TGpuResource<BufferResource_VK>(name, create_infos);
+}
+
+CommandBufferHandle Device_VK::create_command_buffer(const std::string& name, const CI_CommandBuffer& create_infos)
+{
+    return new TGpuResource<CommandBufferResource_VK>(name, create_infos);
 }
 } // namespace gfx::vulkan
