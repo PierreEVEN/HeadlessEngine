@@ -19,15 +19,16 @@ Device& Device::get()
 
 void Device::destroy_device()
 {
-    LOG_WARNING("todo : destroy device more properly");
-    device_instance->~Device();
-    //delete device_instance;
-    //device_instance = nullptr;
+    delete device_instance;
 }
 
 
 Device::Device(uint8_t image_count) : current_frame_id(0), frame_count(image_count)
 {
+    if (device_instance)
+        LOG_FATAL("device have already been created");
+    device_instance = this;
+
     acquired_resources.resize(frame_count, {});
 }
 
@@ -48,26 +49,13 @@ void Device::register_resource(ResourceHandle handle)
     resources.insert(handle);
 }
 
-void Device::create_device(Device* device)
+void Device::free_allocations()
 {
-    if (device_instance)
-        LOG_FATAL("cannot create device twice");
-
-    device_instance = device;
-}
-
-void Device::destroy_resource(ResourceHandle resource_handle)
-{
-    delete resource_handle;
-    resources.erase(resource_handle);
-}
-
-Device::~Device()
-{
-    //@TODO : VkDeviceWaitIdle
+    wait_device();
     for (uint8_t i = 0; i < frame_count; ++i)
+    {
         release_frame(i);
-
+    }
     if (!resources.empty())
         LOG_ERROR("some objects have not been destroyed yet");
 
@@ -80,5 +68,19 @@ Device::~Device()
         LOG_WARNING("destroy resource %s", elem->get_name().c_str());
         elem->destroy();
     }
+}
+
+void Device::destroy_resource(ResourceHandle resource_handle)
+{
+    delete resource_handle;
+    resources.erase(resource_handle);
+}
+
+Device::~Device()
+{
+    if (!resources.empty())
+        LOG_FATAL("some objects have not been destroyed yet");
+
+    device_instance = nullptr;
 }
 } // namespace gfx

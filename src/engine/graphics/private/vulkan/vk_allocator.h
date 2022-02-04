@@ -13,8 +13,4 @@ namespace gfx::vulkan
 
 
 const VkAllocationCallbacks* get_allocator();
-
-const VmaAllocator& get_vma_allocator();
-
-
 } // namespace gfx::vulkan

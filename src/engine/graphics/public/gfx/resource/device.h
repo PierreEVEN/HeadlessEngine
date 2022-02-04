@@ -12,13 +12,13 @@ class Device
 
     template <typename Device_T, typename... Args_T> static void create_device(Args_T&&... args)
     {
-        create_device(new Device_T(std::forward<Args_T>(args)...));
+        auto* device = new Device_T(std::forward<Args_T>(args)...);
+        device->init();
     }
 
     static void destroy_device();
-    Device(uint8_t image_count);
     virtual ~Device();
-
+    
     virtual BufferHandle              create_buffer(const std::string& name, const CI_Buffer& create_infos)                             = 0;
     virtual BufferViewHandle          create_buffer_view(const std::string& name, const CI_BufferView& create_infos)                    = 0;
     virtual CommandBufferHandle       create_command_buffer(const std::string& name, const CI_CommandBuffer& create_infos)              = 0;
@@ -57,11 +57,14 @@ class Device
         return frame_count;
     }
 
-    void register_resource(ResourceHandle handle);
+    void         register_resource(ResourceHandle handle);
+    virtual void wait_device() = 0;
 
+  protected:
+    Device(uint8_t image_count);
+    virtual void init() = 0;
+    void         free_allocations();
   private:
-    static void create_device(Device* device);
-
     friend class IGpuResource;
     void destroy_resource(ResourceHandle resource_handle);
 

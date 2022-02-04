@@ -53,6 +53,16 @@ using FenceHandle = ResourceHandle;
 // Texture
 struct CI_Texture
 {
+    uint32_t                     width                   = 1;
+    uint32_t                     height                  = 1;
+    uint32_t                     depth                   = 1;
+    uint32_t                     mip_level               = 1;
+    EImageType                   image_type              = EImageType::Texture_2D;
+    ETypeFormat                  image_format            = ETypeFormat::B8G8R8A8_UNORM;
+    ETextureTransferCapabilities transfer_capabilities   = ETextureTransferCapabilities::CopyDestination;
+    ETextureGPUWriteCapabilities gpu_write_capabilities  = ETextureGPUWriteCapabilities::None;
+    ETextureGPUReadCapabilities  gpu_read_capabilities   = ETextureGPUReadCapabilities::Sampling;
+    void*                        existing_texture_handle = nullptr;
 };
 using TextureHandle = ResourceHandle;
 

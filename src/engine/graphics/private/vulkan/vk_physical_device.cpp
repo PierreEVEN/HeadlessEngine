@@ -43,12 +43,28 @@ PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(
     device_id      = device_properties.deviceID;
     device_type    = vulkan_device_type_to_engine_type(device_properties.deviceType);
     device_name    = device_properties.deviceName;
-    
+}
+
+VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
+{
+    const QueueInfo& queue_info = get_queue_family(queue_family, 0);
+    VK_CHECK(vkWaitForFences(get_device(), 1, &*queue_info.queue_submit_fence, VK_TRUE, UINT64_MAX), "failed to wait on fence");
+    vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
+    VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence), "failed to submit queue");
+    return *queue_info.queue_submit_fence;
+}
+
+void PhysicalDevice_VK::update_queues()
+{
     uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
 
     std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+
+    graphic_queues.clear();
+    compute_queues.clear();
+    transfer_queues.clear();
 
     uint32_t queue_index = 0;
     for (const auto& queue : queue_families)
@@ -79,15 +95,6 @@ PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(
         }
         queue_index++;
     }
-}
-
-VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
-{
-    const QueueInfo& queue_info = get_queue_family(queue_family, 0);
-    VK_CHECK(vkWaitForFences(get_device(), 1, &*queue_info.queue_submit_fence, VK_TRUE, UINT64_MAX), "failed to wait on fence");
-    vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
-    VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence), "failed to submit queue");
-    return *queue_info.queue_submit_fence;
 }
 
 VkPhysicalDevice get_physical_device()

@@ -116,7 +116,8 @@ enum class ETypeFormat
 };
 
 uint8_t get_format_channel_count(ETypeFormat format);
-uint8_t get_format_bytes_per_pixel(ETypeFormat format);
+uint8_t     get_format_bytes_per_pixel(ETypeFormat format);
+bool    is_depth_format(ETypeFormat format);
 
 
 class Test_Types

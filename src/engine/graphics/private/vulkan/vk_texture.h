@@ -26,20 +26,15 @@ class Texture_VK : public Texture
         return views;
     }
 
-
-    [[nodiscard]] const VkDescriptorImageInfo& get_descriptor_image_infos() const
+    [[current_image]] const TextureHandle& get_current_image() const
     {
-        return *image_descriptor_info;
+        return *images;
     }
 
   private:
     void create_views();
 
-    const bool                                    use_external_images;
-    SwapchainImageResource<VkDescriptorImageInfo> image_descriptor_info;
-    SwapchainImageResource<VkImageLayout>         image_layout;
-    SwapchainImageResource<VkImage>               images;
-    SwapchainImageResource<VmaAllocation>         allocation;
-    SwapchainImageResource<VkImageView>           views;
+    SwapchainImageResource<TextureHandle> images;
+    SwapchainImageResource<VkImageView>   views;
 };
 } // namespace gfx::vulkan

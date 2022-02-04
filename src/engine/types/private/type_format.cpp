@@ -438,6 +438,11 @@ uint8_t get_format_bytes_per_pixel(ETypeFormat format)
     }
 }
 
+bool is_depth_format(ETypeFormat format)
+{
+    return format == ETypeFormat::D24_UNORM_S8_UINT || format == ETypeFormat::D32_SFLOAT || format == ETypeFormat::D32_SFLOAT_S8_UINT;
+}
+
 void Test_Types::test()
 {
     static int test_val;

@@ -47,25 +47,4 @@ class Buffer_VK final : public Buffer
     void resize_current();
 };
 
-class BufferResource_VK final
-{
-  public:
-    BufferResource_VK(const std::string& name, const CI_Buffer& create_infos);
-    ~BufferResource_VK();
-
-    [[nodiscard]] VkBuffer& get_buffer()
-    {
-        return buffer;
-    }
-
-    [[nodiscard]] VmaAllocation& get_allocation()
-    {
-        return memory;
-    }
-
-  private:
-    VkBuffer      buffer = VK_NULL_HANDLE;
-    VmaAllocation memory = VK_NULL_HANDLE;
-};
-
 } // namespace gfx::vulkan

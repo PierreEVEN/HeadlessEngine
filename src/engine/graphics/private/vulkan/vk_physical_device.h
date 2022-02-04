@@ -44,6 +44,8 @@ class PhysicalDevice_VK : public PhysicalDevice
 
     VkFence submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const;
 
+    void update_queues();
+
   private:
     VkPhysicalDevice       physical_device;
     std::vector<QueueInfo> graphic_queues;

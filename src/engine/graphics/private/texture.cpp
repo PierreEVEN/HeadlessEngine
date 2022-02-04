@@ -51,6 +51,7 @@ Texture::Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_dep
 
     if (!image_parameters.mip_level)
         image_parameters.mip_level = std::optional<uint32_t>(std::floor(log2(std::max(std::max(width, height), depth))) + 1);
+
 }
 
 std::shared_ptr<Texture> Texture::create(const uint32_t width, uint32_t height, const uint32_t depth, const TextureParameter& parameters)

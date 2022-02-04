@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cpputils/logger.hpp>
 
 #include <glm/glm.hpp>
 

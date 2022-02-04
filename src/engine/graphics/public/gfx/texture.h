@@ -32,7 +32,7 @@ class Texture
 
     virtual void set_pixels(const std::vector<uint8_t>& data) = 0;
 
-    [[nodiscard]] uint32_t       get_data_size();
+    [[nodiscard]] uint32_t get_data_size();
 
     static bool is_depth_format(ETypeFormat format)
     {

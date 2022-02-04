@@ -7,9 +7,9 @@
 #include "vk_device.h"
 #include "vk_errors.h"
 #include "vk_one_time_command_buffer.h"
+#include "gfx/resource/gpu_resource.h"
 
 #include <string>
-#include <vulkan/vk_allocator.h>
 
 #include "glm/glm.hpp"
 #include <vulkan/vk_helper.h>
@@ -33,7 +33,7 @@ void Buffer_VK::create_or_recreate_buffer(FrameData& current_buffer)
 
     current_buffer.buffer = Device::get().create_buffer("buffer_" + buffer_name, {
                                                                     .stride = stride(),
-                                                                    .count  = count(),
+                                                                    .count  = allocated_count,
                                                                     .usage  = usage,
                                                                     .access = buffer_access,
                                                                     .type   = type,
@@ -101,16 +101,13 @@ void* Buffer_VK::acquire_data_ptr()
     if (type == EBufferType::STATIC)
         vkDeviceWaitIdle(get_device());
 
-    void* dst_ptr;
-
-    if (!frame_data->buffer || !frame_data->buffer->edit<BufferResource_VK>())
+    if (!frame_data->buffer)
     {
-        LOG_ERROR("resource %s is already in use (frame #%d )", frame_data->buffer->get_name().c_str(), Device::get().get_current_frame());
+        LOG_ERROR("resource %s is not valid (frame #%d )", frame_data->buffer->get_name().c_str(), Device::get().get_current_frame());
         return nullptr;
     }
 
-    VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), frame_data->buffer->edit<BufferResource_VK>()->get_allocation(), &dst_ptr), "failed to map memory");
-    return dst_ptr;
+    return frame_data->buffer->edit<BufferResource_VK>()->map_buffer();
 }
 
 void Buffer_VK::submit_data()
@@ -119,7 +116,7 @@ void Buffer_VK::submit_data()
         for (auto& data : frame_data)
             data.dirty = true;
     else
-        vmaUnmapMemory(get_vma_allocator(), frame_data->buffer->edit<BufferResource_VK>()->get_allocation());
+        frame_data->buffer->edit<BufferResource_VK>()->unmap_buffer();
 }
 
 void Buffer_VK::resize_current()
@@ -140,10 +137,8 @@ Buffer_VK::~Buffer_VK()
 {
     delete[] dynamic_data;
     for (const auto& data : frame_data)
-    {
         if (data.buffer)
             data.buffer->destroy();
-    }
 }
 
 void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)
@@ -151,10 +146,8 @@ void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)
     if (type == EBufferType::DYNAMIC && frame_data->dirty)
     {
         resize_current();
-        void* dst_ptr;
-        VK_CHECK(vmaMapMemory(vulkan::get_vma_allocator(), frame_data->buffer->edit<BufferResource_VK>()->get_allocation(), &dst_ptr), "failed to map memory");
-        memcpy(dst_ptr, dynamic_data, size());
-        vmaUnmapMemory(get_vma_allocator(), frame_data->buffer->edit<BufferResource_VK>()->get_allocation());
+        memcpy(frame_data->buffer->edit<BufferResource_VK>()->map_buffer(), dynamic_data, size());
+        frame_data->buffer->edit<BufferResource_VK>()->unmap_buffer();
         frame_data->dirty = false;
     }
 
@@ -179,85 +172,4 @@ void Buffer_VK::bind_buffer(VkCommandBuffer command_buffer)
         LOG_WARNING("This get can't be bound to a command get");
     }
 }
-
-BufferResource_VK::BufferResource_VK(const std::string& name, const CI_Buffer& create_infos)
-{
-    VkBufferUsageFlags vk_usage  = 0;
-    VmaMemoryUsage     vma_usage = VMA_MEMORY_USAGE_UNKNOWN;
-
-    switch (create_infos.usage)
-    {
-    case EBufferUsage::INDEX_DATA:
-        vk_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        break;
-    case EBufferUsage::VERTEX_DATA:
-        vk_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        break;
-    case EBufferUsage::GPU_MEMORY:
-        vk_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        break;
-    case EBufferUsage::UNIFORM_BUFFER:
-        vk_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        break;
-    case EBufferUsage::INDIRECT_DRAW_ARGUMENT:
-        vk_usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-        break;
-    case EBufferUsage::TRANSFER_MEMORY:
-        vk_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    }
-
-    if (create_infos.type != EBufferType::IMMUTABLE)
-    {
-        vk_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        vk_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    switch (create_infos.access)
-    {
-    default:
-    case EBufferAccess::DEFAULT:
-        vma_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-        break;
-    case EBufferAccess::GPU_ONLY:
-        vma_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        break;
-    case EBufferAccess::CPU_TO_GPU:
-        vma_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-        break;
-    case EBufferAccess::GPU_TO_CPU:
-        vma_usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
-        break;
-    }
-
-    const VkBufferCreateInfo buffer_create_info = {
-        .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext                 = nullptr,
-        .flags                 = NULL,
-        .size                  = create_infos.count * create_infos.stride,
-        .usage                 = vk_usage,
-        .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices   = nullptr,
-    };
-
-    const VmaAllocationCreateInfo allocInfo = {
-        .flags          = NULL,
-        .usage          = vma_usage,
-        .requiredFlags  = NULL,
-        .preferredFlags = NULL,
-        .memoryTypeBits = 0,
-        .pool           = VK_NULL_HANDLE,
-        .pUserData      = nullptr,
-    };
-
-    VK_CHECK(vmaCreateBuffer(vulkan::get_vma_allocator(), &buffer_create_info, &allocInfo, &buffer, &memory, nullptr), "failed to create get");
-    debug_set_object_name(name, buffer);
-}
-
-BufferResource_VK::~BufferResource_VK()
-{
-    vmaDestroyBuffer(get_vma_allocator(), buffer, memory);
-}
-
 } // namespace gfx::vulkan

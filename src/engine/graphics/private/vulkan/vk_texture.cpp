@@ -30,101 +30,50 @@ static VkImageUsageFlags vk_usage(const TextureParameter& texture_parameters)
     return usage_flags;
 }
 
-Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : Texture(pixel_width, pixel_height, pixel_depth, parameters), use_external_images(false)
+Texture_VK::Texture_VK(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : Texture(pixel_width, pixel_height, pixel_depth, parameters)
 {
-    VkImageCreateInfo image_infos{
-        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .format        = vk_texture_format_to_engine(image_parameters.format),
-        .mipLevels     = image_parameters.mip_level.value(),
-        .samples       = VK_SAMPLE_COUNT_1_BIT,
-        .tiling        = VK_IMAGE_TILING_OPTIMAL,
-        .usage         = vk_usage(image_parameters),
-        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
-    switch (image_parameters.image_type)
-    {
-    case EImageType::Texture_1D:
-        image_infos.imageType = VK_IMAGE_TYPE_1D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = 1,
-            .depth  = 1,
-        };
-        image_infos.arrayLayers = 1;
-        break;
-    case EImageType::Texture_1D_Array:
-        image_infos.imageType = VK_IMAGE_TYPE_1D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = 1,
-            .depth  = 1,
-        };
-        image_infos.arrayLayers = depth;
-        break;
-    case EImageType::Texture_2D:
-        image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = height,
-            .depth  = 1,
-        };
-        image_infos.arrayLayers = 1;
-        break;
-    case EImageType::Texture_2D_Array:
-        image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = height,
-            .depth  = 1,
-        };
-        image_infos.arrayLayers = depth;
-        break;
-    case EImageType::Texture_3D:
-        image_infos.imageType = VK_IMAGE_TYPE_3D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = height,
-            .depth  = depth,
-        };
-        image_infos.arrayLayers = 1;
-        break;
-    case EImageType::Cubemap:
-        image_infos.imageType = VK_IMAGE_TYPE_2D;
-        image_infos.extent    = {
-            .width  = width,
-            .height = height,
-            .depth  = 1,
-        };
-        image_infos.arrayLayers = 6;
-        break;
-    }
-    const VmaAllocationCreateInfo vma_allocation{
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-    };
-
     if (parameters.read_only)
     {
-        image_layout          = SwapchainImageResource<VkImageLayout>::make_static();
-        images                = SwapchainImageResource<VkImage>::make_static();
-        allocation            = SwapchainImageResource<VmaAllocation>::make_static();
-        views                 = SwapchainImageResource<VkImageView>::make_static();
-        image_descriptor_info = SwapchainImageResource<VkDescriptorImageInfo>::make_static();
+        images = SwapchainImageResource<TextureHandle>::make_static();
+        views  = SwapchainImageResource<VkImageView>::make_static();
     }
-    
-    for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
+
+    for (auto& image : images)
     {
-        VK_CHECK(vmaCreateImage(get_vma_allocator(), &image_infos, &vma_allocation, &images[i], &allocation[i], nullptr), "failed to create images");
-        image_layout[i] = VK_IMAGE_LAYOUT_UNDEFINED;
+        image = Device::get().create_texture("unknown image", CI_Texture{
+                                                                  .width                   = width,
+                                                                  .height                  = height,
+                                                                  .depth                   = depth,
+                                                                  .mip_level               = image_parameters.mip_level.value() ? image_parameters.mip_level.value() : 1,
+                                                                  .image_type              = image_parameters.image_type,
+                                                                  .image_format            = image_parameters.format,
+                                                                  .transfer_capabilities   = image_parameters.transfer_capabilities,
+                                                                  .gpu_write_capabilities  = image_parameters.gpu_write_capabilities,
+                                                                  .gpu_read_capabilities   = image_parameters.gpu_read_capabilities,
+                                                                  .existing_texture_handle = nullptr,
+                                                              });
     }
     create_views();
 }
 
 Texture_VK::Texture_VK(uint32_t image_width, uint32_t image_height, uint32_t image_depth, const TextureParameter& parameters, SwapchainImageResource<VkImage>& existing_images)
-    : Texture(image_width, image_height, image_depth, parameters), use_external_images(true), images(existing_images)
+    : Texture(image_width, image_height, image_depth, parameters)
 {
-    for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
-        image_layout[i] = VK_IMAGE_LAYOUT_UNDEFINED;
+    for (uint8_t i = 0; i < existing_images.get_max_instance_count(); ++i)
+    {
+        images[i] = Device::get().create_texture("unknown image", CI_Texture{
+                                                                      .width                   = width,
+                                                                      .height                  = height,
+                                                                      .depth                   = depth,
+                                                                      .mip_level               = image_parameters.mip_level.value() ? image_parameters.mip_level.value() : 1,
+                                                                      .image_type              = image_parameters.image_type,
+                                                                      .image_format            = image_parameters.format,
+                                                                      .transfer_capabilities   = image_parameters.transfer_capabilities,
+                                                                      .gpu_write_capabilities  = image_parameters.gpu_write_capabilities,
+                                                                      .gpu_read_capabilities   = image_parameters.gpu_read_capabilities,
+                                                                      .existing_texture_handle = existing_images[i],
+                                                                  });
+    }
 
     create_views();
 }
