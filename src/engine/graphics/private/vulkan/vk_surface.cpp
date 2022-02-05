@@ -20,46 +20,35 @@
 
 namespace gfx::vulkan
 {
-Surface_VK::Surface_VK(application::window::Window* container) : window_container(container)
+FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& create_infos)
 {
-    /**
-     * Create surface
-     */
-#if APP_USE_WIN32
-    VkWin32SurfaceCreateInfoKHR create_infos = {
-        .sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .pNext     = nullptr,
-        .flags     = NULL,
-        .hinstance = reinterpret_cast<HINSTANCE>(application::get()->get_platform_app_handle()),
-        .hwnd      = reinterpret_cast<HWND>(container->get_platform_window_handle()),
+    const VkFenceCreateInfo fence_infos{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
+    vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
+}
 
-    vkCreateWin32SurfaceKHR(get_instance(), &create_infos, get_allocator(), &surface);
-    debug_set_object_name(stringutils::format("surface %s (win32)", window_container->name().c_str()), surface);
-#endif
+FenceResource_VK::~FenceResource_VK()
+{
+    vkDestroyFence(get_device(), fence, get_allocator());
+}
 
-    /**
-     * Retrieve present queue
-     */
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(GET_VK_PHYSICAL_DEVICE(), &queueFamilyCount, nullptr);
+SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
+{
+    const VkSemaphoreCreateInfo semaphore_infos{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
+}
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(GET_VK_PHYSICAL_DEVICE(), &queueFamilyCount, queueFamilies.data());
+SemaphoreResource_VK::~SemaphoreResource_VK()
+{
+    vkDestroySemaphore(get_device(), semaphore, get_allocator());
+}
 
-    uint32_t i = 0;
-    for ([[maybe_unused]] const auto& queueFamily : queueFamilies)
-    {
-        VkBool32 presentSupport = false;
-        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(GET_VK_PHYSICAL_DEVICE(), i, surface, &presentSupport), "failed to buffer physical device present support");
-        if (presentSupport)
-        {
-            present_queue_family = i;
-            vkGetDeviceQueue(get_device(), present_queue_family, 0, &present_queue);
-            break;
-        }
-        ++i;
-    }
+SwapchainResource_VK::SwapchainResource_VK(const std::string& name, const CI_Swapchain& create_infos) : parameters(create_infos)
+{
 
     /**
      * Get device capabilities
@@ -67,7 +56,7 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     VkSurfaceCapabilitiesKHR      capabilities;
     std::vector<VkPresentModeKHR> present_modes;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GET_VK_PHYSICAL_DEVICE(), surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GET_VK_PHYSICAL_DEVICE(), create_infos.surface->surface, &capabilities);
 
     composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     for (const auto& compositeAlphaFlag : {
@@ -82,6 +71,75 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
     }
 
     transform_flags = capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
+
+    /**
+     * Choose present mode
+     */
+
+    uint32_t present_mode_count;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(GET_VK_PHYSICAL_DEVICE(), create_infos.surface->surface, &present_mode_count, nullptr);
+    if (present_mode_count != 0)
+    {
+        present_modes.resize(present_mode_count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(GET_VK_PHYSICAL_DEVICE(), create_infos.surface->surface, &present_mode_count, present_modes.data());
+    }
+    present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    for (const auto& mode : present_modes)
+    {
+        if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            present_mode = mode;
+        }
+    }
+
+    VkSwapchainCreateInfoKHR swapchain_create_info{
+        .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .pNext                 = nullptr,
+        .flags                 = 0,
+        .surface               = create_infos.surface->surface,
+        .minImageCount         = Device::get().get_frame_count(),
+        .imageFormat           = create_infos.surface->surface_format.format,
+        .imageColorSpace       = create_infos.surface->surface_format.colorSpace,
+        .imageExtent           = VkExtent2D{create_infos.surface->parameters.container->absolute_width(), create_infos.surface->parameters.container->absolute_height()},
+        .imageArrayLayers      = 1,
+        .imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices   = nullptr,
+        .preTransform          = transform_flags,
+        .compositeAlpha        = composite_alpha,
+        .presentMode           = present_mode,
+        .clipped               = VK_TRUE,
+        .oldSwapchain          = create_infos.previous_swapchain ? create_infos.previous_swapchain->swapchain : VK_NULL_HANDLE,
+    };
+    VK_CHECK(vkCreateSwapchainKHR(get_device(), &swapchain_create_info, get_allocator(), &swapchain), "Failed to create swap chain");
+    uint32_t swapchain_image_count = Device::get().get_frame_count();
+    vkGetSwapchainImagesKHR(get_device(), swapchain, &swapchain_image_count, swapchain_images.data());
+
+    for (const auto& image : swapchain_images)
+        debug_set_object_name("swapchain images", image);
+
+    debug_set_object_name(name, swapchain);
+}
+
+SwapchainResource_VK::~SwapchainResource_VK()
+{
+    vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
+}
+
+SurfaceResource_VK::SurfaceResource_VK(const std::string& name, const CI_Surface& create_infos) : parameters(create_infos)
+{
+#if APP_USE_WIN32
+    const VkWin32SurfaceCreateInfoKHR surface_create_infos{
+        .sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+        .pNext     = nullptr,
+        .flags     = NULL,
+        .hinstance = reinterpret_cast<HINSTANCE>(application::get()->get_platform_app_handle()),
+        .hwnd      = reinterpret_cast<HWND>(create_infos.container->get_platform_window_handle()),
+    };
+    vkCreateWin32SurfaceKHR(get_instance(), &surface_create_infos, get_allocator(), &surface);
+    debug_set_object_name(name, surface);
+#endif
 
     /**
      * Choose surface format
@@ -119,53 +177,52 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
         }
     }
 
+    present_queue = TGpuHandle<QueueResource_VK>("test queue");
+
     /**
-     * Choose present mode
+     * Retrieve present queue
      */
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(GET_VK_PHYSICAL_DEVICE(), &queueFamilyCount, nullptr);
 
-    uint32_t present_mode_count;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(GET_VK_PHYSICAL_DEVICE(), surface, &present_mode_count, nullptr);
-    if (present_mode_count != 0)
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(GET_VK_PHYSICAL_DEVICE(), &queueFamilyCount, queueFamilies.data());
+
+    uint32_t i = 0;
+    for ([[maybe_unused]] const auto& queueFamily : queueFamilies)
     {
-        present_modes.resize(present_mode_count);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(GET_VK_PHYSICAL_DEVICE(), surface, &present_mode_count, present_modes.data());
-    }
-    present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (const auto& mode : present_modes)
-    {
-        if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+        VkBool32 presentSupport = false;
+        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(GET_VK_PHYSICAL_DEVICE(), i, surface, &presentSupport), "failed to buffer physical device present support");
+        if (presentSupport)
         {
-            present_mode = mode;
+            present_queue_family = i;
+            vkGetDeviceQueue(get_device(), present_queue_family, 0, &present_queue->queue);
+            break;
         }
+        ++i;
     }
+}
 
-    const VkSemaphoreCreateInfo semaphore_infos{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
+SurfaceResource_VK::~SurfaceResource_VK()
+{
+    vkDestroySurfaceKHR(get_instance(), surface, get_allocator());
+}
 
-    const VkFenceCreateInfo fence_infos{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
+Surface_VK::Surface_VK(application::window::Window* container) : window_container(container)
+{
+    surface = TGpuHandle<SurfaceResource_VK>("surface test", SurfaceResource_VK::CI_Surface{
+                                                                 .container = window_container,
+                                                             });
 
-    uint8_t resource_index = 0;
     for (auto& resource : swapchain_resources)
-    {
-        VK_CHECK(vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &resource.image_acquire_semaphore), "Failed to create images acquire semaphore");
-        debug_set_object_name(stringutils::format("surface %s : semaphore image acquire #%d", window_container->name().c_str(), resource_index), resource.image_acquire_semaphore);
-        ++resource_index;
-    }
+        resource.image_acquire_semaphore = TGpuHandle<SemaphoreResource_VK>("semaphore", SemaphoreResource_VK::CI_Semaphore{});
 
     recreate_swapchain();
 }
 
 Surface_VK::~Surface_VK()
 {
-    vkDeviceWaitIdle(get_device());
-    vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
-    vkDestroySurfaceKHR(get_instance(), surface, get_allocator());
-    for (const auto& elem : swapchain_resources)
-        vkDestroySemaphore(get_device(), elem.image_acquire_semaphore, get_allocator());
+    LOG_WARNING("destroy surface A");
 }
 
 void Surface_VK::render()
@@ -174,11 +231,11 @@ void Surface_VK::render()
     if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
         return;
 
-    const VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
+    const VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore->semaphore;
 
     // Retrieve the next available images ID
     uint32_t       image_index;
-    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
+    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
     Device::get().begin_frame(static_cast<uint8_t>(image_index));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -205,11 +262,11 @@ void Surface_VK::render()
         .waitSemaphoreCount = 1,
         .pWaitSemaphores    = &*dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->render_finished_semaphore,
         .swapchainCount     = 1,
-        .pSwapchains        = &swapchain,
+        .pSwapchains        = &swapchain->swapchain,
         .pImageIndices      = &image_index,
         .pResults           = nullptr,
     };
-    const VkResult submit_result = vkQueuePresentKHR(present_queue, &present_infos);
+    const VkResult submit_result = vkQueuePresentKHR(surface->present_queue->queue, &present_infos);
 
     if (submit_result == VK_ERROR_OUT_OF_DATE_KHR || submit_result == VK_SUBOPTIMAL_KHR)
     {
@@ -226,44 +283,11 @@ void Surface_VK::recreate_swapchain()
     if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
         return;
 
-    if (swapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(get_device(), swapchain, get_allocator());
+    swapchain = TGpuHandle<SwapchainResource_VK>("test_swapchain", SwapchainResource_VK::CI_Swapchain{
+                                                                       .surface            = surface,
+                                                                       .previous_swapchain = swapchain,
+                                                                   });
 
-    const VkSwapchainCreateInfoKHR create_info{
-        .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .pNext                 = nullptr,
-        .flags                 = 0,
-        .surface               = surface,
-        .minImageCount         = Device::get().get_frame_count(),
-        .imageFormat           = surface_format.format,
-        .imageColorSpace       = surface_format.colorSpace,
-        .imageExtent           = VkExtent2D{window_container->absolute_width(), window_container->absolute_height()},
-        .imageArrayLayers      = 1,
-        .imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices   = nullptr,
-        .preTransform          = transform_flags,
-        .compositeAlpha        = composite_alpha,
-        .presentMode           = present_mode,
-        .clipped               = VK_TRUE,
-        .oldSwapchain          = VK_NULL_HANDLE,
-    };
-
-    VK_CHECK(vkCreateSwapchainKHR(get_device(), &create_info, get_allocator(), &swapchain), "Failed to create swap chain");
-
-    debug_set_object_name(stringutils::format("surface %s : swapchain", window_container->name().c_str()), swapchain);
-
-    uint32_t             swapchain_image_count = Device::get().get_frame_count();
-    std::vector<VkImage> swapchain_images(swapchain_image_count, VK_NULL_HANDLE);
-    vkGetSwapchainImagesKHR(get_device(), swapchain, &swapchain_image_count, swapchain_images.data());
-
-    SwapchainImageResource<VkImage> images{};
-    for (uint8_t i = 0; i < images.get_max_instance_count(); ++i)
-    {
-        images[i] = swapchain_images[i];
-        debug_set_object_name(stringutils::format("surface %s : swapchain image #%d", window_container->name().c_str(), i), images[i]);
-    }
     surface_texture = std::make_shared<Texture_VK>(window_container->absolute_width(), window_container->absolute_height(), 1,
                                                    TextureParameter{
                                                        .format                 = engine_texture_format_from_vk(get_surface_format().format),
@@ -274,11 +298,10 @@ void Surface_VK::recreate_swapchain()
                                                        .mip_level              = 1,
                                                        .read_only              = false,
                                                    },
-                                                   images);
+                                                   swapchain->get_swapchain_images());
+
     if (main_render_pass)
-    {
         main_render_pass->resize(get_container()->absolute_width(), get_container()->absolute_height(), std::vector{surface_texture});
-    }
     else
     {
         if (!RenderPassID::exists("resolve_pass"))
@@ -298,5 +321,4 @@ void Surface_VK::recreate_swapchain()
         on_draw          = &main_render_pass->on_draw_pass;
     }
 }
-
 } // namespace gfx::vulkan

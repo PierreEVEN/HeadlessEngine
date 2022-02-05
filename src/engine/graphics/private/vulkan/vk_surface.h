@@ -3,6 +3,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 
+#include "gfx/resource/gpu_resource.h"
 #include "gfx/surface.h"
 #include "vk_device.h"
 #include "vulkan/vk_unit.h"
@@ -32,8 +33,26 @@ class SemaphoreResource_VK final
     SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos);
     ~SemaphoreResource_VK();
 
-  private:
     VkSemaphore semaphore = VK_NULL_HANDLE;
+};
+
+class SurfaceResource_VK final
+{
+  public:
+    struct CI_Surface
+    {
+        application::window::Window* container;
+    };
+
+    SurfaceResource_VK(const std::string& name, const CI_Surface& create_infos);
+    ~SurfaceResource_VK();
+
+    TGpuHandle<QueueResource_VK> present_queue;
+    uint32_t                     present_queue_family;
+    VkSurfaceFormatKHR           surface_format;
+    VkCompositeAlphaFlagBitsKHR  composite_alpha;
+    VkSurfaceKHR                 surface = VK_NULL_HANDLE;
+    const CI_Surface             parameters;
 };
 
 class SwapchainResource_VK final
@@ -41,26 +60,26 @@ class SwapchainResource_VK final
   public:
     struct CI_Swapchain
     {
+        TGpuHandle<SurfaceResource_VK> surface;
+        TGpuHandle<SwapchainResource_VK> previous_swapchain;
     };
 
     SwapchainResource_VK(const std::string& name, const CI_Swapchain& create_infos);
     ~SwapchainResource_VK();
 
-  private:
-    VkSemaphore semaphore = VK_NULL_HANDLE;
-};
-class SurfaceResource_VK final
-{
-  public:
-    struct CI_Surface
+    [[nodiscard]] SwapchainImageResource<VkImage>& get_swapchain_images()
     {
-    };
+        return swapchain_images;
+    }
 
-    SurfaceResource_VK(const std::string& name, const CI_Surface& create_infos);
-    ~SurfaceResource_VK();
+    VkSwapchainKHR                swapchain = VK_NULL_HANDLE;
+    VkPresentModeKHR              present_mode;
+    VkCompositeAlphaFlagBitsKHR   composite_alpha;
+    VkSurfaceTransformFlagBitsKHR transform_flags;
+    const CI_Swapchain            parameters;
 
   private:
-    VkSemaphore semaphore = VK_NULL_HANDLE;
+    SwapchainImageResource<VkImage> swapchain_images;
 };
 
 class Surface_VK : public Surface
@@ -78,7 +97,7 @@ class Surface_VK : public Surface
 
     VkSurfaceFormatKHR get_surface_format() const
     {
-        return surface_format;
+        return surface->surface_format;
     }
 
     std::shared_ptr<Texture> get_surface_render_texture() const
@@ -89,14 +108,8 @@ class Surface_VK : public Surface
   private:
     TGpuHandle<SurfaceResource_VK>   surface;
     TGpuHandle<SwapchainResource_VK> swapchain;
-    TGpuHandle<QueueResource_VK>     present_queue;
 
-    VkSurfaceFormatKHR            surface_format;
-    VkPresentModeKHR              present_mode;
-    VkCompositeAlphaFlagBitsKHR   composite_alpha;
-    VkSurfaceTransformFlagBitsKHR transform_flags;
-    uint32_t                      present_queue_family;
-    void                          recreate_swapchain();
+    void recreate_swapchain();
 
     struct ImageData
     {

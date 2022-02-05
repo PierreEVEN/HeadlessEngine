@@ -60,16 +60,18 @@ Texture_VK::Texture_VK(uint32_t image_width, uint32_t image_height, uint32_t ima
 {
     for (uint8_t i = 0; i < existing_images.get_max_instance_count(); ++i)
     {
+        const auto framebuffer_image = TGpuHandle<ImageResource_VK>("Unknown existing image",
+                                                                    ImageResource_VK::CI_Texture{
+                                                                        .width              = width,
+                                                                        .height             = height,
+                                                                        .depth              = depth,
+                                                                        .texture_parameters = parameters,
+                                                                    },
+                                                                    existing_images[i]);
+        
         views[i] = TGpuHandle<ImageViewResource_VK>("unknown view", ImageViewResource_VK::CI_TextureView{
                                                                         .texture_parameters = parameters,
-                                                                        .used_image         = TGpuHandle<ImageResource_VK>("Unknown existing image",
-                                                                                                                   ImageResource_VK::CI_Texture{
-                                                                                                                       .width              = width,
-                                                                                                                       .height             = height,
-                                                                                                                       .depth              = depth,
-                                                                                                                       .texture_parameters = parameters,
-                                                                                                                   },
-                                                                                                                   existing_images[i]),
+                                                                        .used_image         = framebuffer_image,
                                                                     });
     }
 }
@@ -307,6 +309,7 @@ ImageViewResource_VK::ImageViewResource_VK(const std::string& name, const CI_Tex
         image_view_infos.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
         break;
     }
+
     image_view_infos.image = create_infos.used_image->image;
     vkCreateImageView(get_device(), &image_view_infos, get_allocator(), &view);
 
@@ -317,7 +320,6 @@ ImageViewResource_VK::ImageViewResource_VK(const std::string& name, const CI_Tex
         .imageView   = view,
         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     };
-    LOG_WARNING("create view");
 }
 
 ImageViewResource_VK::~ImageViewResource_VK()

@@ -15,10 +15,9 @@ namespace gfx::vulkan
 class QueueResource_VK final
 {
   public:
-    QueueResource_VK(const std::string& name);
-    ~QueueResource_VK();
+    QueueResource_VK(const std::string& name) {}
+    ~QueueResource_VK() = default;
 
-  private:
     VkQueue queue = VK_NULL_HANDLE;
 };
 
@@ -46,7 +45,5 @@ class Device_VK final : public Device
   private:
     VkDevice     device;
     VmaAllocator vulkan_memory_allocator;
-
-    TGpuHandle<QueueResource_VK> 
 };
 } // namespace gfx::vulkan
