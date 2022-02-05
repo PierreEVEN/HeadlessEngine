@@ -179,9 +179,7 @@ void Surface_VK::render()
     // Retrieve the next available images ID
     uint32_t       image_index;
     const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
-    Device::get().set_frame(static_cast<uint8_t>(image_index));
-
-    Device::get().release_frame(static_cast<uint8_t>(image_index));
+    Device::get().begin_frame(static_cast<uint8_t>(image_index));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {

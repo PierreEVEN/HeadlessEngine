@@ -4,11 +4,64 @@
 #include <vulkan/vulkan.h>
 
 #include "gfx/surface.h"
-
+#include "vk_device.h"
 #include "vulkan/vk_unit.h"
 
 namespace gfx::vulkan
 {
+class FenceResource_VK final
+{
+  public:
+    struct CI_Fence
+    {
+    };
+
+    FenceResource_VK(const std::string& name, const CI_Fence& create_infos);
+    ~FenceResource_VK();
+
+  private:
+    VkFence fence = VK_NULL_HANDLE;
+};
+
+class SemaphoreResource_VK final
+{
+  public:
+    struct CI_Semaphore
+    {
+    };
+    SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos);
+    ~SemaphoreResource_VK();
+
+  private:
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+};
+
+class SwapchainResource_VK final
+{
+  public:
+    struct CI_Swapchain
+    {
+    };
+
+    SwapchainResource_VK(const std::string& name, const CI_Swapchain& create_infos);
+    ~SwapchainResource_VK();
+
+  private:
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+};
+class SurfaceResource_VK final
+{
+  public:
+    struct CI_Surface
+    {
+    };
+
+    SurfaceResource_VK(const std::string& name, const CI_Surface& create_infos);
+    ~SurfaceResource_VK();
+
+  private:
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+};
 
 class Surface_VK : public Surface
 {
@@ -34,10 +87,10 @@ class Surface_VK : public Surface
     }
 
   private:
-    VkSurfaceKHR   surface   = VK_NULL_HANDLE;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    TGpuHandle<SurfaceResource_VK>   surface;
+    TGpuHandle<SwapchainResource_VK> swapchain;
+    TGpuHandle<QueueResource_VK>     present_queue;
 
-    VkQueue                       present_queue = VK_NULL_HANDLE;
     VkSurfaceFormatKHR            surface_format;
     VkPresentModeKHR              present_mode;
     VkCompositeAlphaFlagBitsKHR   composite_alpha;
@@ -47,8 +100,8 @@ class Surface_VK : public Surface
 
     struct ImageData
     {
-        VkFence     image_in_flight           = VK_NULL_HANDLE;
-        VkSemaphore image_acquire_semaphore   = VK_NULL_HANDLE;
+        TGpuHandle<FenceResource_VK>     image_in_flight;
+        TGpuHandle<SemaphoreResource_VK> image_acquire_semaphore;
     };
 
     std::shared_ptr<Texture>          surface_texture;

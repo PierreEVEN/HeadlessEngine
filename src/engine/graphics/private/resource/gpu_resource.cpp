@@ -1,10 +1,12 @@
 #include "gfx/resource/gpu_resource.h"
 
+#include "gfx/resource/device.h"
+
 namespace gfx
 {
 void IGpuHandle::destroy()
 {
-    TestDevice::delete_resource(resource);
+    Device::get().delete_resource(resource);
     resource = nullptr;
 }
 } // namespace gfx

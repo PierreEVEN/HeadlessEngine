@@ -160,7 +160,7 @@ void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::v
         for (const auto& image : get_framebuffer_images())
         {
             const auto texture = dynamic_cast<Texture_VK*>(image.get());
-            attachments.emplace_back(texture->get_view()[i]);
+            attachments.emplace_back(texture->get_view()[i]->view);
         }
 
         const VkFramebufferCreateInfo framebuffer_infos{
