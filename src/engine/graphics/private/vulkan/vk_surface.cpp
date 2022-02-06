@@ -20,33 +20,6 @@
 
 namespace gfx::vulkan
 {
-FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& create_infos)
-{
-    const VkFenceCreateInfo fence_infos{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-    vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
-}
-
-FenceResource_VK::~FenceResource_VK()
-{
-    vkDestroyFence(get_device(), fence, get_allocator());
-}
-
-SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
-{
-    const VkSemaphoreCreateInfo semaphore_infos{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
-}
-
-SemaphoreResource_VK::~SemaphoreResource_VK()
-{
-    vkDestroySemaphore(get_device(), semaphore, get_allocator());
-}
-
 SwapchainResource_VK::SwapchainResource_VK(const std::string& name, const CI_Swapchain& create_infos) : parameters(create_infos)
 {
 
@@ -92,7 +65,7 @@ SwapchainResource_VK::SwapchainResource_VK(const std::string& name, const CI_Swa
         }
     }
 
-    VkSwapchainCreateInfoKHR swapchain_create_info{
+    const VkSwapchainCreateInfoKHR swapchain_create_info{
         .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext                 = nullptr,
         .flags                 = 0,
@@ -222,7 +195,6 @@ Surface_VK::Surface_VK(application::window::Window* container) : window_containe
 
 Surface_VK::~Surface_VK()
 {
-    LOG_WARNING("destroy surface A");
 }
 
 void Surface_VK::render()

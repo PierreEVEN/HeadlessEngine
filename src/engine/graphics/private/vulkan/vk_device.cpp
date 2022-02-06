@@ -21,6 +21,33 @@
 
 namespace gfx::vulkan
 {
+FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& create_infos)
+{
+    const VkFenceCreateInfo fence_infos{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
+}
+
+FenceResource_VK::~FenceResource_VK()
+{
+    vkDestroyFence(get_device(), fence, get_allocator());
+}
+
+SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
+{
+    const VkSemaphoreCreateInfo semaphore_infos{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
+}
+
+SemaphoreResource_VK::~SemaphoreResource_VK()
+{
+    vkDestroySemaphore(get_device(), semaphore, get_allocator());
+}
+
 void Device_VK::init()
 {
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos = {};

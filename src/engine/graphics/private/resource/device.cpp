@@ -36,8 +36,12 @@ void Device::free_allocations()
 
     for (auto& queue : deletion_queues)
     {
-        for (const auto& resource : queue)
-            delete resource;
+        while (!queue.empty())
+        {
+            const auto* back = queue.back();
+            queue.pop_back();
+            delete back;
+        }
         queue.clear();
     }
 }

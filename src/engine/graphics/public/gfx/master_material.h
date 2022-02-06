@@ -18,22 +18,7 @@ class MasterMaterial
     static std::shared_ptr<MasterMaterial> create(const shader_builder::CompilationResult& compilation_results, MaterialOptions options = {});
     static std::shared_ptr<MasterMaterial> create(const std::filesystem::path& shader_path, MaterialOptions options = {});
 
-    virtual void rebuild_material(const shader_builder::CompilationResult& compilation_results)
-    {
-        shader_properties = compilation_results.properties;
-
-        enabled_render_passes.clear();
-        for (const auto& pass : compilation_results.passes)
-        {
-            if (RenderPassID::exists(pass.first))
-            {
-                const auto pass_id                = RenderPassID::get(pass.first);
-                vertex_reflection.init(pass_id)   = pass.second.vertex.reflection;
-                fragment_reflection.init(pass_id) = pass.second.fragment.reflection;
-                enabled_render_passes.emplace_back(pass_id);
-            }
-        }
-    }
+    virtual void rebuild_material(const shader_builder::CompilationResult& compilation_results);
 
     [[nodiscard]] const shader_builder::ShaderProperties& get_properties() const
     {

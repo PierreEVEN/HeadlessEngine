@@ -12,8 +12,9 @@ class IGpuHandle
     {
         friend class Device;
 
-        bool     should_destroy  = false;
-        uint32_t reference_count = 1;
+        bool        should_destroy  = false;
+        uint32_t    reference_count = 1;
+        std::string name;
 
       protected:
         IResourceReference()          = default;
@@ -105,6 +106,7 @@ template <typename Resource_T> class TGpuHandle final : public IGpuHandle
   public:
     template <typename... Args_T> TGpuHandle(const std::string& in_name, Args_T&&... args) : IGpuHandle(new TResourceReference(in_name, std::forward<Args_T>(args)...))
     {
+        resource->name = in_name;
     }
 
     TGpuHandle() = default;

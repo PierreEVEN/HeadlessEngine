@@ -10,32 +10,6 @@
 
 namespace gfx::vulkan
 {
-class FenceResource_VK final
-{
-  public:
-    struct CI_Fence
-    {
-    };
-
-    FenceResource_VK(const std::string& name, const CI_Fence& create_infos);
-    ~FenceResource_VK();
-
-  private:
-    VkFence fence = VK_NULL_HANDLE;
-};
-
-class SemaphoreResource_VK final
-{
-  public:
-    struct CI_Semaphore
-    {
-    };
-    SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos);
-    ~SemaphoreResource_VK();
-
-    VkSemaphore semaphore = VK_NULL_HANDLE;
-};
-
 class SurfaceResource_VK final
 {
   public:

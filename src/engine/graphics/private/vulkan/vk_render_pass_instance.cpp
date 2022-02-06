@@ -2,6 +2,7 @@
 #include "vk_render_pass_instance.h"
 
 #include "gfx/physical_device.h"
+#include "vk_device.h"
 #include "vk_physical_device.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_command_buffer.h"
@@ -12,32 +13,6 @@
 
 namespace gfx::vulkan
 {
-RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images)
-    : RenderPassInstance(width, height, base, images)
-{
-    resize(width, height, images);
-
-    const VkSemaphoreCreateInfo semaphore_infos{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-    };
-
-    for (auto& semaphore : render_finished_semaphore)
-        vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
-    for (auto& fence : render_finished_fence)
-        fence = VK_NULL_HANDLE;
-}
-
-RenderPassInstance_VK::~RenderPassInstance_VK()
-{
-    vkDeviceWaitIdle(get_device());
-    for (const auto& framebuffer : framebuffers)
-        vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
-
-    for (const auto& semaphore : render_finished_semaphore)
-        vkDestroySemaphore(get_device(), semaphore, get_allocator());
-}
 
 VkClearValue to_vk_clear_color(const ClearValue& in_clear)
 {
@@ -56,11 +31,49 @@ VkClearValue to_vk_clear_depth_stencil(const ClearValue& in_clear)
     return clear_value;
 }
 
+FramebufferResource_VK::FramebufferResource_VK(const std::string& name, const CI_Framebuffer& create_infos) : parameters(create_infos)
+{
+    std::vector<VkImageView> attachments(0);
+    for (const auto& image : create_infos.images)
+        attachments.emplace_back(image->image);
+
+    const VkFramebufferCreateInfo framebuffer_infos{
+        .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .renderPass      = create_infos.render_pass->render_pass,
+        .attachmentCount = static_cast<uint32_t>(attachments.size()),
+        .pAttachments    = attachments.data(),
+        .width           = create_infos.width,
+        .height          = create_infos.height,
+        .layers          = 1,
+    };
+
+    VK_CHECK(vkCreateFramebuffer(get_device(), &framebuffer_infos, get_allocator(), &framebuffer), "Failed to create framebuffers");
+    debug_set_object_name(name, framebuffer);
+}
+
+FramebufferResource_VK::~FramebufferResource_VK()
+{
+    vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
+}
+
+RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images) : RenderPassInstance(width, height, base, images)
+{
+    resize(width, height, images);
+
+    const VkSemaphoreCreateInfo semaphore_infos{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
+
+    for (auto& data : frame_data)
+    {
+        data.render_finished_semaphore = TGpuHandle<SemaphoreResource_VK>("sem test", SemaphoreResource_VK::CI_Semaphore{});
+    }
+}
+
 void RenderPassInstance_VK::begin_pass()
 {
-    if (*render_finished_fence)
-        VK_CHECK(vkWaitForFences(get_device(), 1, &*render_finished_fence, VK_TRUE, UINT64_MAX), "wait failed");
-
     // Begin get record
     get_pass_command_buffer()->start();
 
@@ -79,8 +92,8 @@ void RenderPassInstance_VK::begin_pass()
 
     const VkRenderPassBeginInfo begin_infos = {
         .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass  = base->get(),
-        .framebuffer = *framebuffers,
+        .renderPass  = base->get()->render_pass,
+        .framebuffer = frame_data->framebuffer->framebuffer,
         .renderArea =
             {
                 .offset = {0, 0},
@@ -123,7 +136,7 @@ void RenderPassInstance_VK::submit()
     // Submit get (wait children completion using children_semaphores)
     std::vector<VkSemaphore> children_semaphores;
     for (const auto& child : children)
-        children_semaphores.emplace_back(*dynamic_cast<RenderPassInstance_VK*>(child.get())->render_finished_semaphore);
+        children_semaphores.emplace_back(*dynamic_cast<RenderPassInstance_VK*>(child.get())->frame_data->render_finished_semaphore->semaphore);
     if (get_base()->is_present_pass())
         children_semaphores.emplace_back(swapchain_image_acquire_semaphore);
     std::vector<VkPipelineStageFlags> wait_stage(children_semaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
@@ -136,45 +149,25 @@ void RenderPassInstance_VK::submit()
         .commandBufferCount   = 1,
         .pCommandBuffers      = &cmd,
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &*render_finished_semaphore,
+        .pSignalSemaphores    = &frame_data->render_finished_semaphore->semaphore,
     };
-    *render_finished_fence = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
+    get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
 }
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
-    vkDeviceWaitIdle(get_device());
-    for (const auto& framebuffer : framebuffers)
-        vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
+    std::vector<TGpuHandle<ImageResource_VK>> images;
 
-    if (!surface_texture.empty())
-    {
-        framebuffers_images = surface_texture;
-    }
-    
-    framebuffer_width  = width;
-    framebuffer_height = height;
-    for (uint8_t i = 0; i < framebuffers.get_max_instance_count(); ++i)
-    {
-        std::vector<VkImageView> attachments(0);
-        for (const auto& image : get_framebuffer_images())
-        {
-            const auto texture = dynamic_cast<Texture_VK*>(image.get());
-            attachments.emplace_back(texture->get_view()[i]->view);
-        }
 
-        const VkFramebufferCreateInfo framebuffer_infos{
-            .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass      = dynamic_cast<RenderPass_VK*>(get_base())->get(),
-            .attachmentCount = static_cast<uint32_t>(attachments.size()),
-            .pAttachments    = attachments.data(),
-            .width           = framebuffer_width,
-            .height          = framebuffer_height,
-            .layers          = 1,
-        };
+    for (const auto& image : framebuffers_images)
+        images.emplace_back(static_cast<Texture_VK*>(image.get())->)
 
-        VK_CHECK(vkCreateFramebuffer(get_device(), &framebuffer_infos, get_allocator(), &framebuffers[i]), "Failed to create framebuffers");
-        debug_set_object_name(stringutils::format("render pass %s : framebuffers #%d", get_base()->get_config().pass_name.c_str(), i), framebuffers[i]);
-    }
+    for (auto& frame : frame_data)
+        frame.framebuffer = TGpuHandle<FramebufferResource_VK>("framebuffer", FramebufferResource_VK::CI_Framebuffer{
+                                                                                  .width       = width,
+                                                                                  .height      = height,
+                                                                                  .render_pass = render_pass,
+                                                                                  .images      = {},
+                                                                              });
 }
 } // namespace gfx::vulkan

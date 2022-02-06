@@ -11,7 +11,7 @@
 
 namespace gfx::vulkan
 {
-RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_pass) : RenderPass(frame_graph_config, in_present_pass)
+RenderPassResource_VK::RenderPassResource_VK(const std::string& name, const RenderPass::Config& render_pass_config, bool in_present_pass)
 {
     std::vector<VkAttachmentDescription> attachment_descriptions;
     std::vector<VkAttachmentReference>   color_attachment_references;
@@ -19,7 +19,7 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
     std::optional<VkAttachmentReference> color_attachment_resolve_reference;
 
     // add color color_attachments
-    for (const auto& col_attachment : get_config().color_attachments)
+    for (const auto& col_attachment : render_pass_config.color_attachments)
     {
         if (col_attachment.image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
@@ -34,7 +34,7 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
             .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout    = is_present_pass() ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .finalLayout    = in_present_pass ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
 
         color_attachment_references.emplace_back(VkAttachmentReference{
@@ -44,17 +44,17 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
     }
 
     // add depth attachment
-    if (get_config().depth_attachment)
+    if (render_pass_config.depth_attachment)
     {
-        if (get_config().depth_attachment->image_format == ETypeFormat::UNDEFINED)
+        if (render_pass_config.depth_attachment->image_format == ETypeFormat::UNDEFINED)
             LOG_FATAL("images buffer format is undefined");
 
         const uint32_t attachment_index = static_cast<uint32_t>(attachment_descriptions.size());
 
         attachment_descriptions.emplace_back(VkAttachmentDescription{
-            .format         = vk_texture_format_to_engine(get_config().depth_attachment->image_format),
+            .format         = vk_texture_format_to_engine(render_pass_config.depth_attachment->image_format),
             .samples        = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp         = get_config().depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .loadOp         = render_pass_config.depth_attachment->clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -110,12 +110,16 @@ RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_p
     };
 
     VK_CHECK(vkCreateRenderPass(get_device(), &render_pass_infos, get_allocator(), &render_pass), "Failed to create render pass");
-    debug_set_object_name("render pass " + get_config().pass_name, render_pass);
+    debug_set_object_name("render pass " + render_pass_config.pass_name, render_pass);
 }
 
-RenderPass_VK::~RenderPass_VK()
+RenderPassResource_VK::~RenderPassResource_VK()
 {
-    vkDeviceWaitIdle(get_device());
     vkDestroyRenderPass(get_device(), render_pass, get_allocator());
+}
+
+RenderPass_VK::RenderPass_VK(const Config& frame_graph_config, bool in_present_pass) : RenderPass(frame_graph_config, in_present_pass)
+{
+    render_pass = TGpuHandle<RenderPassResource_VK>(frame_graph_config.pass_name, frame_graph_config, in_present_pass);
 }
 } // namespace gfx::vulkan

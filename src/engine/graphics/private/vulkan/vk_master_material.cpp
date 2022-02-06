@@ -334,7 +334,7 @@ void MasterMaterial_VK::rebuild_material(const shader_builder::CompilationResult
             .pColorBlendState    = &color_blending,
             .pDynamicState       = &dynamic_states,
             .layout              = pass_data->layout,
-            .renderPass          = render_pass->get(),
+            .renderPass          = render_pass->get()->render_pass,
             .subpass             = 0,
             .basePipelineHandle  = VK_NULL_HANDLE,
             .basePipelineIndex   = -1,
