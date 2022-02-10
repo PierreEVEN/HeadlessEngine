@@ -2,7 +2,6 @@
 
 #include "vk_errors.h"
 #include "vk_render_pass.h"
-#include "vk_texture.h"
 #include "vk_types.h"
 #include "vulkan/vk_allocator.h"
 #include "vulkan/vk_device.h"
