@@ -48,13 +48,8 @@ PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(
 TGpuHandle<FenceResource_VK> PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
 {
     QueueInfo queue_info = get_queue_family(queue_family, 0);
-    if (!*queue_info.queue_submit_fence)
-        LOG_ERROR("fence is null");
-
-    if ((*queue_info.queue_submit_fence)->fence == VK_NULL_HANDLE)
-        LOG_WARNING("fence resource is null");
-
     (*queue_info.queue_submit_fence)->wait_fence();
+    VK_CHECK(vkResetFences(get_device(), 1, &(*queue_info.queue_submit_fence)->fence), "failed to reset fence");
     VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, (*queue_info.queue_submit_fence)->fence), "failed to submit queue");
     return *queue_info.queue_submit_fence;
 }

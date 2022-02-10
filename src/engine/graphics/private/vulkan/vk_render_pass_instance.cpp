@@ -161,6 +161,9 @@ void RenderPassInstance_VK::submit()
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
+    framebuffer_width = width;
+    framebuffer_height = height;
+
     if (!surface_texture.empty())
     {
         framebuffers_images.clear();

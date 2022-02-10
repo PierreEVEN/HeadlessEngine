@@ -8,12 +8,6 @@
 
 namespace gfx::vulkan
 {
-/*
-void    set_image_count(uint8_t image_count);
-void    set_frame(uint8_t new_image_index);
-uint8_t get_image_index();
-uint8_t get_image_count();
-*/
 
 template <typename Resource_T> class SwapchainResourceIterator
 {
@@ -46,35 +40,54 @@ template <typename Resource_T> class SwapchainResourceIterator
     Resource_T* element;
 };
 
-template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainResource_Base final
+template <typename Resource_T, typename GetMaxImageLambda_T> class TSwapchainResource_Base final
 {
   public:
-    static SwapchainResource_Base make_static()
+    static TSwapchainResource_Base make_static()
     {
-        return SwapchainResource_Base(true);
-    }
-    static SwapchainResource_Base make_dynamic()
-    {
-        return SwapchainResource_Base(false);
+        return TSwapchainResource_Base(true);
     }
 
-    SwapchainResource_Base() : SwapchainResource_Base(false)
+    static TSwapchainResource_Base make_dynamic()
+    {
+        return TSwapchainResource_Base(false);
+    }
+
+    TSwapchainResource_Base() : TSwapchainResource_Base(false)
     {
     }
-    ~SwapchainResource_Base()
+
+    ~TSwapchainResource_Base()
     {
         delete[] items;
         items = nullptr;
     }
 
-    SwapchainResource_Base(const SwapchainResource_Base& other)
+    TSwapchainResource_Base(const TSwapchainResource_Base& other)
     {
         copy_from(other);
     }
 
-    SwapchainResource_Base(SwapchainResource_Base&& other)
+    TSwapchainResource_Base(TSwapchainResource_Base&& other)
     {
+        move_from(std::move(other));
+    }
+
+    TSwapchainResource_Base& operator=(const TSwapchainResource_Base& other)
+    {
+        if (&other == this)
+            return *this;
+
         copy_from(other);
+        return *this;
+    }
+    TSwapchainResource_Base& operator=(TSwapchainResource_Base&& other)
+    {
+        if (&other == this)
+            return *this;
+
+        move_from(std::move(other));
+        return *this;
     }
 
     Resource_T& operator[](size_t index)
@@ -89,12 +102,6 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
         if (is_static())
             return items[0];
         return items[index];
-    }
-
-    SwapchainResource_Base& operator=(const SwapchainResource_Base& other)
-    {
-        copy_from(other);
-        return *this;
     }
 
     Resource_T& operator*()
@@ -147,26 +154,37 @@ template <typename Resource_T, typename GetMaxImageLambda_T> class SwapchainReso
         return resource_static;
     }
 
-    Resource_T* data() const
+    [[nodiscard]] Resource_T* data() const
     {
         return items;
     }
 
   private:
-    void copy_from(const SwapchainResource_Base& other)
+    void move_from(TSwapchainResource_Base&& other)
     {
-        resource_static = other.resource_static;
-        delete[] items;
-        items = new Resource_T[get_max_instance_count()];
-        memcpy(items, other.items, sizeof(Resource_T) * get_max_instance_count());
+        prepare_alloc(other);
+        for (uint8_t i = 0; i < get_max_instance_count(); ++i)
+            items[i] = std::move(other.items[i]);
     }
 
-    SwapchainResource_Base(bool make_resource_static) : resource_static(make_resource_static)
+    void copy_from(const TSwapchainResource_Base& other)
     {
-        items = new Resource_T[get_max_instance_count()];
+        prepare_alloc(other);
+        for (uint8_t i = 0; i < get_max_instance_count(); ++i)
+            items[i] = other.items[i];
+    }
+
+    void prepare_alloc(const TSwapchainResource_Base& other)
+    {
+        resource_static = other.resource_static;
+        if (items == nullptr)
+            items = new Resource_T[get_max_instance_count()];
+    }
+
+    TSwapchainResource_Base(bool make_resource_static) : resource_static(make_resource_static), items(new Resource_T[get_max_instance_count()])
+    {
         for (uint8_t i = 0; i < get_max_instance_count(); ++i)
             new (items + i) Resource_T();
-        std::memset(items, 0, sizeof(Resource_T) * get_max_instance_count());
     }
 
     bool        resource_static;
@@ -186,5 +204,5 @@ struct SwapchainResourceImageCountHelper
     }
 };
 
-template <typename Resource_T> using SwapchainImageResource = SwapchainResource_Base<Resource_T, SwapchainResourceImageCountHelper>;
+template <typename Resource_T> using SwapchainImageResource = TSwapchainResource_Base<Resource_T, SwapchainResourceImageCountHelper>;
 } // namespace gfx::vulkan

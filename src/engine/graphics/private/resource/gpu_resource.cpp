@@ -6,7 +6,8 @@ namespace gfx
 {
 void IGpuHandle::destroy()
 {
-    Device::get().delete_resource(resource);
-    resource = nullptr;
+    auto* to_delete = resource_ptr;
+    resource_ptr    = nullptr;
+    Device::get().delete_resource(to_delete);
 }
 } // namespace gfx

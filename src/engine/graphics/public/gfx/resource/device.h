@@ -26,7 +26,6 @@ class Device
         // free resources (don't use for loop because deletion queue size can be increased)
         for (size_t i = 0; i < deletion_queues[current_frame_id].size(); ++i)
         {
-            LOG_WARNING("frame %d : destroy %s", current_frame_id, deletion_queues[current_frame_id][i]->name.c_str());
             delete deletion_queues[current_frame_id][i];
         }
 

@@ -25,7 +25,7 @@ FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& crea
 {
     const VkFenceCreateInfo fence_infos{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+        .flags =( create_infos.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : static_cast<VkFenceCreateFlags>(0)),
     };
     vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
 }
@@ -38,7 +38,6 @@ FenceResource_VK::~FenceResource_VK()
 void FenceResource_VK::wait_fence() const
 {
     vkWaitForFences(get_device(), 1, &fence, VK_TRUE, UINT64_MAX);
-    vkResetFences(get_device(), 1, &fence);
 }
 
 SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
@@ -127,6 +126,9 @@ void Device_VK::init()
 
 Device_VK::~Device_VK()
 {
+    for (const auto& queue : get_physical_device<PhysicalDevice_VK>()->get_queues())
+        queue->queue_submit_fence = {};
+
     free_allocations();
 
     command_pool::destroy_pools();
@@ -142,7 +144,6 @@ Device_VK::~Device_VK()
     vkDestroyDevice(device, get_allocator());
     device = VK_NULL_HANDLE;
 }
-
 
 void Device_VK::wait_device()
 {

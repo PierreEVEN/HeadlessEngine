@@ -208,7 +208,6 @@ void Surface_VK::render()
     // Retrieve the next available images ID
     uint32_t       image_index;
     const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, image_acquire_semaphore->semaphore, VK_NULL_HANDLE, &image_index);
-    LOG_WARNING("begin image %d", image_index);
 
     if (auto& render_finished_fence = dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->frame_data->render_finished_fences)
         render_finished_fence->wait_fence();

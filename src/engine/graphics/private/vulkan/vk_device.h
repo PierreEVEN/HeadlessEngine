@@ -25,6 +25,7 @@ class FenceResource_VK final
   public:
     struct CI_Fence
     {
+        bool signaled = true;
     };
 
     FenceResource_VK(const std::string& name, const CI_Fence& create_infos);
