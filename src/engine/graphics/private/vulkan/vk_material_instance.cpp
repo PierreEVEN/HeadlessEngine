@@ -14,26 +14,40 @@
 
 namespace gfx::vulkan
 {
+DescriptorSetResource_VK::DescriptorSetResource_VK(const std::string& name, const CI_DescriptorSet& create_infos) : parameters(create_infos)
+{
+    VkDescriptorSetAllocateInfo descriptor_info{
+        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext              = nullptr,
+        .descriptorPool     = VK_NULL_HANDLE,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &create_infos.desc_set_layout->descriptor_set_layout,
+    };
+    create_infos.descriptor_pool.alloc_memory(descriptor_info);
+    VK_CHECK(vkAllocateDescriptorSets(get_device(), &descriptor_info, &descriptor_set), "failed to allocate descriptor sets");
+    is_dirty = true;
+}
+
+DescriptorSetResource_VK::~DescriptorSetResource_VK()
+{
+    //@TODO : free descriptor sets
+}
+
 MaterialInstance_VK::MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base) : MaterialInstance(base)
 {
+
     const auto* vk_base = dynamic_cast<MasterMaterial_VK*>(get_base().get());
 
     for (auto it = get_base()->get_vertex_reflections().begin(); it != get_base()->get_vertex_reflections().end(); ++it)
     {
-        auto& desc_sets = descriptor_sets.init(it.id());
-        for (uint8_t i = 0; i < desc_sets.get_max_instance_count(); ++i)
+        const auto& desc_set_layouts = vk_base->get_descriptor_set_layouts(it.id());
+        auto&       desc_sets        = descriptor_sets.init(it.id());
+        for (auto& desc_set : desc_sets)
         {
-            const auto&                 desc_set_layouts = vk_base->get_descriptor_set_layouts(it.id());
-            VkDescriptorSetAllocateInfo descriptor_info{
-                .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .pNext              = nullptr,
-                .descriptorPool     = VK_NULL_HANDLE,
-                .descriptorSetCount = 1,
-                .pSetLayouts        = &desc_set_layouts,
-            };
-            dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool().alloc_memory(descriptor_info);
-            VK_CHECK(vkAllocateDescriptorSets(get_device(), &descriptor_info, &desc_sets[i].descriptor_set), "failed to allocate descriptor sets");
-            desc_sets[i].is_dirty = true;
+            desc_set = TGpuHandle<DescriptorSetResource_VK>("desc set test", DescriptorSetResource_VK::CI_DescriptorSet{
+                                                                                 .desc_set_layout = desc_set_layouts,
+                                                                                 .descriptor_pool = dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool(),
+                                                                             });
         }
     }
 }
@@ -48,7 +62,7 @@ void MaterialInstance_VK::bind_buffer(const std::string& binding_name, const std
     write_buffers[binding_name] = in_buffer;
     for (auto& pass : descriptor_sets)
         for (auto& image : pass)
-            image.is_dirty = true;
+            image->is_dirty = true;
 }
 
 void MaterialInstance_VK::bind_texture(const std::string& binding_name, const std::shared_ptr<Texture>& in_texture)
@@ -58,7 +72,7 @@ void MaterialInstance_VK::bind_texture(const std::string& binding_name, const st
     write_textures[binding_name] = in_texture;
     for (auto& pass : descriptor_sets)
         for (auto& image : pass)
-            image.is_dirty = true;
+            image->is_dirty = true;
 }
 
 void MaterialInstance_VK::bind_sampler(const std::string& binding_name, const std::shared_ptr<Sampler>& in_sampler)
@@ -68,7 +82,7 @@ void MaterialInstance_VK::bind_sampler(const std::string& binding_name, const st
     write_samplers[binding_name] = in_sampler;
     for (auto& pass : descriptor_sets)
         for (auto& image : pass)
-            image.is_dirty = true;
+            image->is_dirty = true;
 }
 
 bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
@@ -77,8 +91,8 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
         return false;
 
     const auto            base            = dynamic_cast<MasterMaterial_VK*>(get_base().get());
-    const auto*           pipeline_layout = base->get_pipeline_layout(command_buffer->get_render_pass());
-    const auto*           pipeline        = base->get_pipeline(command_buffer->get_render_pass());
+    const auto&           pipeline_layout = base->get_pipeline_layout(command_buffer->get_render_pass());
+    const auto&           pipeline        = base->get_pipeline(command_buffer->get_render_pass());
     const VkCommandBuffer cmd             = **dynamic_cast<CommandBuffer_VK*>(command_buffer);
 
     if (!pipeline_layout)
@@ -98,9 +112,9 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
 
     auto& pass_data = descriptor_sets[command_buffer->get_render_pass()];
 
-    if (pass_data->is_dirty)
+    if ((*pass_data)->is_dirty)
     {
-        auto& desc_set = pass_data->write_descriptor_sets;
+        auto& desc_set = (*pass_data)->write_descriptor_sets;
         desc_set       = std::vector<VkWriteDescriptorSet>();
 
         for (const auto& buffer : write_buffers)
@@ -111,7 +125,7 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
             desc_set.emplace_back(VkWriteDescriptorSet{
                 .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext            = nullptr,
-                .dstSet           = pass_data->descriptor_set,
+                .dstSet           = (*pass_data)->descriptor_set,
                 .dstBinding       = binding->binding,
                 .dstArrayElement  = 0,
                 .descriptorCount  = 1,
@@ -130,7 +144,7 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
             desc_set.emplace_back(VkWriteDescriptorSet{
                 .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext            = nullptr,
-                .dstSet           = pass_data->descriptor_set,
+                .dstSet           = (*pass_data)->descriptor_set,
                 .dstBinding       = binding->binding,
                 .dstArrayElement  = 0,
                 .descriptorCount  = 1,
@@ -148,7 +162,7 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
             desc_set.emplace_back(VkWriteDescriptorSet{
                 .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext            = nullptr,
-                .dstSet           = pass_data->descriptor_set,
+                .dstSet           = (*pass_data)->descriptor_set,
                 .dstBinding       = binding->binding,
                 .dstArrayElement  = 0,
                 .descriptorCount  = 1,
@@ -158,12 +172,12 @@ bool MaterialInstance_VK::bind_material(CommandBuffer* command_buffer)
                 .pTexelBufferView = nullptr,
             });
         }
-        vkUpdateDescriptorSets(get_device(), static_cast<uint32_t>(pass_data->write_descriptor_sets.size()), pass_data->write_descriptor_sets.data(), 0, nullptr);
+        vkUpdateDescriptorSets(get_device(), static_cast<uint32_t>((*pass_data)->write_descriptor_sets.size()), (*pass_data)->write_descriptor_sets.data(), 0, nullptr);
 
-        pass_data->is_dirty = false;
+        (*pass_data)->is_dirty = false;
     }
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, &pass_data->descriptor_set, 0, nullptr);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout->pipeline_layout, 0, 1, &(*pass_data)->descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
     return true;
 }
 

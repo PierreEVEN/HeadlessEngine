@@ -39,8 +39,10 @@ int main()
             canvas->end_window();
 
             canvas->start_window("wintwo");
-            // canvas->label("this is a text yay");
+            canvas->label("this is a text yay");
             canvas->end_window();
+
+            canvas->demo_window();
 
             canvas->submit(command_buffer);
         });

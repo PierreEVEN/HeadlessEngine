@@ -7,6 +7,77 @@
 namespace gfx::vulkan
 {
 
+class DescriptorSetLayoutResource_VK final
+{
+  public:
+    struct CI_DescriptorSetLayout
+    {
+        const shader_builder::ReflectionResult& vertex_reflection_data;
+        const shader_builder::ReflectionResult& fragment_reflection_data;
+    };
+
+    DescriptorSetLayoutResource_VK(const std::string& name, const CI_DescriptorSetLayout& create_infos);
+    ~DescriptorSetLayoutResource_VK();
+
+    VkDescriptorSetLayout descriptor_set_layout;
+};
+
+class ShaderModuleResource_VK final
+{
+  public:
+    struct CI_ShaderModule
+    {
+        std::vector<uint32_t> spirv_code;
+    };
+
+    ShaderModuleResource_VK(const std::string& name, const CI_ShaderModule& create_infos);
+    ~ShaderModuleResource_VK();
+
+    VkShaderModule shader_module;
+};
+
+class PipelineLayoutResource_VK final
+{
+  public:
+    struct CI_PipelineLayout
+    {
+        const shader_builder::ReflectionResult&    vertex_reflection_data;
+        const shader_builder::ReflectionResult&    fragment_reflection_data;
+        TGpuHandle<DescriptorSetLayoutResource_VK> descriptor_set_layout;
+    };
+
+    PipelineLayoutResource_VK(const std::string& name, const CI_PipelineLayout& create_infos);
+    ~PipelineLayoutResource_VK();
+
+    VkPipelineLayout pipeline_layout;
+
+  private:
+    const CI_PipelineLayout parameters;
+};
+
+class PipelineResource_VK final
+{
+  public:
+    struct CI_Pipeline
+    {
+        TGpuHandle<ShaderModuleResource_VK>          vertex_stage;
+        TGpuHandle<ShaderModuleResource_VK>          fragment_stage;
+        TGpuHandle<PipelineLayoutResource_VK>        pipeline_layout;
+        const shader_builder::CompilationResult&     compilation_results;
+        RenderPassID                                 pass_id;
+        const MaterialOptions&                       material_options;
+        const std::vector<shader_builder::Property>& vertex_inputs;
+    };
+
+    PipelineResource_VK(const std::string& name, const CI_Pipeline& create_infos);
+    ~PipelineResource_VK();
+
+    VkPipeline pipeline;
+
+  private:
+    const CI_Pipeline parameters;
+};
+
 class MasterMaterial_VK final : public MasterMaterial
 {
   public:
@@ -17,30 +88,30 @@ class MasterMaterial_VK final : public MasterMaterial
 
     struct MaterialPassData
     {
-        VkDescriptorSetLayout descriptor_set_layout;
-        VkPipeline            pipeline        = VK_NULL_HANDLE;
-        VkPipelineLayout      layout          = VK_NULL_HANDLE;
-        VkShaderModule        vertex_module   = VK_NULL_HANDLE;
-        VkShaderModule        fragment_module = VK_NULL_HANDLE;
+        TGpuHandle<DescriptorSetLayoutResource_VK> descriptor_set_layout = {};
+        TGpuHandle<PipelineResource_VK>            pipeline              = {};
+        TGpuHandle<PipelineLayoutResource_VK>      pipeline_layout       = {};
+        TGpuHandle<ShaderModuleResource_VK>        vertex_module         = {};
+        TGpuHandle<ShaderModuleResource_VK>        fragment_module       = {};
     };
 
     void rebuild_material(const shader_builder::CompilationResult& compilation_results) override;
 
-    [[nodiscard]] const VkPipelineLayout* get_pipeline_layout(const RenderPassID& render_pass) const
+    [[nodiscard]] TGpuHandle<PipelineLayoutResource_VK> get_pipeline_layout(const RenderPassID& render_pass) const
     {
         if (!render_pass)
-            return nullptr;
-        return &per_pass_data[render_pass].layout;
+            return {};
+        return per_pass_data[render_pass].pipeline_layout;
     }
 
-    [[nodiscard]] const VkPipeline* get_pipeline(const RenderPassID& render_pass) const
+    [[nodiscard]] TGpuHandle<PipelineResource_VK> get_pipeline(const RenderPassID& render_pass) const
     {
         if (!render_pass)
-            return nullptr;
-        return &per_pass_data[render_pass].pipeline;
+            return {};
+        return per_pass_data[render_pass].pipeline;
     }
-    
-    [[nodiscard]] const VkDescriptorSetLayout& get_descriptor_set_layouts(const RenderPassID& render_pass) const
+
+    [[nodiscard]] const TGpuHandle<DescriptorSetLayoutResource_VK>& get_descriptor_set_layouts(const RenderPassID& render_pass) const
     {
         return per_pass_data[render_pass].descriptor_set_layout;
     }

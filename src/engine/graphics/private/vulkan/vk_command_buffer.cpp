@@ -1,14 +1,14 @@
 
 #include "vk_command_buffer.h"
 
+#include "gfx/Mesh.h"
 #include "gfx/buffer.h"
 #include "vulkan/vk_buffer.h"
-#include "vulkan/vk_helper.h"
-#include "vulkan/vk_master_material.h"
-#include "gfx/Mesh.h"
 #include "vulkan/vk_command_pool.h"
 #include "vulkan/vk_device.h"
 #include "vulkan/vk_errors.h"
+#include "vulkan/vk_helper.h"
+#include "vulkan/vk_master_material.h"
 #include "vulkan/vk_material_instance.h"
 
 namespace gfx::vulkan
@@ -36,12 +36,11 @@ CommandBuffer_VK::~CommandBuffer_VK()
         vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &buffer);
 }
 
-
 void CommandBuffer_VK::draw_procedural(MaterialInstance* in_material, uint32_t vertex_count, uint32_t first_vertex, uint32_t instance_count, uint32_t first_instance)
 {
     const auto& cmd = *command_buffer;
     if (in_material->bind_material(this))
-    vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
+        vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 void CommandBuffer_VK::draw_mesh(Mesh* in_buffer, MaterialInstance* in_material, uint32_t instance_count, uint32_t first_instance)
@@ -127,7 +126,7 @@ void CommandBuffer_VK::push_constant(bool is_vertex_buffer, const MaterialInstan
         }
     }
 
-    vkCmdPushConstants(*command_buffer, *material_base->get_pipeline_layout(*render_pass), is_vertex_buffer ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, 0, data_size, data);
+    vkCmdPushConstants(*command_buffer, material_base->get_pipeline_layout(*render_pass)->pipeline_layout, is_vertex_buffer ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, 0, data_size, data);
 }
 
 void CommandBuffer_VK::start()

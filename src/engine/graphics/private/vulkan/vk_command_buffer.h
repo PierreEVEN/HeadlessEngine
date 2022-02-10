@@ -41,6 +41,10 @@ class CommandBuffer_VK : public CommandBuffer
 class CommandBufferResource_VK final
 {
   public:
+    struct CI_CommandBuffer
+    {
+    };
+
     CommandBufferResource_VK(const std::string& name, const CI_CommandBuffer& create_infos);
     ~CommandBufferResource_VK();
 
