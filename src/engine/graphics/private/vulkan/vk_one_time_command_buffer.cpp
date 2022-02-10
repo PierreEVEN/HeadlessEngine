@@ -38,8 +38,7 @@ OneTimeCommandBuffer::~OneTimeCommandBuffer()
         .pCommandBuffers    = &command_buffer,
     };
 
-    const auto fence = get_physical_device<PhysicalDevice_VK>()->submit_queue(queue, submit_infos);
-    vkWaitForFences(get_device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    get_physical_device<PhysicalDevice_VK>()->submit_queue(queue, submit_infos)->wait_fence();
     vkFreeCommandBuffers(get_device(), command_pool::get(), 1, &command_buffer);
 }
 } // namespace gfx::vulkan

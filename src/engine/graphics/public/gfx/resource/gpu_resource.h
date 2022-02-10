@@ -118,21 +118,29 @@ template <typename Resource_T> class TGpuHandle final : public IGpuHandle
 
     Resource_T* operator->()
     {
+        if (!resource)
+            LOG_FATAL("trying to access null resource");
         return &dynamic_cast<TResourceReference*>(resource)->resource;
     }
 
     const Resource_T* operator->() const
     {
+        if (!resource)
+            LOG_FATAL("trying to access null resource");
         return &dynamic_cast<TResourceReference*>(resource)->resource;
     }
 
     Resource_T& operator*()
     {
+        if (!resource)
+            LOG_FATAL("trying to access null resource");
         return dynamic_cast<TResourceReference*>(resource)->resource;
     }
 
     const Resource_T& operator*() const
     {
+        if (!resource)
+            LOG_FATAL("trying to access null resource");
         return dynamic_cast<TResourceReference*>(resource)->resource;
     }
 };

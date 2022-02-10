@@ -203,13 +203,17 @@ void Surface_VK::render()
     if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
         return;
 
-    const VkSemaphore& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore->semaphore;
+    const auto& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
 
     // Retrieve the next available images ID
     uint32_t       image_index;
-    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, image_acquire_semaphore, VK_NULL_HANDLE, &image_index);
-    Device::get().begin_frame(static_cast<uint8_t>(image_index));
+    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, image_acquire_semaphore->semaphore, VK_NULL_HANDLE, &image_index);
+    LOG_WARNING("begin image %d", image_index);
 
+    if (auto& render_finished_fence = dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->frame_data->render_finished_fences)
+        render_finished_fence->wait_fence();
+
+    Device::get().begin_frame(static_cast<uint8_t>(image_index));
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreate_swapchain();
@@ -232,7 +236,7 @@ void Surface_VK::render()
     const VkPresentInfoKHR present_infos{
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores    = &*dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->render_finished_semaphore,
+        .pWaitSemaphores    = &dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->frame_data->render_finished_semaphore->semaphore,
         .swapchainCount     = 1,
         .pSwapchains        = &swapchain->swapchain,
         .pImageIndices      = &image_index,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gfx/physical_device.h"
+#include "vk_device.h"
 
 #include <vulkan/vulkan.h>
 
@@ -20,10 +21,10 @@ enum class EQueueFamilyType
 
 struct QueueInfo
 {
-    EQueueFamilyType                queue_family = EQueueFamilyType::UNKNOWN;
-    uint32_t                        queue_index  = 0;
-    VkQueue                         queues       = VK_NULL_HANDLE;
-    SwapchainImageResource<VkFence> queue_submit_fence;
+    EQueueFamilyType                                     queue_family = EQueueFamilyType::UNKNOWN;
+    uint32_t                                             queue_index  = 0;
+    VkQueue                                              queues       = VK_NULL_HANDLE;
+    SwapchainImageResource<TGpuHandle<FenceResource_VK>> queue_submit_fence;
 };
 
 class PhysicalDevice_VK : public PhysicalDevice
@@ -42,7 +43,7 @@ class PhysicalDevice_VK : public PhysicalDevice
 
     [[nodiscard]] QueueInfo get_queue_family(EQueueFamilyType queue_family, uint8_t queue_index = 0) const;
 
-    VkFence submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const;
+    TGpuHandle<FenceResource_VK> submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const;
 
     void update_queues();
 

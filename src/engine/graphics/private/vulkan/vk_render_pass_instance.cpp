@@ -34,8 +34,11 @@ VkClearValue to_vk_clear_depth_stencil(const ClearValue& in_clear)
 FramebufferResource_VK::FramebufferResource_VK(const std::string& name, const CI_Framebuffer& create_infos) : parameters(create_infos)
 {
     std::vector<VkImageView> attachments(0);
-    for (const auto& image : create_infos.images)
-        attachments.emplace_back(image->image);
+    for (const auto& view : create_infos.views)
+        attachments.emplace_back(view->view);
+
+    if (!create_infos.render_pass)
+        LOG_FATAL("render pass is null");
 
     const VkFramebufferCreateInfo framebuffer_infos{
         .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -58,6 +61,8 @@ FramebufferResource_VK::~FramebufferResource_VK()
 
 RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images) : RenderPassInstance(width, height, base, images)
 {
+    render_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(base))->get();
+
     resize(width, height, images);
 
     const VkSemaphoreCreateInfo semaphore_infos{
@@ -136,9 +141,9 @@ void RenderPassInstance_VK::submit()
     // Submit get (wait children completion using children_semaphores)
     std::vector<VkSemaphore> children_semaphores;
     for (const auto& child : children)
-        children_semaphores.emplace_back(*dynamic_cast<RenderPassInstance_VK*>(child.get())->frame_data->render_finished_semaphore->semaphore);
+        children_semaphores.emplace_back(dynamic_cast<RenderPassInstance_VK*>(child.get())->frame_data->render_finished_semaphore->semaphore);
     if (get_base()->is_present_pass())
-        children_semaphores.emplace_back(swapchain_image_acquire_semaphore);
+        children_semaphores.emplace_back(swapchain_image_acquire_semaphore->semaphore);
     std::vector<VkPipelineStageFlags> wait_stage(children_semaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     const VkSubmitInfo                submit_infos{
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -151,23 +156,29 @@ void RenderPassInstance_VK::submit()
         .signalSemaphoreCount = 1,
         .pSignalSemaphores    = &frame_data->render_finished_semaphore->semaphore,
     };
-    get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
+    frame_data->render_finished_fences = get_physical_device<PhysicalDevice_VK>()->submit_queue(EQueueFamilyType::GRAPHIC_QUEUE, submit_infos);
 }
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
-    std::vector<TGpuHandle<ImageResource_VK>> images;
+    if (!surface_texture.empty())
+    {
+        framebuffers_images.clear();
+        for (const auto& texture : surface_texture)
+            framebuffers_images.emplace_back(texture);
+    }
 
-
-    for (const auto& image : framebuffers_images)
-        images.emplace_back(static_cast<Texture_VK*>(image.get())->)
-
-    for (auto& frame : frame_data)
-        frame.framebuffer = TGpuHandle<FramebufferResource_VK>("framebuffer", FramebufferResource_VK::CI_Framebuffer{
-                                                                                  .width       = width,
-                                                                                  .height      = height,
-                                                                                  .render_pass = render_pass,
-                                                                                  .images      = {},
-                                                                              });
+    for (uint8_t i = 0; i < frame_data.get_max_instance_count(); ++i)
+    {
+        std::vector<TGpuHandle<ImageViewResource_VK>> views;
+        for (const auto& image : framebuffers_images)
+            views.emplace_back(dynamic_cast<Texture_VK*>(image.get())->get_views()[i]);
+        frame_data[i].framebuffer = TGpuHandle<FramebufferResource_VK>("framebuffer", FramebufferResource_VK::CI_Framebuffer{
+                                                                                          .width       = width,
+                                                                                          .height      = height,
+                                                                                          .render_pass = render_pass,
+                                                                                          .views       = views,
+                                                                                      });
+    }
 }
 } // namespace gfx::vulkan

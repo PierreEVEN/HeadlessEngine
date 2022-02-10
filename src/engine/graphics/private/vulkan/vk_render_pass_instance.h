@@ -14,10 +14,10 @@ class FramebufferResource_VK final
   public:
     struct CI_Framebuffer
     {
-        uint32_t                                  width;
-        uint32_t                                  height;
-        TGpuHandle<RenderPassResource_VK>         render_pass;
-        std::vector<TGpuHandle<ImageResource_VK>> images;
+        uint32_t                                      width;
+        uint32_t                                      height;
+        TGpuHandle<RenderPassResource_VK>             render_pass;
+        std::vector<TGpuHandle<ImageViewResource_VK>> views;
     };
 
     FramebufferResource_VK(const std::string& name, const CI_Framebuffer& create_infos);
@@ -48,6 +48,7 @@ class RenderPassInstance_VK final : public RenderPassInstance
     {
         TGpuHandle<FramebufferResource_VK> framebuffer;
         TGpuHandle<SemaphoreResource_VK>   render_finished_semaphore;
+        TGpuHandle<FenceResource_VK>       render_finished_fences;
     };
 
     SwapchainImageResource<FrameData> frame_data                        = {};

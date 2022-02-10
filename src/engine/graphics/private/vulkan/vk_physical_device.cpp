@@ -3,8 +3,8 @@
 #include "vk_errors.h"
 #include "vk_helper.h"
 #include "vulkan/vk_device.h"
-#include <types/magic_enum.h>
 #include <cpputils/logger.hpp>
+#include <types/magic_enum.h>
 
 namespace gfx::vulkan
 {
@@ -45,12 +45,17 @@ PhysicalDevice_VK::PhysicalDevice_VK(VkPhysicalDevice device) : physical_device(
     device_name    = device_properties.deviceName;
 }
 
-VkFence PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
+TGpuHandle<FenceResource_VK> PhysicalDevice_VK::submit_queue(EQueueFamilyType queue_family, const VkSubmitInfo& submit_infos) const
 {
-    const QueueInfo& queue_info = get_queue_family(queue_family, 0);
-    VK_CHECK(vkWaitForFences(get_device(), 1, &*queue_info.queue_submit_fence, VK_TRUE, UINT64_MAX), "failed to wait on fence");
-    vkResetFences(get_device(), 1, &*queue_info.queue_submit_fence);
-    VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, *queue_info.queue_submit_fence), "failed to submit queue");
+    QueueInfo queue_info = get_queue_family(queue_family, 0);
+    if (!*queue_info.queue_submit_fence)
+        LOG_ERROR("fence is null");
+
+    if ((*queue_info.queue_submit_fence)->fence == VK_NULL_HANDLE)
+        LOG_WARNING("fence resource is null");
+
+    (*queue_info.queue_submit_fence)->wait_fence();
+    VK_CHECK(vkQueueSubmit(queue_info.queues, 1, &submit_infos, (*queue_info.queue_submit_fence)->fence), "failed to submit queue");
     return *queue_info.queue_submit_fence;
 }
 
@@ -73,24 +78,21 @@ void PhysicalDevice_VK::update_queues()
         {
             if (queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphic_queues.emplace_back(QueueInfo{
-                    .queue_family       = EQueueFamilyType::GRAPHIC_QUEUE,
-                    .queue_index        = queue_index,
-                    .queues             = VK_NULL_HANDLE,
-                    .queue_submit_fence = {},
+                    .queue_family = EQueueFamilyType::GRAPHIC_QUEUE,
+                    .queue_index  = queue_index,
+                    .queues       = VK_NULL_HANDLE,
                 });
             if (queue.queueFlags & VK_QUEUE_COMPUTE_BIT)
                 compute_queues.emplace_back(QueueInfo{
-                    .queue_family       = EQueueFamilyType::COMPUTE_QUEUE,
-                    .queue_index        = queue_index,
-                    .queues             = VK_NULL_HANDLE,
-                    .queue_submit_fence = {},
+                    .queue_family = EQueueFamilyType::COMPUTE_QUEUE,
+                    .queue_index  = queue_index,
+                    .queues       = VK_NULL_HANDLE,
                 });
             if (queue.queueFlags & VK_QUEUE_TRANSFER_BIT)
                 transfer_queues.emplace_back(QueueInfo{
-                    .queue_family       = EQueueFamilyType::TRANSFER_QUEUE,
-                    .queue_index        = queue_index,
-                    .queues             = VK_NULL_HANDLE,
-                    .queue_submit_fence = {},
+                    .queue_family = EQueueFamilyType::TRANSFER_QUEUE,
+                    .queue_index  = queue_index,
+                    .queues       = VK_NULL_HANDLE,
                 });
         }
         queue_index++;

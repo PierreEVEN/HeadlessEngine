@@ -2,6 +2,7 @@
 
 #include "gfx/types.h"
 
+#include <cpputils/logger.hpp>
 #include <cstdint>
 #include <memory>
 #include <optional>

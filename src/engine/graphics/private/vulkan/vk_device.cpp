@@ -35,6 +35,12 @@ FenceResource_VK::~FenceResource_VK()
     vkDestroyFence(get_device(), fence, get_allocator());
 }
 
+void FenceResource_VK::wait_fence() const
+{
+    vkWaitForFences(get_device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    vkResetFences(get_device(), 1, &fence);
+}
+
 SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
 {
     const VkSemaphoreCreateInfo semaphore_infos{
@@ -97,26 +103,16 @@ void Device_VK::init()
     VK_CHECK(vkCreateDevice(GET_VK_PHYSICAL_DEVICE(), &create_infos, get_allocator(), &device), "failed to create device");
     debug_set_object_name("primary device", device);
 
-    std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
+    std::unordered_map<uint32_t, SwapchainImageResource<TGpuHandle<FenceResource_VK>>> queue_fence_map;
     for (const auto& queue : queues)
     {
         queue_fence_map[queue->queue_index] = {};
         vkGetDeviceQueue(device, queue->queue_index, 0, &queue->queues);
     }
 
-    VkFenceCreateInfo fence_infos{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
     for (auto& [index, fence] : queue_fence_map)
-    {
-        uint8_t i = 0;
         for (auto& item : fence)
-        {
-            VK_CHECK(vkCreateFence(get_device(), &fence_infos, get_allocator(), &item), "Failed to create fence");
-            debug_set_object_name(stringutils::format("fence queue submit : queue=%d #%d", index, i++), item);
-        }
-    }
+            item = TGpuHandle<FenceResource_VK>("test fence", FenceResource_VK::CI_Fence{});
 
     for (const auto& queue : queues)
         queue->queue_submit_fence = queue_fence_map[queue->queue_index];
@@ -136,14 +132,6 @@ Device_VK::~Device_VK()
     command_pool::destroy_pools();
 
     const auto queues = get_physical_device<PhysicalDevice_VK>()->get_queues();
-
-    std::unordered_map<uint32_t, SwapchainImageResource<VkFence>> queue_fence_map;
-    for (const auto& queue : queues)
-        queue_fence_map[queue->queue_index] = queue->queue_submit_fence;
-
-    for (auto& [index, fence] : queue_fence_map)
-        for (auto& item : fence)
-            vkDestroyFence(get_device(), item, get_allocator());
 
     VmaStats stats;
     vulkan_memory_allocator->CalculateStats(&stats);

@@ -29,9 +29,9 @@ class FenceResource_VK final
 
     FenceResource_VK(const std::string& name, const CI_Fence& create_infos);
     ~FenceResource_VK();
-
-  private:
     VkFence fence = VK_NULL_HANDLE;
+
+    void wait_fence() const;
 };
 
 class SemaphoreResource_VK final

@@ -20,12 +20,17 @@ class Device
 
     void begin_frame(uint8_t frame_index)
     {
-        // free resources
-        for (const auto& resource : deletion_queues[current_frame_id])
-            delete resource;
-        deletion_queues[current_frame_id].clear();
-        // init new frame
+        // update current frame
         current_frame_id = frame_index;
+
+        // free resources (don't use for loop because deletion queue size can be increased)
+        for (size_t i = 0; i < deletion_queues[current_frame_id].size(); ++i)
+        {
+            LOG_WARNING("frame %d : destroy %s", current_frame_id, deletion_queues[current_frame_id][i]->name.c_str());
+            delete deletion_queues[current_frame_id][i];
+        }
+
+        deletion_queues[current_frame_id].clear();
     }
 
     virtual void wait_device() = 0;

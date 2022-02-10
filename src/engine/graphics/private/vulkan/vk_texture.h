@@ -64,17 +64,17 @@ class Texture_VK final : public Texture
 
     void set_pixels(const std::vector<uint8_t>& data) override;
 
-    [[nodiscard]] const SwapchainImageResource<TGpuHandle<ImageViewResource_VK>>& get_view() const
+    [[nodiscard]] const SwapchainImageResource<TGpuHandle<ImageViewResource_VK>>& get_views() const
     {
         return views;
     }
 
-    [[nodiscard]] const TGpuHandle<ImageResource_VK>& get_current_image() const
+    [[nodiscard]] const SwapchainImageResource<TGpuHandle<ImageResource_VK>>& get_images() const
     {
-        return *images;
+        return images;
     }
 
-    const VkDescriptorImageInfo& get_descriptor_image_infos()const
+    [[nodiscard]] const VkDescriptorImageInfo& get_descriptor_image_infos()const
     {
         return (*views)->descriptor_infos;
     }

@@ -1,4 +1,4 @@
-#pragma
+#pragma once
 
 #include "gfx/render_pass.h"
 #include "gfx/resource/gpu_resource.h"
