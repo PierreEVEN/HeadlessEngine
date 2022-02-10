@@ -110,7 +110,7 @@ RenderPassResource_VK::RenderPassResource_VK(const std::string& name, const Rend
     };
 
     VK_CHECK(vkCreateRenderPass(get_device(), &render_pass_infos, get_allocator(), &render_pass), "Failed to create render pass");
-    debug_set_object_name("render pass " + render_pass_config.pass_name, render_pass);
+    debug_set_object_name(name, render_pass);
 }
 
 RenderPassResource_VK::~RenderPassResource_VK()

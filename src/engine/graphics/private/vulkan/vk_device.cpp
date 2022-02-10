@@ -28,6 +28,7 @@ FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& crea
         .flags =( create_infos.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : static_cast<VkFenceCreateFlags>(0)),
     };
     vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
+    debug_set_object_name(name, fence);
 }
 
 FenceResource_VK::~FenceResource_VK()
@@ -40,12 +41,13 @@ void FenceResource_VK::wait_fence() const
     vkWaitForFences(get_device(), 1, &fence, VK_TRUE, UINT64_MAX);
 }
 
-SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, const CI_Semaphore& create_infos)
+SemaphoreResource_VK::SemaphoreResource_VK(const std::string& name, [[maybe_unused]] const CI_Semaphore& create_infos)
 {
     const VkSemaphoreCreateInfo semaphore_infos{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     vkCreateSemaphore(get_device(), &semaphore_infos, get_allocator(), &semaphore);
+    debug_set_object_name(name, semaphore);
 }
 
 SemaphoreResource_VK::~SemaphoreResource_VK()

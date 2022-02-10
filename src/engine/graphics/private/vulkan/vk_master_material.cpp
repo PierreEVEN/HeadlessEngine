@@ -102,6 +102,7 @@ DescriptorSetLayoutResource_VK::DescriptorSetLayoutResource_VK(const std::string
         .pBindings    = bindings.data(),
     };
     VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &descriptor_set_layout), "Failed to create descriptor set layout");
+    debug_set_object_name(name, descriptor_set_layout);
 }
 
 DescriptorSetLayoutResource_VK::~DescriptorSetLayoutResource_VK()
@@ -258,6 +259,7 @@ PipelineResource_VK::PipelineResource_VK(const std::string& name, const CI_Pipel
     };
 
     VK_CHECK(vkCreateGraphicsPipelines(get_device(), VK_NULL_HANDLE, 1, &pipelineInfo, get_allocator(), &pipeline), "Failed to create material graphic pipeline");
+    debug_set_object_name(name, pipeline);
 }
 
 PipelineResource_VK::~PipelineResource_VK()
@@ -293,6 +295,7 @@ PipelineLayoutResource_VK::PipelineLayoutResource_VK(const std::string& name, co
         .pPushConstantRanges    = push_constants.data(),
     };
     VK_CHECK(vkCreatePipelineLayout(get_device(), &pipeline_layout_infos, nullptr, &pipeline_layout), "Failed to create pipeline layout");
+    debug_set_object_name(name, pipeline_layout);
 }
 
 PipelineLayoutResource_VK::~PipelineLayoutResource_VK()

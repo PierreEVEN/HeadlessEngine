@@ -14,7 +14,7 @@ namespace gfx::vulkan
 class QueueResource_VK final
 {
   public:
-    QueueResource_VK(const std::string& name) {}
+    QueueResource_VK([[maybe_unused]] const std::string& name) {}
     ~QueueResource_VK() = default;
 
     VkQueue queue = VK_NULL_HANDLE;

@@ -11,6 +11,7 @@
 #include "vk_render_pass.h"
 #include "vk_sampler.h"
 #include "vk_texture.h"
+#include <vulkan/vk_helper.h>
 
 namespace gfx::vulkan
 {
@@ -25,6 +26,7 @@ DescriptorSetResource_VK::DescriptorSetResource_VK(const std::string& name, cons
     };
     create_infos.descriptor_pool.alloc_memory(descriptor_info);
     VK_CHECK(vkAllocateDescriptorSets(get_device(), &descriptor_info, &descriptor_set), "failed to allocate descriptor sets");
+    debug_set_object_name(name, descriptor_set);
     is_dirty = true;
 }
 
