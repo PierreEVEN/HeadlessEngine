@@ -9,6 +9,12 @@ namespace gfx
 class Device
 {
   public:
+    struct CI_Device
+    {
+        bool     bindless_descriptors = true;
+        uint32_t swapchain_images     = 3;
+    };
+
     // SINGLETON
     static Device&                                               get();
     static void                                                  destroy_device();
@@ -36,7 +42,7 @@ class Device
 
     [[nodiscard]] uint8_t get_frame_count() const
     {
-        return frame_count;
+        return parameters.swapchain_images;
     }
 
     [[nodiscard]] uint8_t get_current_frame() const
@@ -45,12 +51,13 @@ class Device
     }
 
   protected:
-    Device(uint8_t image_count);
+    Device(const CI_Device& image_count);
     virtual ~Device();
 
     virtual void init() = 0;
     void         free_allocations();
 
+    const CI_Device parameters;
   private:
     friend class IGpuHandle;
     friend void destroy_device();
@@ -63,6 +70,6 @@ class Device
     std::vector<std::vector<IGpuHandle::IResourceReference*>> deletion_queues;
 
     uint8_t current_frame_id;
-    uint8_t frame_count;
+
 };
 } // namespace gfx

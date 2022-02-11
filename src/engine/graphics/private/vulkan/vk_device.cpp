@@ -6,7 +6,6 @@
 #include "vulkan/vk_device.h"
 
 #include "types/magic_enum.h"
-#include "vk_buffer.h"
 #include "vk_command_buffer.h"
 #include "vk_command_pool.h"
 #include "vk_helper.h"
@@ -25,7 +24,7 @@ FenceResource_VK::FenceResource_VK(const std::string& name, const CI_Fence& crea
 {
     const VkFenceCreateInfo fence_infos{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags =( create_infos.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : static_cast<VkFenceCreateFlags>(0)),
+        .flags = (create_infos.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : static_cast<VkFenceCreateFlags>(0)),
     };
     vkCreateFence(get_device(), &fence_infos, get_allocator(), &fence);
     debug_set_object_name(name, fence);
@@ -77,29 +76,63 @@ void Device_VK::init()
         queue_create_infos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures device_features
-    {
-#if ENABLE_VALIDATION_LAYER
-        .robustBufferAccess = VK_TRUE,
-#endif
-        .geometryShader       = VK_TRUE,
-        .sampleRateShading    = VK_TRUE, // Sample Shading
-            .fillModeNonSolid = VK_TRUE, // Wireframe
-            .wideLines = VK_TRUE, .samplerAnisotropy = VK_TRUE,
+    std::vector extensions = config::device_extensions;
+
+    // Ensure bindless is supported
+    VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+        .pNext = nullptr,
     };
+    VkPhysicalDeviceFeatures2 device_features2{
+        .sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext    = &indexing_features,
+        .features = NULL,
+    };
+    vkGetPhysicalDeviceFeatures2(GET_VK_PHYSICAL_DEVICE(), &device_features2);
+    const bool bindless_supported = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
+
+    VkPhysicalDeviceFeatures2 physical_features2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = nullptr,
+        .features =
+            VkPhysicalDeviceFeatures{
+#if ENABLE_VALIDATION_LAYER
+                .robustBufferAccess = VK_TRUE,
+#endif
+                .geometryShader    = VK_TRUE,
+                .sampleRateShading = VK_TRUE, // Sample Shading
+                .fillModeNonSolid  = VK_TRUE, // Wireframe
+                .wideLines         = VK_TRUE,
+                .samplerAnisotropy = VK_TRUE,
+            },
+    };
+    vkGetPhysicalDeviceFeatures2(GET_VK_PHYSICAL_DEVICE(), &physical_features2);
 
     VkDeviceCreateInfo create_infos = {
         .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext                   = nullptr,
+        .pNext                   = &physical_features2,
         .flags                   = NULL,
         .queueCreateInfoCount    = static_cast<uint32_t>(queue_create_infos.size()),
         .pQueueCreateInfos       = queue_create_infos.data(),
         .enabledLayerCount       = 0,
         .ppEnabledLayerNames     = nullptr,
-        .enabledExtensionCount   = static_cast<uint32_t>(config::device_extensions.size()),
-        .ppEnabledExtensionNames = config::device_extensions.begin(),
-        .pEnabledFeatures        = &device_features,
+        .enabledExtensionCount   = static_cast<uint32_t>(extensions.size()),
+        .ppEnabledExtensionNames = extensions.data(),
+        .pEnabledFeatures        = nullptr,
     };
+    if (parameters.bindless_descriptors)
+    {
+        if (bindless_supported)
+        {
+            // This should be already set to VK_TRUE, as we queried before.
+            indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
+            indexing_features.runtimeDescriptorArray          = VK_TRUE;
+
+            physical_features2.pNext = &indexing_features;
+        }
+        else
+            LOG_ERROR("bindless descriptor are not supported");
+    }
 
     VK_CHECK(vkCreateDevice(GET_VK_PHYSICAL_DEVICE(), &create_infos, get_allocator(), &device), "failed to create device");
     debug_set_object_name("primary device", device);
@@ -152,5 +185,4 @@ void Device_VK::wait_device()
     if (device != VK_NULL_HANDLE)
         vkDeviceWaitIdle(device);
 }
-
 } // namespace gfx::vulkan

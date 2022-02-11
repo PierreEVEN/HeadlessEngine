@@ -21,13 +21,13 @@ void Device::destroy_device()
 }
 
 
-Device::Device(uint8_t image_count) : current_frame_id(0), frame_count(image_count)
+Device::Device(const CI_Device& create_infos) : parameters(create_infos), current_frame_id(0)
 {
     if (device_instance)
         LOG_FATAL("device have already been created");
     device_instance = this;
 
-    deletion_queues.resize(frame_count, {});
+    deletion_queues.resize(parameters.swapchain_images, {});
 }
 
 void Device::free_allocations()

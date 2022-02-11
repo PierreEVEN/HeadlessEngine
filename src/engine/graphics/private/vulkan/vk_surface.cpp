@@ -22,7 +22,6 @@ namespace gfx::vulkan
 {
 SwapchainResource_VK::SwapchainResource_VK(const std::string& name, const CI_Swapchain& create_infos) : parameters(create_infos)
 {
-
     /**
      * Get device capabilities
      */
@@ -93,6 +92,7 @@ SwapchainResource_VK::SwapchainResource_VK(const std::string& name, const CI_Swa
         debug_set_object_name("swapchain images", image);
 
     debug_set_object_name(name, swapchain);
+    parameters.previous_swapchain = {};
 }
 
 SwapchainResource_VK::~SwapchainResource_VK()

@@ -70,7 +70,7 @@ template <typename Object_T> void debug_set_object_name([[maybe_unused]] const s
     else if (typeid(VkSwapchainKHR) == typeid(Object_T))
         object_type = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT;
     else
-        LOG_FATAL("unhandled debug object type");
+        LOG_FATAL("unhandled debug object type : %s", typeid(Object_T).name());
 
     const auto                     pfn_set_object_name = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetDeviceProcAddr(get_device(), "vkDebugMarkerSetObjectNameEXT"));
     VkDebugMarkerObjectNameInfoEXT object_name_info    = {

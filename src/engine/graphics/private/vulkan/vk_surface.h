@@ -50,7 +50,8 @@ class SwapchainResource_VK final
     VkPresentModeKHR              present_mode;
     VkCompositeAlphaFlagBitsKHR   composite_alpha;
     VkSurfaceTransformFlagBitsKHR transform_flags;
-    const CI_Swapchain            parameters;
+private:
+    CI_Swapchain            parameters;
 
   private:
     SwapchainImageResource<VkImage> swapchain_images;

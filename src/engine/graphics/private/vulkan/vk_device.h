@@ -50,8 +50,10 @@ class SemaphoreResource_VK final
 class Device_VK final : public Device
 {
   public:
+
+
     void init() override;
-    Device_VK(uint8_t image_count) : Device(image_count)
+    Device_VK(const CI_Device& create_infos) : Device(create_infos)
     {
     }
     ~Device_VK() override;
