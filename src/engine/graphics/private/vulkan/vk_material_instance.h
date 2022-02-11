@@ -8,23 +8,6 @@
 
 namespace gfx::vulkan
 {
-class DescriptorSetResource_VK final
-{
-public:
-    struct CI_DescriptorSet
-    {
-        TGpuHandle<DescriptorSetLayoutResource_VK> desc_set_layout;
-        DescriptorPool_VK&                         descriptor_pool;
-    };
-    DescriptorSetResource_VK(const std::string& name, const CI_DescriptorSet& create_infos);
-    ~DescriptorSetResource_VK();
-    bool                              is_dirty;
-    std::vector<VkWriteDescriptorSet> write_descriptor_sets;
-    VkDescriptorSet                   descriptor_set;
-private:
-    const CI_DescriptorSet parameters;
-};
-
 class MaterialInstance_VK : public MaterialInstance
 {
   public:

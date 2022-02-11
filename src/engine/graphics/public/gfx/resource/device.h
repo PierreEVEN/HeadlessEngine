@@ -11,8 +11,8 @@ class Device
   public:
     struct CI_Device
     {
-        bool     bindless_descriptors = true;
-        uint32_t swapchain_images     = 3;
+        bool    bindless_descriptors = true;
+        uint8_t swapchain_images     = 3;
     };
 
     // SINGLETON
@@ -58,6 +58,7 @@ class Device
     void         free_allocations();
 
     const CI_Device parameters;
+
   private:
     friend class IGpuHandle;
     friend void destroy_device();
@@ -70,6 +71,5 @@ class Device
     std::vector<std::vector<IGpuHandle::IResourceReference*>> deletion_queues;
 
     uint8_t current_frame_id;
-
 };
 } // namespace gfx

@@ -1,4 +1,5 @@
 #pragma once
+#include "vk_descriptor_pool.h"
 #include "gfx/master_material.h"
 
 #include "vk_unit.h"
@@ -6,21 +7,6 @@
 
 namespace gfx::vulkan
 {
-
-class DescriptorSetLayoutResource_VK final
-{
-  public:
-    struct CI_DescriptorSetLayout
-    {
-        const shader_builder::ReflectionResult& vertex_reflection_data;
-        const shader_builder::ReflectionResult& fragment_reflection_data;
-    };
-
-    DescriptorSetLayoutResource_VK(const std::string& name, const CI_DescriptorSetLayout& create_infos);
-    ~DescriptorSetLayoutResource_VK();
-
-    VkDescriptorSetLayout descriptor_set_layout;
-};
 
 class ShaderModuleResource_VK final
 {

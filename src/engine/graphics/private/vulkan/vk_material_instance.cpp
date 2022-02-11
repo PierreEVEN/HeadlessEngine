@@ -15,25 +15,6 @@
 
 namespace gfx::vulkan
 {
-DescriptorSetResource_VK::DescriptorSetResource_VK(const std::string& name, const CI_DescriptorSet& create_infos) : parameters(create_infos)
-{
-    VkDescriptorSetAllocateInfo descriptor_info{
-        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext              = nullptr,
-        .descriptorPool     = VK_NULL_HANDLE,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &create_infos.desc_set_layout->descriptor_set_layout,
-    };
-    create_infos.descriptor_pool.alloc_memory(descriptor_info);
-    VK_CHECK(vkAllocateDescriptorSets(get_device(), &descriptor_info, &descriptor_set), "failed to allocate descriptor sets");
-    is_dirty = true;
-}
-
-DescriptorSetResource_VK::~DescriptorSetResource_VK()
-{
-    //@TODO : free descriptor sets
-}
-
 MaterialInstance_VK::MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& base) : MaterialInstance(base)
 {
 
@@ -41,14 +22,10 @@ MaterialInstance_VK::MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& 
 
     for (auto it = get_base()->get_vertex_reflections().begin(); it != get_base()->get_vertex_reflections().end(); ++it)
     {
-        const auto& desc_set_layouts = vk_base->get_descriptor_set_layouts(it.id());
         auto&       desc_sets        = descriptor_sets.init(it.id());
         for (auto& desc_set : desc_sets)
         {
-            desc_set = TGpuHandle<DescriptorSetResource_VK>("desc set test", DescriptorSetResource_VK::CI_DescriptorSet{
-                                                                                 .desc_set_layout = desc_set_layouts,
-                                                                                 .descriptor_pool = dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool(),
-                                                                             });
+            desc_set = dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool().create_descriptor_set(vk_base->get_descriptor_set_layouts(it.id()));
         }
     }
 }

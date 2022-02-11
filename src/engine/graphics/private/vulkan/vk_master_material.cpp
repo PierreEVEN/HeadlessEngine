@@ -69,47 +69,6 @@ static VkCullModeFlags vk_cull_mode(shader_builder::ECulling culling)
     }
 }
 
-DescriptorSetLayoutResource_VK::DescriptorSetLayoutResource_VK(const std::string& name, const CI_DescriptorSetLayout& create_infos)
-{
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-    for (const auto& binding : create_infos.vertex_reflection_data.bindings)
-    {
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding            = binding.binding,
-            .descriptorType     = MasterMaterial_VK::vk_descriptor_type(binding.descriptor_type),
-            .descriptorCount    = 1,
-            .stageFlags         = VK_SHADER_STAGE_VERTEX_BIT,
-            .pImmutableSamplers = nullptr,
-        });
-    }
-
-    for (const auto& binding : create_infos.fragment_reflection_data.bindings)
-    {
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding            = binding.binding,
-            .descriptorType     = MasterMaterial_VK::vk_descriptor_type(binding.descriptor_type),
-            .descriptorCount    = 1,
-            .stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = nullptr,
-        });
-    }
-
-    VkDescriptorSetLayoutCreateInfo layout_infos{
-        .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext        = nullptr,
-        .flags        = 0,
-        .bindingCount = static_cast<uint32_t>(bindings.size()),
-        .pBindings    = bindings.data(),
-    };
-    VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &descriptor_set_layout), "Failed to create descriptor set layout");
-    debug_set_object_name(name, descriptor_set_layout);
-}
-
-DescriptorSetLayoutResource_VK::~DescriptorSetLayoutResource_VK()
-{
-    vkDestroyDescriptorSetLayout(get_device(), descriptor_set_layout, get_allocator());
-}
-
 PipelineResource_VK::PipelineResource_VK(const std::string& name, const CI_Pipeline& create_infos) : parameters(create_infos)
 {
     const RenderPass_VK* render_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(create_infos.pass_id));

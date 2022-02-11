@@ -1,6 +1,9 @@
 #pragma once
 #pragma once
 
+#include "gfx/resource/gpu_resource.h"
+#include "shader_builder/shader_types.h"
+
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -15,41 +18,68 @@
 
 namespace gfx::vulkan
 {
-
-class DescriptorPoolItem final
+class DescriptorSetLayoutResource_VK final
 {
-    friend class DescriptorPool_VK;
-  private:
+  public:
+    struct CI_DescriptorSetLayout
+    {
+        const shader_builder::ReflectionResult& vertex_reflection_data;
+        const shader_builder::ReflectionResult& fragment_reflection_data;
+    };
 
-    static void clear_pools();
+    DescriptorSetLayoutResource_VK(const std::string& name, const CI_DescriptorSetLayout& create_infos);
+    ~DescriptorSetLayoutResource_VK();
 
-    DescriptorPoolItem(VkDescriptorSetAllocateInfo& allocInfos);
-    ~DescriptorPoolItem();
+    VkDescriptorSetLayout descriptor_set_layout;
+};
+
+class DescriptorPoolResource_VK final
+{
+  public:
+    struct CI_DescriptorPool
+    {
+        bool bindless_pool = false;
+    };
+
+    DescriptorPoolResource_VK(const std::string& name, const CI_DescriptorPool& create_infos);
+    ~DescriptorPoolResource_VK();
 
     explicit operator bool() const;
 
-    [[nodiscard]] bool has_space_for(const uint32_t& required_space) const
-    {
-        return space_left >= required_space;
-    }
+    VkDescriptorSet allocate(const TGpuHandle<DescriptorSetLayoutResource_VK>& layout);
+    void            free(VkDescriptorSet descriptor);
 
-    VkDescriptorPool bind_alloc_infos(VkDescriptorSetAllocateInfo& allocInfos);
-
-    VkDescriptorPool pool       = VK_NULL_HANDLE;
-    uint32_t         space_left = 0;
+  private:
+    VkDescriptorPool pool;
+    uint32_t         space_left;
     std::thread::id  pool_thread_id;
+};
+
+class DescriptorSetResource_VK final
+{
+  public:
+    struct CI_DescriptorSet
+    {
+        TGpuHandle<DescriptorSetLayoutResource_VK> desc_set_layout;
+        TGpuHandle<DescriptorPoolResource_VK>      descriptor_pool;
+    };
+    DescriptorSetResource_VK(const std::string&, const CI_DescriptorSet& create_infos);
+    ~DescriptorSetResource_VK();
+    bool                              is_dirty;
+    std::vector<VkWriteDescriptorSet> write_descriptor_sets;
+    VkDescriptorSet                   descriptor_set;
+
+  private:
+    CI_DescriptorSet parameters;
 };
 
 class DescriptorPool_VK final
 {
   public:
-    DescriptorPool_VK();
-    ~DescriptorPool_VK();
-
-    VkDescriptorPool alloc_memory(VkDescriptorSetAllocateInfo& alloc_infos);
+    TGpuHandle<DescriptorSetResource_VK> create_descriptor_set(TGpuHandle<DescriptorSetLayoutResource_VK> desc_set_layout);
 
   private:
-    std::vector<DescriptorPoolItem*> context_pools;
-    std::mutex                       find_pool_lock;
+    std::vector<TGpuHandle<DescriptorPoolResource_VK>> context_pools;
+    std::mutex                                         find_pool_lock;
 };
 } // namespace gfx::vulkan
