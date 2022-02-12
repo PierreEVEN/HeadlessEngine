@@ -25,7 +25,7 @@ MaterialInstance_VK::MaterialInstance_VK(const std::shared_ptr<MasterMaterial>& 
         auto&       desc_sets        = descriptor_sets.init(it.id());
         for (auto& desc_set : desc_sets)
         {
-            desc_set = dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool().create_descriptor_set(vk_base->get_descriptor_set_layouts(it.id()));
+            desc_set = dynamic_cast<RenderPass_VK*>(RenderPass::find(it.id()))->get_descriptor_pool_manager().new_descriptor_set(vk_base->get_descriptor_set_layouts(it.id()));
         }
     }
 }

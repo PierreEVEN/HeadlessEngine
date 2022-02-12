@@ -31,38 +31,11 @@ VkClearValue to_vk_clear_depth_stencil(const ClearValue& in_clear)
     return clear_value;
 }
 
-FramebufferResource_VK::FramebufferResource_VK(const std::string& name, const CI_Framebuffer& create_infos) : parameters(create_infos)
-{
-    std::vector<VkImageView> attachments(0);
-    for (const auto& view : create_infos.views)
-        attachments.emplace_back(view->view);
-
-    if (!create_infos.render_pass)
-        LOG_FATAL("render pass is null");
-
-    const VkFramebufferCreateInfo framebuffer_infos{
-        .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .renderPass      = create_infos.render_pass->render_pass,
-        .attachmentCount = static_cast<uint32_t>(attachments.size()),
-        .pAttachments    = attachments.data(),
-        .width           = create_infos.width,
-        .height          = create_infos.height,
-        .layers          = 1,
-    };
-
-    VK_CHECK(vkCreateFramebuffer(get_device(), &framebuffer_infos, get_allocator(), &framebuffer), "Failed to create framebuffers");
-    debug_set_object_name(name, framebuffer);
-}
-
-FramebufferResource_VK::~FramebufferResource_VK()
-{
-    vkDestroyFramebuffer(get_device(), framebuffer, get_allocator());
-}
-
 RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, const RenderPassID& base, const std::vector<std::shared_ptr<Texture>>& images) : RenderPassInstance(width, height, base, images)
 {
-    render_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(base))->get();
-
+    const auto* owning_pass = dynamic_cast<RenderPass_VK*>(RenderPass::find(base));
+    render_pass             = owning_pass->get();
+    pass_name               = owning_pass->get_config().pass_name;
     resize(width, height, images);
 
     const VkSemaphoreCreateInfo semaphore_infos{
@@ -73,7 +46,7 @@ RenderPassInstance_VK::RenderPassInstance_VK(uint32_t width, uint32_t height, co
 
     for (auto& data : frame_data)
     {
-        data.render_finished_semaphore = TGpuHandle<SemaphoreResource_VK>("sem test", SemaphoreResource_VK::CI_Semaphore{});
+        data.render_finished_semaphore = TGpuHandle<SemaphoreResource_VK>(stringutils::format("semaphore_render_finished:pass=%s", pass_name.c_str()), SemaphoreResource_VK::CI_Semaphore{});
     }
 }
 
@@ -161,7 +134,7 @@ void RenderPassInstance_VK::submit()
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
-    framebuffer_width = width;
+    framebuffer_width  = width;
     framebuffer_height = height;
 
     if (!surface_texture.empty())
@@ -176,12 +149,13 @@ void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::v
         std::vector<TGpuHandle<ImageViewResource_VK>> views;
         for (const auto& image : framebuffers_images)
             views.emplace_back(dynamic_cast<Texture_VK*>(image.get())->get_views()[i]);
-        frame_data[i].framebuffer = TGpuHandle<FramebufferResource_VK>("framebuffer", FramebufferResource_VK::CI_Framebuffer{
-                                                                                          .width       = width,
-                                                                                          .height      = height,
-                                                                                          .render_pass = render_pass,
-                                                                                          .views       = views,
-                                                                                      });
+        frame_data[i].framebuffer = TGpuHandle<FramebufferResource_VK>(stringutils::format("framebuffer:pass=%s", pass_name.c_str()),
+                                                                       FramebufferResource_VK::CreateInfos{
+                                                                           .width             = width,
+                                                                           .height            = height,
+                                                                           .render_pass       = render_pass,
+                                                                           .framebuffer_views = views,
+                                                                       });
     }
 }
 } // namespace gfx::vulkan

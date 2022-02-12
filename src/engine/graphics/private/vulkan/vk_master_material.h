@@ -3,71 +3,17 @@
 #include "gfx/master_material.h"
 
 #include "vk_unit.h"
+#include "resources/vk_resource_pipeline.h"
+
 #include <vulkan/vulkan.h>
 
 namespace gfx::vulkan
 {
 
-class ShaderModuleResource_VK final
-{
-  public:
-    struct CI_ShaderModule
-    {
-        std::vector<uint32_t> spirv_code;
-    };
-
-    ShaderModuleResource_VK(const std::string& name, const CI_ShaderModule& create_infos);
-    ~ShaderModuleResource_VK();
-
-    VkShaderModule shader_module;
-};
-
-class PipelineLayoutResource_VK final
-{
-  public:
-    struct CI_PipelineLayout
-    {
-        const shader_builder::ReflectionResult&    vertex_reflection_data;
-        const shader_builder::ReflectionResult&    fragment_reflection_data;
-        TGpuHandle<DescriptorSetLayoutResource_VK> descriptor_set_layout;
-    };
-
-    PipelineLayoutResource_VK(const std::string& name, const CI_PipelineLayout& create_infos);
-    ~PipelineLayoutResource_VK();
-
-    VkPipelineLayout pipeline_layout;
-
-  private:
-    const CI_PipelineLayout parameters;
-};
-
-class PipelineResource_VK final
-{
-  public:
-    struct CI_Pipeline
-    {
-        TGpuHandle<ShaderModuleResource_VK>          vertex_stage;
-        TGpuHandle<ShaderModuleResource_VK>          fragment_stage;
-        TGpuHandle<PipelineLayoutResource_VK>        pipeline_layout;
-        const shader_builder::CompilationResult&     compilation_results;
-        RenderPassID                                 pass_id;
-        const MaterialOptions&                       material_options;
-        const std::vector<shader_builder::Property>& vertex_inputs;
-    };
-
-    PipelineResource_VK(const std::string& name, const CI_Pipeline& create_infos);
-    ~PipelineResource_VK();
-
-    VkPipeline pipeline;
-
-  private:
-    const CI_Pipeline parameters;
-};
-
 class MasterMaterial_VK final : public MasterMaterial
 {
   public:
-    MasterMaterial_VK(MaterialOptions options) : material_options(options)
+    MasterMaterial_VK(const std::string& name, const MaterialOptions& options) : MasterMaterial(name, options)
     {
     }
     ~MasterMaterial_VK() override;
@@ -138,6 +84,5 @@ class MasterMaterial_VK final : public MasterMaterial
 
     void                             clear();
     RenderPassData<MaterialPassData> per_pass_data;
-    MaterialOptions                  material_options;
 };
 } // namespace gfx::vulkan

@@ -9,26 +9,6 @@
 
 namespace gfx::vulkan
 {
-class FramebufferResource_VK final
-{
-  public:
-    struct CI_Framebuffer
-    {
-        uint32_t                                      width;
-        uint32_t                                      height;
-        TGpuHandle<RenderPassResource_VK>             render_pass;
-        std::vector<TGpuHandle<ImageViewResource_VK>> views;
-    };
-
-    FramebufferResource_VK(const std::string& name, const CI_Framebuffer& create_infos);
-    ~FramebufferResource_VK();
-
-    VkFramebuffer framebuffer = VK_NULL_HANDLE;
-
-  private:
-    const CI_Framebuffer parameters;
-};
-
 class RenderPassInstance_VK final : public RenderPassInstance
 {
     friend class Surface_VK;
@@ -54,5 +34,6 @@ class RenderPassInstance_VK final : public RenderPassInstance
     SwapchainImageResource<FrameData> frame_data                        = {};
     TGpuHandle<SemaphoreResource_VK>  swapchain_image_acquire_semaphore = {};
     TGpuHandle<RenderPassResource_VK> render_pass;
+    std::string                pass_name;
 };
 } // namespace gfx::vulkan

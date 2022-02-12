@@ -70,7 +70,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         .absolute_height = 600,
         .window_style    = application::window::EWindowStyle::WINDOWED,
     });
-    auto* surface = gfx::Surface::create_surface(window);
+    auto* surface = gfx::Surface::create_surface("default_surface", window);
     declare_render_pass();
 
     std::unique_ptr<scene::Universe> global_universe = std::make_unique<CustomUniverse>();
@@ -81,7 +81,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     auto ui_pass               = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
 
     auto resolve_sampler                  = gfx::Sampler::create("resolve sampler", {});
-    auto resolve_material_instance        = gfx::MaterialInstance::create(gfx::MasterMaterial::create("data/shaders/engine/resolve.shb"));
+    auto resolve_material_instance = gfx::MaterialInstance::create(gfx::MasterMaterial::create("resolve_material", "data/shaders/engine/resolve.shb"));
     resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
     resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
     resolve_material_instance->bind_texture("gbuffer_color", gbuffer_pass->get_framebuffer_images()[0]);

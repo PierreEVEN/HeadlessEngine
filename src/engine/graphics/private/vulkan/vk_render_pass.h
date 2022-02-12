@@ -2,27 +2,11 @@
 
 #include "gfx/render_pass.h"
 #include "gfx/resource/gpu_resource.h"
+#include "resources/vk_resource_render_pass.h"
 #include "vk_descriptor_pool.h"
-
-#include <vulkan/vulkan.h>
-
-namespace gfx
-{
-class Surface;
-}
 
 namespace gfx::vulkan
 {
-
-class RenderPassResource_VK final
-{
-  public:
-    RenderPassResource_VK(const std::string& name, const RenderPass::Config& render_pass_config, bool in_present_pass);
-    ~RenderPassResource_VK();
-
-    VkRenderPass render_pass;
-};
-
 class RenderPass_VK final : public RenderPass
 {
   public:
@@ -34,13 +18,13 @@ class RenderPass_VK final : public RenderPass
         return render_pass;
     }
 
-    DescriptorPool_VK& get_descriptor_pool()
+    DescriptorPoolManager& get_descriptor_pool_manager()
     {
-        return descriptor_pool;
+        return *descriptor_pool_manager;
     }
 
   private:
-    DescriptorPool_VK                 descriptor_pool;
-    TGpuHandle<RenderPassResource_VK> render_pass;
+    const std::unique_ptr<DescriptorPoolManager> descriptor_pool_manager;
+    TGpuHandle<RenderPassResource_VK>            render_pass;
 };
 } // namespace gfx::vulkan

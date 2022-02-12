@@ -8,10 +8,10 @@
 
 namespace gfx
 {
-Surface* Surface::create_surface(application::window::Window* container)
+Surface* Surface::create_surface(const std::string& name, application::window::Window* container)
 {
 #if GFX_USE_VULKAN
-    const auto surface = new vulkan::Surface_VK(container);
+    const auto surface = new vulkan::Surface_VK(name, container);
     return surface;
 #else
     static_assert(false, "backend not supported");

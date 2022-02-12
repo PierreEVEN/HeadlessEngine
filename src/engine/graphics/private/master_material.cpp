@@ -4,12 +4,12 @@
 
 namespace gfx
 {
-std::shared_ptr<MasterMaterial> MasterMaterial::create(const shader_builder::CompilationResult& compilation_results, MaterialOptions options)
+std::shared_ptr<MasterMaterial> MasterMaterial::create(const std::string& name, const shader_builder::CompilationResult& compilation_results, MaterialOptions options)
 {
 #if GFX_USE_VULKAN
     print_compilation_errors(compilation_results);
     //print_compilation_results(compilation_results);
-    const auto material = std::make_shared<vulkan::MasterMaterial_VK>(options);
+    const auto material = std::make_shared<vulkan::MasterMaterial_VK>(name, options);
     material->rebuild_material(compilation_results);
     return material;
 #else
@@ -17,9 +17,9 @@ std::shared_ptr<MasterMaterial> MasterMaterial::create(const shader_builder::Com
 #endif
 }
 
-std::shared_ptr<MasterMaterial> MasterMaterial::create(const std::filesystem::path& shader_path, MaterialOptions options)
+std::shared_ptr<MasterMaterial> MasterMaterial::create(const std::string& name, const std::filesystem::path& shader_path, MaterialOptions options)
 {
-    return create(shader_builder::compile_shader(shader_path), options);
+    return create(name, shader_builder::compile_shader(shader_path), options);
 }
 
 void MasterMaterial::rebuild_material(const shader_builder::CompilationResult& compilation_results)

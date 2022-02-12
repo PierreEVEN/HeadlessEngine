@@ -58,7 +58,7 @@ class CustomUniverse : public scene::Universe
   public:
     CustomUniverse() : Universe()
     {
-        planet_material = gfx::MasterMaterial::create("data/shaders/planet/planet_material.shb");
+        planet_material = gfx::MasterMaterial::create("planet_material", "data/shaders/planet/planet_material.shb");
 
         //planet_material->bind_buffer("camera_ubo", get_global_view()->get_buffer());
 

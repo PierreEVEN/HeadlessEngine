@@ -147,7 +147,7 @@ void ImGuiWrapper::init_internal()
         },
     };
 
-    imgui_base_material     = gfx::MasterMaterial::create("data/shaders/imgui_material.shb", gfx::MaterialOptions{.input_stage_override = vertex_attribute_overrides});
+    imgui_base_material     = gfx::MasterMaterial::create("imgui_material", "data/shaders/imgui_material.shb", gfx::MaterialOptions{.input_stage_override = vertex_attribute_overrides});
     imgui_material_instance = gfx::MaterialInstance::create(imgui_base_material);
     global_sampler          = gfx::Sampler::create("imgui sampler", {});
     mesh                    = new gfx::Mesh("imgui mesh", sizeof(ImDrawVert), 0, 0, gfx::EBufferType::IMMEDIATE, gfx::EIndexBufferType::UINT16);

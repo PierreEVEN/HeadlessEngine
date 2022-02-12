@@ -15,8 +15,8 @@ class MasterMaterial
 {
   public:
     virtual ~MasterMaterial() = default;
-    static std::shared_ptr<MasterMaterial> create(const shader_builder::CompilationResult& compilation_results, MaterialOptions options = {});
-    static std::shared_ptr<MasterMaterial> create(const std::filesystem::path& shader_path, MaterialOptions options = {});
+    static std::shared_ptr<MasterMaterial> create(const std::string& name, const shader_builder::CompilationResult& compilation_results, MaterialOptions options = {});
+    static std::shared_ptr<MasterMaterial> create(const std::string& name, const std::filesystem::path& shader_path, MaterialOptions options = {});
 
     virtual void rebuild_material(const shader_builder::CompilationResult& compilation_results);
 
@@ -49,7 +49,12 @@ class MasterMaterial
     }
 
   protected:
-    MasterMaterial() = default;
+    MasterMaterial(std::string name, MaterialOptions options) : material_name(std::move(name)), material_options(std::move(options))
+    {
+    }
+
+    const std::string     material_name;
+    const MaterialOptions material_options;
 
   private:
     std::vector<RenderPassID>                        enabled_render_passes;
