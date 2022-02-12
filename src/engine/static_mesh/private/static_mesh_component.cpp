@@ -33,9 +33,10 @@ static std::vector<DrawCall>   drawcalls;
 static uint32_t                last_frame_calls = 0;
 static std::shared_ptr<Buffer> matrix_buffer;
 
-void StaticMeshComponent::add_systems(ecs::SystemFactory* factory)
+void StaticMeshComponent::add_systems([[maybe_unused]] ecs::SystemFactory* factory)
 {
 
+    /*
     factory->pre_render<scene::Transform, StaticMeshComponent>(
         [](ecs::TSystemIterable<scene::Transform, StaticMeshComponent> iterator, View* view)
         {
@@ -97,6 +98,7 @@ void StaticMeshComponent::add_systems(ecs::SystemFactory* factory)
             if (count != 0)
                 command_buffer->draw_mesh(last_mesh, last_material, count, first);
         });
+        */
 }
 
 void StaticMeshComponent::init_system()

@@ -24,10 +24,10 @@ struct TextureParameter
 class Texture
 {
   public:
-    [[nodiscard]] static std::shared_ptr<Texture> create(uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters = {});
-    [[nodiscard]] static std::shared_ptr<Texture> create(uint32_t width, uint32_t height, const TextureParameter& parameters = {})
+    [[nodiscard]] static std::shared_ptr<Texture> create(const std::string& name, uint32_t width, uint32_t height, uint32_t depth, const TextureParameter& parameters = {});
+    [[nodiscard]] static std::shared_ptr<Texture> create(const std::string& name, uint32_t width, uint32_t height, const TextureParameter& parameters = {})
     {
-        return create(width, height, 1, parameters);
+        return create(name, width, height, 1, parameters);
     }
     virtual ~Texture() = default;
 
@@ -41,9 +41,9 @@ class Texture
     }
 
   protected:
-    Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters);
+    Texture(const std::string& name, uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters);
 
-  protected:
+    const std::string& texture_name;
     TextureParameter image_parameters;
     uint32_t         width;
     uint32_t         height;

@@ -25,7 +25,7 @@ CommandBuffer_VK::CommandBuffer_VK(const std::string& name)
     for (auto& buffer : command_buffer)
     {
         VK_CHECK(vkAllocateCommandBuffers(get_device(), &command_buffer_infos, &buffer), "Failed to allocate command get");
-        debug_set_object_name(stringutils::format("command get %s #%d", name.c_str(), cmd++), buffer);
+        debug_set_object_name(stringutils::format("command_buffer:%s:frame=%d", name.c_str(), cmd++), buffer);
     }
 }
 

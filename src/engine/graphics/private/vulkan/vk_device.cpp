@@ -146,7 +146,7 @@ void Device_VK::init()
 
     for (auto& [index, fence] : queue_fence_map)
         for (auto& item : fence)
-            item = TGpuHandle<FenceResource_VK>("test fence", FenceResource_VK::CI_Fence{});
+            item = TGpuHandle<FenceResource_VK>("queue_fence", FenceResource_VK::CI_Fence{});
 
     for (const auto& queue : queues)
         queue->queue_submit_fence = queue_fence_map[queue->queue_index];

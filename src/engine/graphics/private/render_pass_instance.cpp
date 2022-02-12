@@ -40,34 +40,45 @@ RenderPassInstance::RenderPassInstance(uint32_t width, uint32_t height, const Re
     }
     else
     {
-        // Else : generate new framebuffer images
-        for (const auto& attachment : render_pass_base->get_config().color_attachments)
-        {
-            if (Texture::is_depth_format(attachment.image_format))
-                LOG_FATAL("Cannot use depth format on color attachments");
-            framebuffers_images.emplace_back(Texture::create(width, height, 1,
-                                                             TextureParameter{
-                                                                 .format                 = attachment.image_format,
-                                                                 .transfer_capabilities  = ETextureTransferCapabilities::None,
-                                                                 .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
-                                                                 .mip_level              = 1,
-                                                             }));
-        }
-        if (render_pass_base->get_config().depth_attachment)
-        {
-            if (!Texture::is_depth_format(render_pass_base->get_config().depth_attachment->image_format))
-                LOG_FATAL("Depth attachment require a depth format");
-            framebuffers_images.emplace_back(Texture::create(width, height, 1,
-                                                             TextureParameter{
-                                                                 .format                 = render_pass_base->get_config().depth_attachment->image_format,
-                                                                 .transfer_capabilities  = ETextureTransferCapabilities::None,
-                                                                 .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
-                                                                 .mip_level              = 1,
-                                                             }));
-        }
+        create_or_recreate_framebuffer_images();
     }
 
-    command_buffer = CommandBuffer::create("test");
+    command_buffer = CommandBuffer::create(stringutils::format("pass=%s:depth=#%d", base.name().c_str()));
+}
+
+void RenderPassInstance::create_or_recreate_framebuffer_images()
+{
+    if (get_width() == 0 || get_height() == 0)
+        return;
+
+    framebuffers_images.clear();
+
+    uint32_t attachment_index = 0;
+    // Else : generate new framebuffer images
+    for (const auto& attachment : render_pass_base->get_config().color_attachments)
+    {
+        if (Texture::is_depth_format(attachment.image_format))
+            LOG_FATAL("Cannot use depth format on color attachments");
+        framebuffers_images.emplace_back(Texture::create(stringutils::format("pass=%s:color=#%d", render_pass_base->get_config().pass_name.c_str(), attachment_index++), get_width(), get_height(), 1,
+                                                         TextureParameter{
+                                                             .format                 = attachment.image_format,
+                                                             .transfer_capabilities  = ETextureTransferCapabilities::None,
+                                                             .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
+                                                             .mip_level              = 1,
+                                                         }));
+    }
+    if (render_pass_base->get_config().depth_attachment)
+    {
+        if (!Texture::is_depth_format(render_pass_base->get_config().depth_attachment->image_format))
+            LOG_FATAL("Depth attachment require a depth format");
+        framebuffers_images.emplace_back(Texture::create(stringutils::format("pass=%s:depth=#%d", render_pass_base->get_config().pass_name.c_str(), attachment_index), get_width(), get_height(), 1,
+                                                         TextureParameter{
+                                                             .format                 = render_pass_base->get_config().depth_attachment->image_format,
+                                                             .transfer_capabilities  = ETextureTransferCapabilities::None,
+                                                             .gpu_write_capabilities = ETextureGPUWriteCapabilities::Enabled,
+                                                             .mip_level              = 1,
+                                                         }));
+    }
 }
 
 void RenderPassInstance::build_framegraph()

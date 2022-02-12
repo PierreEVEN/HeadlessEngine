@@ -20,7 +20,7 @@ int main()
     application::create();
     gfx::init();
     application::window::Window* window  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
-    gfx::Surface*                surface = gfx::Surface::create_surface(window);
+    gfx::Surface*                surface = gfx::Surface::create_surface("default_surface", window);
 
     std::unique_ptr<ui::UICanvas> canvas = std::make_unique<ui::UICanvas>(nullptr);
 

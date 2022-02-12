@@ -61,6 +61,8 @@ class RenderPassInstance
     uint32_t                                         framebuffer_width;
     uint32_t                                         framebuffer_height;
 
+    void create_or_recreate_framebuffer_images();
+
   private:
     CommandBuffer*                        command_buffer = nullptr;
     RenderPass*                           render_pass_base;

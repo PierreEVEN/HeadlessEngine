@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <string>
 
+#include <cpputils/eventmanager.hpp>
+
+DECLARE_DELEGATE_MULTICAST(EventResizeWindow, uint32_t, uint32_t);
+
 namespace application::window
 {
 enum class EWindowStyle
@@ -68,6 +72,8 @@ class Window
     {
         return config.name;
     }
+
+    EventResizeWindow on_resize_window;
 
   protected:
     static void  register_window(Window* new_window);

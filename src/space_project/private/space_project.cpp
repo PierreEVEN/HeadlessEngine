@@ -80,7 +80,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     auto deferred_combine_pass = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("deferred_combine"));
     auto ui_pass               = gfx::RenderPassInstance::create(window->absolute_width(), window->absolute_height(), gfx::RenderPassID::get("ui_pass"));
 
-    auto resolve_sampler                  = gfx::Sampler::create("resolve sampler", {});
+    auto resolve_sampler           = gfx::Sampler::create("resolve sampler", {});
     auto resolve_material_instance = gfx::MaterialInstance::create(gfx::MasterMaterial::create("resolve_material", "data/shaders/engine/resolve.shb"));
     resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
     resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
@@ -88,6 +88,19 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[1]);
     resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[2]);
     resolve_material_instance->bind_sampler("ui_sampler", resolve_sampler);
+
+    window->on_resize_window.add_lambda(
+        [&](uint32_t width, uint32_t height)
+        {
+            gbuffer_pass->resize(width, height);
+            deferred_combine_pass->resize(width, height);
+            ui_pass->resize(width, height);
+            resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
+            resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
+            resolve_material_instance->bind_texture("gbuffer_color", gbuffer_pass->get_framebuffer_images()[0]);
+            resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[1]);
+            resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[2]);
+        });
 
     // Pass render content
     gbuffer_pass->on_draw_pass.add_lambda(
@@ -126,6 +139,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     surface->link_dependency(deferred_combine_pass);
     surface->build_framegraph();
 
+    window->on_resize_window.add_lambda(
+        [&](uint32_t width, uint32_t height)
+        {
+            gfx::next_frame();
+            global_universe->pre_render();
+            surface->render();
+            window->update();
+        });
+
     // Game loop
     while (application::window::Window::get_window_count() > 0)
     {
@@ -136,13 +158,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         window->update();
     }
 
-    global_universe                  = nullptr;
-    gbuffer_pass                     = nullptr;
-    resolve_sampler                  = nullptr;
-    resolve_material_instance        = nullptr;
-    ui_pass                          = nullptr;
-    canvas                           = nullptr;
-    deferred_combine_pass            = nullptr;
+    global_universe           = nullptr;
+    gbuffer_pass              = nullptr;
+    resolve_sampler           = nullptr;
+    resolve_material_instance = nullptr;
+    ui_pass                   = nullptr;
+    canvas                    = nullptr;
+    deferred_combine_pass     = nullptr;
     delete surface;
     gfx::destroy();
     application::destroy();

@@ -2,7 +2,7 @@
 #include "asset_manager/asset_ptr.h"
 
 #include "asset_manager/asset_manager.h"
-
+/*
 IAssetPtr::IAssetPtr()
 {
     clear();
@@ -122,3 +122,5 @@ void IAssetPtr::on_delete_asset(AssetBase* deleted_asset)
     if (deleted_asset == asset)
         set(nullptr);
 }
+
+*/

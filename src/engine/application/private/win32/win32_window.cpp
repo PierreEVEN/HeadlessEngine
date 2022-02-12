@@ -79,6 +79,8 @@ void Window_Win32::set_size(uint32_t width, uint32_t height)
     config.framebuffer_width  = width;
     config.framebuffer_height = height;
 
+    on_resize_window.execute(width, height);
+
     RECT initial_area = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));
     WIN_CHECK(::SetWindowPos(window_handle, nullptr, config.absolute_pos_x, config.absolute_pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top, 0));
@@ -122,6 +124,7 @@ LRESULT Window_Win32::window_behaviour(uint32_t in_msg, WPARAM in_wparam, LPARAM
     {
         config.absolute_width  = LOWORD(in_lparam);
         config.absolute_height = HIWORD(in_lparam);
+        on_resize_window.execute(config.absolute_width, config.absolute_height);
         return 0;
     }
     case WM_MOVE:

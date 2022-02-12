@@ -4,6 +4,7 @@
 
 #include "asset_id.h"
 
+/*
 class AssetBase;
 
 class IAssetPtr
@@ -72,3 +73,5 @@ template <class AssetClass> class TAssetPtr final : public IAssetPtr
         return static_cast<AssetClass*>(get_const());
     }
 };
+
+*/

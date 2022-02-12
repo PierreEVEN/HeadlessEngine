@@ -112,7 +112,7 @@ void ImGuiWrapper::init_internal()
     uint8_t* pixels;
     int      width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    font_texture = gfx::Texture::create(width, height, gfx::TextureParameter{.format = gfx::ETypeFormat::R8G8B8A8_UNORM});
+    font_texture = gfx::Texture::create("imgui_font", width, height, gfx::TextureParameter{.format = gfx::ETypeFormat::R8G8B8A8_UNORM});
     font_texture->set_pixels(std::vector(pixels, pixels + width * height * 4));
 
     io.Fonts->TexID = font_texture.get();

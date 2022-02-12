@@ -19,7 +19,7 @@ int main()
      * 2° declare some windows with surfaces (surfaces are layers that allow rendering images from the gfx backend onto application window)
      */
     auto* window_1  = create_window(application::window::WindowConfig{.name = application::get_full_name(), .window_style = application::window::EWindowStyle::WINDOWED});
-    auto  surface_1 = std::unique_ptr<gfx::Surface>(gfx::Surface::create_surface(window_1));
+    auto  surface_1 = std::unique_ptr<gfx::Surface>(gfx::Surface::create_surface("default_surface", window_1));
 
     std::unique_ptr<gfx::View> main_view = std::make_unique<gfx::View>();
 
@@ -56,7 +56,7 @@ int main()
     {
         glm::vec3 pos;
     };
-    auto glob_mat     = gfx::MasterMaterial::create("data/shaders/draw_procedural_test.shb");
+    auto glob_mat     = gfx::MasterMaterial::create("draw_procedural_test", "data/shaders/draw_procedural_test.shb");
     auto mat_instance = gfx::MaterialInstance::create(glob_mat);
     auto vertices     = std::vector{Vertex{
                                     .pos = glm::vec3(0, 0, 0),

@@ -10,7 +10,7 @@
 #endif
 namespace gfx
 {
-Texture::Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : image_parameters(parameters)
+Texture::Texture(const std::string& name, uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_depth, const TextureParameter& parameters) : texture_name(name), image_parameters(parameters)
 {
     if (parameters.format == ETypeFormat::UNDEFINED)
         LOG_FATAL("buffer format is undefined");
@@ -54,10 +54,10 @@ Texture::Texture(uint32_t pixel_width, uint32_t pixel_height, uint32_t pixel_dep
 
 }
 
-std::shared_ptr<Texture> Texture::create(const uint32_t width, uint32_t height, const uint32_t depth, const TextureParameter& parameters)
+std::shared_ptr<Texture> Texture::create(const std::string& name, const uint32_t width, uint32_t height, const uint32_t depth, const TextureParameter& parameters)
 {
 #if GFX_USE_VULKAN
-    return std::make_shared<vulkan::Texture_VK>(width, height, depth, parameters);
+    return std::make_shared<vulkan::Texture_VK>(name, width, height, depth, parameters);
 #else
     static_assert(false, "backend not supported");
 #endif

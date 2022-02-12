@@ -98,7 +98,7 @@ void Surface_VK::recreate_swapchain()
                                                                        .surface            = surface,
                                                                    });
 
-    surface_texture = std::make_shared<Texture_VK>(window_container->absolute_width(), window_container->absolute_height(), 1,
+    surface_texture = std::make_shared<Texture_VK>("swapchain_image", window_container->absolute_width(), window_container->absolute_height(), 1,
                                                    TextureParameter{
                                                        .format                 = engine_texture_format_from_vk(get_surface_format().format),
                                                        .image_type             = EImageType::Texture_2D,

@@ -4,7 +4,6 @@
 #include "gfx/physical_device.h"
 #include "vk_device.h"
 #include "vk_physical_device.h"
-#include "vulkan/vk_allocator.h"
 #include "vulkan/vk_command_buffer.h"
 #include "vulkan/vk_errors.h"
 #include "vulkan/vk_helper.h"
@@ -134,8 +133,12 @@ void RenderPassInstance_VK::submit()
 
 void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::vector<std::shared_ptr<Texture>>& surface_texture)
 {
+    if (width == 0 || height == 0)
+        return;
+
     framebuffer_width  = width;
     framebuffer_height = height;
+
 
     if (!surface_texture.empty())
     {
@@ -143,6 +146,8 @@ void RenderPassInstance_VK::resize(uint32_t width, uint32_t height, const std::v
         for (const auto& texture : surface_texture)
             framebuffers_images.emplace_back(texture);
     }
+    else
+        create_or_recreate_framebuffer_images();
 
     for (uint8_t i = 0; i < frame_data.get_max_instance_count(); ++i)
     {
