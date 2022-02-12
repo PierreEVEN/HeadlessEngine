@@ -79,9 +79,6 @@ void Application::next_frame()
     const auto current_time = time();
     time_delta              = current_time - last_time;
     last_time               = current_time;
-
-    for (uint32_t i = 0; i < window::Window::get_window_count(); ++i)
-        window::Window::get_window(i)->update();
 }
 
 void create()

@@ -124,6 +124,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
             });
             canvas->start_window("this is a test window");
             canvas->label("this is a text yay");
+            canvas->label(stringutils::format("framerate : %f fps", 1.0 / application::get()->delta_time()));
+            canvas->label(stringutils::format("frame time : %f ms", application::get()->delta_time() * 1000.0));
             canvas->end_window();
 
             canvas->submit(command_buffer);
@@ -140,7 +142,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     surface->build_framegraph();
 
     window->on_resize_window.add_lambda(
-        [&](uint32_t width, uint32_t height)
+        [&](uint32_t, uint32_t)
         {
             gfx::next_frame();
             global_universe->pre_render();
@@ -151,6 +153,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     // Game loop
     while (application::window::Window::get_window_count() > 0)
     {
+        application::get()->next_frame();
         gfx::next_frame();
         global_universe->tick();
         global_universe->pre_render();
