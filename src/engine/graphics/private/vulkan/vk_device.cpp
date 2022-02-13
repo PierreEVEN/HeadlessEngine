@@ -75,38 +75,36 @@ void Device_VK::init()
         queueCreateInfo.pQueuePriorities = &queue_priorities;
         queue_create_infos.push_back(queueCreateInfo);
     }
-
-    std::vector extensions = config::device_extensions;
-
-    // Ensure bindless is supported
+    
     VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
         .pNext = nullptr,
     };
-    VkPhysicalDeviceFeatures2 device_features2{
-        .sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext    = &indexing_features,
-        .features = NULL,
-    };
-    vkGetPhysicalDeviceFeatures2(GET_VK_PHYSICAL_DEVICE(), &device_features2);
-    const bool bindless_supported = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
-
     VkPhysicalDeviceFeatures2 physical_features2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = nullptr,
+        .pNext = &indexing_features,
         .features =
             VkPhysicalDeviceFeatures{
 #if ENABLE_VALIDATION_LAYER
                 .robustBufferAccess = VK_TRUE,
 #endif
-                .geometryShader    = VK_TRUE,
+                .geometryShader    = VK_FALSE,
                 .sampleRateShading = VK_TRUE, // Sample Shading
                 .fillModeNonSolid  = VK_TRUE, // Wireframe
                 .wideLines         = VK_TRUE,
                 .samplerAnisotropy = VK_TRUE,
             },
     };
-    vkGetPhysicalDeviceFeatures2(GET_VK_PHYSICAL_DEVICE(), &physical_features2);
+
+    if (use_bindless_descriptors())
+    {
+        // Ensure bindless is enabled
+        indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
+        indexing_features.runtimeDescriptorArray          = VK_TRUE;
+        ;
+
+        physical_features2.pNext = &indexing_features;
+    }
 
     VkDeviceCreateInfo create_infos = {
         .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -116,23 +114,10 @@ void Device_VK::init()
         .pQueueCreateInfos       = queue_create_infos.data(),
         .enabledLayerCount       = 0,
         .ppEnabledLayerNames     = nullptr,
-        .enabledExtensionCount   = static_cast<uint32_t>(extensions.size()),
-        .ppEnabledExtensionNames = extensions.data(),
+        .enabledExtensionCount   = static_cast<uint32_t>(config::device_extensions.size()),
+        .ppEnabledExtensionNames = config::device_extensions.begin(),
         .pEnabledFeatures        = nullptr,
     };
-    if (parameters.bindless_descriptors)
-    {
-        if (bindless_supported)
-        {
-            // This should be already set to VK_TRUE, as we queried before.
-            indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
-            indexing_features.runtimeDescriptorArray          = VK_TRUE;
-
-            physical_features2.pNext = &indexing_features;
-        }
-        else
-            LOG_ERROR("bindless descriptor are not supported");
-    }
 
     VK_CHECK(vkCreateDevice(GET_VK_PHYSICAL_DEVICE(), &create_infos, get_allocator(), &device), "failed to create device");
     debug_set_object_name("primary device", device);
@@ -184,5 +169,20 @@ void Device_VK::wait_device()
 {
     if (device != VK_NULL_HANDLE)
         vkDeviceWaitIdle(device);
+}
+
+bool Device_VK::has_bindless_support() const
+{
+    VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+        .pNext = nullptr,
+    };
+    VkPhysicalDeviceFeatures2 device_features2{
+        .sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext    = &indexing_features,
+        .features = NULL,
+    };
+    vkGetPhysicalDeviceFeatures2(GET_VK_PHYSICAL_DEVICE(), &device_features2);
+    return indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
 }
 } // namespace gfx::vulkan

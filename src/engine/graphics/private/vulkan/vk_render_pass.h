@@ -24,6 +24,9 @@ class RenderPass_VK final : public RenderPass
     }
 
   private:
+    //TGpuHandle<DescriptorSetResource_VK>         bindless_descriptors;
+    //TGpuHandle<DescriptorSetLayoutResource_VK>   bindless_descriptor_set_layout;
+    //TGpuHandle<DescriptorPoolResource_VK>        bindless_descriptor_pool;
     const std::unique_ptr<DescriptorPoolManager> descriptor_pool_manager;
     TGpuHandle<RenderPassResource_VK>            render_pass;
 };

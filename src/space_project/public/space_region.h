@@ -5,11 +5,13 @@
 #define GLM_FORCE_RADIANS
 #include "application/inputs/input_mapping.h"
 #include "planet.h"
+#include "application/application.h"
 
 #include "scene/SubScene.h"
 #include <glm/detail/type_quat.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#define M_PI 3.14159265358979323846
 
 class Planet : public ecs::Actor
 {
@@ -60,8 +62,6 @@ class CustomUniverse : public scene::Universe
     {
         planet_material = gfx::MasterMaterial::create("planet_material", "data/shaders/planet/planet_material.shb");
 
-        //planet_material->bind_buffer("camera_ubo", get_global_view()->get_buffer());
-
         for (int i = 0; i < 1; ++i)
         {
             planets.emplace_back(new_actor<Planet>(i * 5, planet_material));
@@ -77,7 +77,7 @@ class CustomUniverse : public scene::Universe
         look_right = std::make_unique<application::inputs::AxisMapping>(application::inputs::EAxis::Mouse_X);
         look_up    = std::make_unique<application::inputs::AxisMapping>(application::inputs::EAxis::Mouse_Y);
 
-        position = glm::dvec3(-10, 0, 0);
+        position = glm::dvec3(0, 0, -10);
     }
 
     void tick() override
@@ -86,11 +86,11 @@ class CustomUniverse : public scene::Universe
 
         // glm::dvec3 forward = forward_vector
 
-        glm::dquat rot = glm::eulerAngleYXZ(0.0, static_cast<double>(*look_up->value) * 0.01, static_cast<double>(*look_right->value) * 0.01);
+        glm::dquat rot = glm::eulerAngleYXZ(0.0, static_cast<double>(*look_up->value) * 0.00 + M_PI / 2, static_cast<double>(*look_right->value) * -0.00 + M_PI / 2);
 
         glm::dvec3 forward = rot * glm::dvec3(1, 0, 0);
 
-        position += glm::dvec3(*move_forward->value ? 1 : *move_backward->value ? -1 : 0, *move_right->value ? -1 : *move_left->value ? 1 : 0, *move_up->value ? 1 : *move_down->value ? -1 : 0) * 0.5;
+        position += glm::dvec3(*move_forward->value ? 1 : *move_backward->value ? -1 : 0, *move_right->value ? -1 : *move_left->value ? 1 : 0, *move_up->value ? 1 : *move_down->value ? -1 : 0) * glm::dvec3(1 * application::get()->delta_time());
 
         get_global_view()->set_viewport(800, 600, 45, 10000, 0.1f);
         get_global_view()->set_view_point(position, forward, glm::dvec3(0, 1, 0));
@@ -104,7 +104,7 @@ class CustomUniverse : public scene::Universe
 
   private:
     std::shared_ptr<gfx::MasterMaterial> planet_material;
-    std::vector<std::shared_ptr<Planet>>   planets;
+    std::vector<std::shared_ptr<Planet>> planets;
 
     glm::dvec3                                          position;
     glm::dvec3                                          forward_vector;

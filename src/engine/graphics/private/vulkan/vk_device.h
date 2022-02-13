@@ -70,6 +70,10 @@ class Device_VK final : public Device
 
     void wait_device() override;
 
+    [[nodiscard]] bool has_bindless_support() const override;
+
+
+
   private:
     VkDevice     device;
     VmaAllocator vulkan_memory_allocator;

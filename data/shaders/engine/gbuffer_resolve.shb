@@ -14,13 +14,30 @@ vertex(resolve_pass) => "fullscreen_vertex.cg"
 
 fragment(resolve_pass)
 [
+
+	#include "../common/pbr.shb"
+
+
+
+
+
 	Texture2D gbuffer_color;
+	Texture2D gbuffer_rmao;
 	Texture2D gbuffer_normal;
 	Texture2D gbuffer_velocity;
 	SamplerState gbuffer_sampler;
 
 	float4 main(VsToFsStruct input) : SV_Target
 	{
-		return combine_albedo.Sample(gbuffer_color, input.Uv);
+		float4 albedo_alpha = combine_albedo.Sample(gbuffer_color, input.Uv);
+		float4 rmao = combine_albedo.Sample(gbuffer_rmao, input.Uv);
+		float3 light_color = (10, 10, 10);
+		float3 light_pos = (-10, 0, 0);
+
+		float3 frag_pos = float3(0, 0, 0);// @TODO
+		float3 world_normal = float3(1, 0, 0);// @TODO
+		float3 cam_pos = float3(-10, 0, 0); // @TODO
+		
+		return float4(pbr_equation(albedo_alpha.rgb, rmao, light_color, light_pos, frag_pos, world_normal, cam_pos), albedo_alpha.a);
 	}
 ]

@@ -12,6 +12,42 @@ namespace gfx::vulkan
 {
 DescriptorSetLayoutResource_VK::DescriptorSetLayoutResource_VK(const std::string& name, const CreateInfos& create_infos)
 {
+    /*
+    if (create_infos.bindless_descriptor_set)
+    {
+
+        // Enable bindless support
+        VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+
+        VkDescriptorSetLayoutBinding vk_binding;
+        vk_binding.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        vk_binding.descriptorCount = k_max_bindless_resources;
+        vk_binding.binding         = k_bindless_texture_binding;
+
+        vk_binding.stageFlags         = VK_SHADER_STAGE_ALL;
+        vk_binding.pImmutableSamplers = nullptr;
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{
+            .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT,
+            .pNext         = nullptr,
+            .bindingCount  = 1,
+            .pBindingFlags = &bindless_flags,
+        };
+
+        VkDescriptorSetLayoutCreateInfo layout_infos{
+            .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext        = &extended_info,
+            .flags        = NULL,
+            .bindingCount = static_cast<uint32_t>(bindings.size()),
+            .pBindings    = bindings.data(),
+        };
+
+        VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &descriptor_set_layout), "Failed to create descriptor set layout");
+        debug_set_object_name(name, descriptor_set_layout);
+        return;
+    }
+    */
+
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     for (const auto& binding : create_infos.vertex_bindings)
     {
@@ -38,10 +74,11 @@ DescriptorSetLayoutResource_VK::DescriptorSetLayoutResource_VK(const std::string
     VkDescriptorSetLayoutCreateInfo layout_infos{
         .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext        = nullptr,
-        .flags        = 0,
+        .flags        = NULL,
         .bindingCount = static_cast<uint32_t>(bindings.size()),
         .pBindings    = bindings.data(),
     };
+
     VK_CHECK(vkCreateDescriptorSetLayout(get_device(), &layout_infos, get_allocator(), &descriptor_set_layout), "Failed to create descriptor set layout");
     debug_set_object_name(name, descriptor_set_layout);
 }

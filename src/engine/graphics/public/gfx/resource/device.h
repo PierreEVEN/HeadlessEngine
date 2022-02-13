@@ -50,6 +50,16 @@ class Device
         return current_frame_id;
     }
 
+    [[nodiscard]] bool use_bindless_descriptors() const
+    {
+        return parameters.bindless_descriptors;
+    }
+
+    [[nodiscard]] virtual bool has_bindless_support() const
+    {
+        return false;
+    }
+
   protected:
     Device(const CI_Device& image_count);
     virtual ~Device();
@@ -57,11 +67,11 @@ class Device
     virtual void init() = 0;
     void         free_allocations();
 
-    const CI_Device parameters;
-
   private:
     friend class IGpuHandle;
     friend void destroy_device();
+
+    CI_Device parameters;
 
     void delete_resource(IGpuHandle::IResourceReference* resource)
     {

@@ -20,12 +20,15 @@ void Device::destroy_device()
     delete device_instance;
 }
 
-
 Device::Device(const CI_Device& create_infos) : parameters(create_infos), current_frame_id(0)
 {
     if (device_instance)
         LOG_FATAL("device have already been created");
     device_instance = this;
+
+    // disable bindless if not available
+    if (parameters.bindless_descriptors && !has_bindless_support())
+        parameters.bindless_descriptors = false;
 
     deletion_queues.resize(parameters.swapchain_images, {});
 }

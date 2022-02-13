@@ -15,6 +15,11 @@ void declare_render_pass()
             .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
         },
         {
+            .attachment_name = "roughness_metalness_ao",
+            .image_format    = gfx::ETypeFormat::R8G8_UNORM,
+            .clear_value     = gfx::ClearValue{.color = {0, 0}},
+        },
+        {
             .attachment_name = "normal",
             .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
         },
@@ -54,7 +59,7 @@ void declare_render_pass()
     };
     gfx::RenderPass::declare(gfx::RenderPass::Config{
         .pass_name         = "ui_pass",
-        .color_attachments = region_combine_color_attachments,
+        .color_attachments = ui_pass_color_attachments,
     });
 }
 
@@ -85,8 +90,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
     resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
     resolve_material_instance->bind_texture("gbuffer_color", gbuffer_pass->get_framebuffer_images()[0]);
-    resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[1]);
-    resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[2]);
+    resolve_material_instance->bind_texture("gbuffer_rmao", gbuffer_pass->get_framebuffer_images()[1]);
+    resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[2]);
+    resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[3]);
+    resolve_material_instance->bind_texture("gbuffer_depth", gbuffer_pass->get_framebuffer_images()[4]);
     resolve_material_instance->bind_sampler("ui_sampler", resolve_sampler);
 
     window->on_resize_window.add_lambda(
@@ -98,8 +105,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
             resolve_material_instance->bind_texture("combine_albedo", deferred_combine_pass->get_framebuffer_images()[0]);
             resolve_material_instance->bind_texture("ui_result", ui_pass->get_framebuffer_images()[0]);
             resolve_material_instance->bind_texture("gbuffer_color", gbuffer_pass->get_framebuffer_images()[0]);
-            resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[1]);
-            resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[2]);
+            resolve_material_instance->bind_texture("gbuffer_rmao", gbuffer_pass->get_framebuffer_images()[1]);
+            resolve_material_instance->bind_texture("gbuffer_normal", gbuffer_pass->get_framebuffer_images()[2]);
+            resolve_material_instance->bind_texture("gbuffer_velocity", gbuffer_pass->get_framebuffer_images()[3]);
+            resolve_material_instance->bind_texture("gbuffer_depth", gbuffer_pass->get_framebuffer_images()[4]);
         });
 
     // Pass render content

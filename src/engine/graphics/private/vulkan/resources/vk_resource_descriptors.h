@@ -15,6 +15,7 @@ class DescriptorSetLayoutResource_VK final
     {
         const std::vector<shader_builder::BindingDescriptor>& vertex_bindings;
         const std::vector<shader_builder::BindingDescriptor>& fragment_bindings;
+        bool                                                  bindless_descriptor_set = false;
     };
 
     DescriptorSetLayoutResource_VK(const std::string& name, const CreateInfos& create_infos);
@@ -30,7 +31,7 @@ class DescriptorPoolResource_VK final
     {
         uint32_t max_descriptor_per_pool = 64;
         uint32_t max_descriptor_per_type = 256;
-        bool bindless_pool = false;
+        bool     bindless_pool           = false;
     };
 
     DescriptorPoolResource_VK(const std::string& name, const CreateInfos& create_infos);
@@ -42,7 +43,7 @@ class DescriptorPoolResource_VK final
     // Allocate a new descriptor set in this pool
     VkDescriptorSet allocate(const TGpuHandle<DescriptorSetLayoutResource_VK>& layout);
     // Free a descriptor allocated in this pool
-    void            free(VkDescriptorSet descriptor);
+    void free(VkDescriptorSet descriptor);
 
   private:
     VkDescriptorPool pool;

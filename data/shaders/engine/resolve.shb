@@ -26,18 +26,38 @@ fragment(resolve_pass)
 
 	float4 main(VsToFsStruct input) : SV_Target
 	{
-		return combine_albedo.Sample(ui_sampler, input.Uv) + ui_result.Sample(ui_sampler, input.Uv);
+		float4 combine = combine_albedo.Sample(ui_sampler, input.Uv);
+		float4 ui = ui_result.Sample(ui_sampler, input.Uv);
+
+		return lerp(float4(ui.rgb, 1), combine, ui.a);
 	}
 ]
 
 fragment(deferred_combine)
 [
+	#include "../common/pbr.hlsl"
+
 	Texture2D gbuffer_color;
+	Texture2D gbuffer_rmao;
 	Texture2D gbuffer_normal;
 	Texture2D gbuffer_velocity;
+	Texture2D gbuffer_depth;
 
 	float4 main(VsToFsStruct input) : SV_Target
 	{
-		return gbuffer_color.Sample(ui_sampler, input.Uv);
+		float depth = gbuffer_depth.Sample(ui_sampler, input.Uv).r;
+		float4 albedo_alpha = gbuffer_color.Sample(ui_sampler, input.Uv);
+		float4 rmao = gbuffer_rmao.Sample(ui_sampler, input.Uv);
+		float3 light_color = (10, 10, 10);
+		float3 light_pos = (-10, 0, 0);
+
+		return float4(albedo_alpha.rgb, 1);
+		return float4(depth, depth, depth, 1);
+
+		float3 frag_pos = float3(0, 0, 0);// @TODO
+		float3 world_normal = float3(1, 0, 0);// @TODO
+		float3 cam_pos = float3(-10, 0, 0); // @TODO
+		
+		return float4(pbr_equation(albedo_alpha.rgb, rmao, light_color, light_pos, frag_pos, world_normal, cam_pos), 1);
 	}
 ]

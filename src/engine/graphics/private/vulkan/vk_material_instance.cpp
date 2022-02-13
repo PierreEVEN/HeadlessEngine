@@ -11,7 +11,6 @@
 #include "vk_render_pass.h"
 #include "vk_sampler.h"
 #include "vk_texture.h"
-#include <vulkan/vk_helper.h>
 
 namespace gfx::vulkan
 {
