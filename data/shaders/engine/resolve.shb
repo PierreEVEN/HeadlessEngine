@@ -48,15 +48,15 @@ float4 main(VsToFsStruct input) : SV_Target
     float depth = gbuffer_depth.Sample(ui_sampler, input.Uv).r;
     float4 albedo_alpha = gbuffer_color.Sample(ui_sampler, input.Uv);
     float4 rmao = gbuffer_rmao.Sample(ui_sampler, input.Uv);
-    float3 light_color = (10, 10, 10);
-    float3 light_pos = (-10, 0, 0);
+    float3 light_color = (100, 100, 100);
+    float3 light_pos = (10, 10, 10);
 
-    //if (albedo_alpha.a == 0)
+    if (albedo_alpha.a == 0)
         return float4(albedo_alpha.rgb, 1);
 
     float3 frag_pos = float3(0, 0, 0); // @TODO
-    float3 world_normal = float3(1, 0, 0); // @TODO
-    float3 cam_pos = float3(-10, 0, 0); // @TODO
+    float3 world_normal = float3(0, 0, 1); // @TODO
+    float3 cam_pos = float3(0, 0, 10); // @TODO
 		
     return float4(pbr_equation(albedo_alpha.rgb, rmao, light_color, light_pos, frag_pos, world_normal, cam_pos), 1);
 }
