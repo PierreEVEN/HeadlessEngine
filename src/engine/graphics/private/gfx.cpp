@@ -29,10 +29,6 @@ void init()
 #endif
 }
 
-void next_frame()
-{
-}
-
 void destroy()
 {
     RenderPass::destroy_passes();

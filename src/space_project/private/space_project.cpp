@@ -12,7 +12,7 @@ void declare_render_pass()
     const auto color_attachments = std::vector<gfx::RenderPass::Config::Attachment>{
         {
             .attachment_name = "albedo",
-            .clear_value     = gfx::ClearValue{.color = {0, 0, 0, 1}},
+            .clear_value     = gfx::ClearValue{.color = {0.6f, 0.8f, 0.9f, 0}},
         },
         {
             .attachment_name = "roughness_metalness_ao",
@@ -153,21 +153,27 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     window->on_resize_window.add_lambda(
         [&](uint32_t, uint32_t)
         {
-            gfx::next_frame();
-            global_universe->pre_render();
-            surface->render();
-            window->update();
+            if (surface->prepare_next_frame())
+            {
+                application::get()->next_frame();
+                global_universe->tick();
+                global_universe->pre_render();
+                surface->render();
+                window->update();
+            }
         });
 
     // Game loop
     while (application::window::Window::get_window_count() > 0)
     {
-        application::get()->next_frame();
-        gfx::next_frame();
-        global_universe->tick();
-        global_universe->pre_render();
-        surface->render();
-        window->update();
+        if (surface->prepare_next_frame())
+        {
+            application::get()->next_frame();
+            global_universe->tick();
+            global_universe->pre_render();
+            surface->render();
+            window->update();
+        }
     }
 
     global_universe           = nullptr;

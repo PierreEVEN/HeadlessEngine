@@ -17,8 +17,6 @@ namespace gfx
 
 void init();
 
-void next_frame();
-
 void destroy();
 
 } // namespace gfx

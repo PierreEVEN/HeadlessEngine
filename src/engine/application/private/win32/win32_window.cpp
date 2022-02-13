@@ -33,8 +33,8 @@ Window_Win32::Window_Win32(const WindowConfig& config) : Window(config)
     RECT initial_area = {0, 0, static_cast<LONG>(config.absolute_width), static_cast<LONG>(config.absolute_height)};
     WIN_CHECK(::AdjustWindowRectEx(&initial_area, style, FALSE, ex_style));
 
-    window_handle = ::CreateWindowEx(ex_style, "headless_engine_window_class", config.name.c_str(), style, config.absolute_pos_x, config.absolute_pos_y, initial_area.right - initial_area.left, initial_area.bottom - initial_area.top,
-                                     nullptr, nullptr, dynamic_cast<application::win32::Application_Win32*>(application::get())->get_handle(), nullptr);
+    window_handle = ::CreateWindowEx(ex_style, "headless_engine_window_class", config.name.c_str(), style, config.absolute_pos_x, config.absolute_pos_y, initial_area.right - initial_area.left,
+                                     initial_area.bottom - initial_area.top, nullptr, nullptr, dynamic_cast<application::win32::Application_Win32*>(application::get())->get_handle(), nullptr);
     WIN_CHECK(window_handle);
 
     WIN_CHECK(::SetLayeredWindowAttributes(window_handle, 0, static_cast<uint8_t>(config.opacity * 255), LWA_ALPHA));
@@ -194,7 +194,8 @@ void Window_Win32::update()
 {
     ::UpdateWindow(window_handle);
     MSG msg;
-    if (GetMessage(&msg, NULL, 0, 0) > 0)
+    
+    while (GetMessage(&msg, NULL, 0, 0) > 0 && msg.message != WM_PAINT && msg.message != WM_TIMER)
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -209,7 +210,7 @@ void Window_Win32::register_window_class(HINSTANCE handle)
         .style       = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS,
         .lpfnWndProc = [](HWND in_hwnd, uint32_t in_msg, WPARAM wparam, LPARAM lparam) -> LRESULT
         {
-            if (window::win32::Window_Win32* window = window::win32::Window_Win32::find_window_by_handle(in_hwnd))
+            if (Window_Win32* window = find_window_by_handle(in_hwnd))
                 return window->window_behaviour(in_msg, wparam, lparam);
 
             const LRESULT result = ::DefWindowProc(in_hwnd, in_msg, wparam, lparam);

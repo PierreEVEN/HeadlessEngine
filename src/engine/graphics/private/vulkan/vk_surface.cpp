@@ -32,40 +32,45 @@ Surface_VK::~Surface_VK()
 {
 }
 
-void Surface_VK::render()
+bool Surface_VK::prepare_next_frame()
 {
     // Don't draw_pass if window is minimized
     if (window_container->absolute_width() == 0 || window_container->absolute_height() == 0)
-        return;
+        return false;
 
-    const auto& image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
+    current_image_acquire_semaphore = swapchain_resources->image_acquire_semaphore;
 
     // Retrieve the next available images ID
     uint32_t       image_index;
-    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, image_acquire_semaphore->semaphore, VK_NULL_HANDLE, &image_index);
+    const VkResult result = vkAcquireNextImageKHR(get_device(), swapchain->swapchain, UINT64_MAX, current_image_acquire_semaphore->semaphore, VK_NULL_HANDLE, &image_index);
 
-    if (auto& render_finished_fence = dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->frame_data->render_finished_fences)
-        render_finished_fence->wait_fence();
-
-    Device::get().begin_frame(static_cast<uint8_t>(image_index));
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreate_swapchain();
-        return;
+        return false;
     }
 
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
         LOG_ERROR("Failed to acquire images from the swapchain");
-        return;
+        return false;
     }
 
+    if (auto& render_finished_fence = dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->frame_data->render_finished_fences)
+        render_finished_fence->wait_fence();
+    Device::get().begin_frame(static_cast<uint8_t>(image_index));
+    return true;
+}
+
+void Surface_VK::render()
+{
     // The present pass must wait for the image acquire semaphore
-    dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->swapchain_image_acquire_semaphore = image_acquire_semaphore;
+    dynamic_cast<RenderPassInstance_VK*>(main_render_pass.get())->swapchain_image_acquire_semaphore = current_image_acquire_semaphore;
 
     // Draw content
     main_render_pass->draw_pass();
 
+    uint32_t image_index = Device::get().get_current_frame();
     // Submit to present queue
     const VkPresentInfoKHR present_infos{
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -94,9 +99,9 @@ void Surface_VK::recreate_swapchain()
         return;
 
     swapchain = TGpuHandle<SwapchainResource_VK>(stringutils::format("swapchain:surface=%s", surface_name.c_str()), SwapchainResource_VK::CI_Swapchain{
-                                                                       .previous_swapchain = swapchain,
-                                                                       .surface            = surface,
-                                                                   });
+                                                                                                                        .previous_swapchain = swapchain,
+                                                                                                                        .surface            = surface,
+                                                                                                                    });
 
     surface_texture = std::make_shared<Texture_VK>("swapchain_image", window_container->absolute_width(), window_container->absolute_height(), 1,
                                                    TextureParameter{

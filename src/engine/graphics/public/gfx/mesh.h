@@ -1,10 +1,10 @@
 #pragma once
 #include "buffer.h"
 
+#include <cpputils/logger.hpp>
 #include <memory>
 #include <string>
 #include <vector>
-#include <cpputils/logger.hpp>
 
 #include <glm/glm.hpp>
 
@@ -14,12 +14,12 @@ class Buffer;
 
 struct DefaultVertex
 {
-    glm::dvec3 pos;
-    glm::vec2  uv;
-    glm::vec4  color;
-    glm::vec3  normal;
-    glm::vec3  tangent;
-    glm::vec3  bi_tangent;
+    glm::vec3 pos;
+    glm::vec2 uv;
+    glm::vec4 color;
+    glm::vec3 normal;
+    glm::vec3 tangent;
+    glm::vec3 bi_tangent;
 };
 
 enum class EIndexBufferType

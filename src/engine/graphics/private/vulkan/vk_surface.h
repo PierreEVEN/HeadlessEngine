@@ -16,7 +16,8 @@ class Surface_VK : public Surface
     Surface_VK(const std::string& name, application::window::Window* container);
     virtual ~Surface_VK();
 
-    void render() override;
+    [[nodiscard]] bool prepare_next_frame() override;
+    void               render() override;
 
     application::window::Window* get_container() const override
     {
@@ -45,6 +46,7 @@ class Surface_VK : public Surface
         TGpuHandle<SemaphoreResource_VK> image_acquire_semaphore;
     };
 
+    TGpuHandle<SemaphoreResource_VK>  current_image_acquire_semaphore;
     std::shared_ptr<Texture>          surface_texture;
     SwapchainImageResource<ImageData> swapchain_resources;
 };

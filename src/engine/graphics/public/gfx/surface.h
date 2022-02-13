@@ -14,6 +14,7 @@ class Surface
     virtual ~Surface() = default;
 
     [[nodiscard]] virtual application::window::Window* get_container() const = 0;
+    [[nodiscard]] virtual bool                         prepare_next_frame()  = 0;
     virtual void                                       render()              = 0;
 
     void        link_dependency(const std::shared_ptr<RenderPassInstance>& render_pass) const;
@@ -25,7 +26,7 @@ class Surface
     {
     }
 
-    application::window::Window*        window_container ;
+    application::window::Window*        window_container;
     const std::string&                  surface_name;
     std::shared_ptr<RenderPassInstance> main_render_pass;
 };
