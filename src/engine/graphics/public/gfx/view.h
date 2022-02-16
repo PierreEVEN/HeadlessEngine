@@ -3,9 +3,9 @@
 #include "command_buffer.h"
 #include "types/frustum.h"
 
-#include <glm/glm.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/glm.hpp>
 
 namespace gfx
 {
@@ -45,7 +45,7 @@ class View
 
   private:
     std::shared_ptr<Buffer> camera_buffer;
-    Frustum       view_frustum;
+    Frustum                 view_frustum;
 
     bool dirty = false;
 

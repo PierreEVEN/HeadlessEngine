@@ -403,7 +403,7 @@ public:
      * bool(const Entity, const Entity);
      * @endcode
      *
-     * Where `Component` are such that they are iterated by the group.<br/>
+     * Where `ComponentPtr` are such that they are iterated by the group.<br/>
      * Moreover, the comparison function object shall induce a
      * _strict weak ordering_ on the values.
      *
@@ -846,7 +846,7 @@ public:
      * bool(const Entity, const Entity);
      * @endcode
      *
-     * Where `Component` are either owned types or not but still such that they
+     * Where `ComponentPtr` are either owned types or not but still such that they
      * are iterated by the group.<br/>
      * Moreover, the comparison function object shall induce a
      * _strict weak ordering_ on the values.

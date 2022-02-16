@@ -5,8 +5,8 @@
 #define GLM_FORCE_RADIANS
 #include "application/application.h"
 #include "application/inputs/input_mapping.h"
-#include "planet.h"
 #include "gfx/resource/device.h"
+#include "planet.h"
 
 #include "scene/SubScene.h"
 #include <glm/detail/type_quat.hpp>
@@ -110,7 +110,8 @@ class CustomUniverse : public scene::Universe
                                           : glm::dvec3())) *
                     glm::dvec3(5 * application::get()->delta_time());
 
-        get_global_view()->set_viewport(application::window::Window::get_window(0)->absolute_width(), application::window::Window::get_window(0)->absolute_height(), 45, 10000, 0.1f);
+        get_global_view()->set_viewport(static_cast<float>(application::window::Window::get_window(0)->absolute_width()), static_cast<float>(application::window::Window::get_window(0)->absolute_height()), 45, 10000,
+                                        0.1f);
         get_global_view()->set_view_point(position, forward, glm::dvec3(0, 0, 1));
     }
 
