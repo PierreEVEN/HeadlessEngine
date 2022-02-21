@@ -1,7 +1,8 @@
 
-#include "family.h"
+#include "ecs/family.h"
 
 #include "object_ptr.h"
+
 
 Family::Family(const FamilySignature& in_signature) : component_count(static_cast<uint32_t>(in_signature.elements.size())), object_count(0), signature(in_signature)
 {
@@ -43,7 +44,7 @@ void Family::remove_object(ObjectPtr* object)
     object->pool_index    = 0;
 }
 
-Component<ComponentPtr> Family::get_component(ObjectPtr*, Class*)
+Component<ComponentBase> Family::get_component(ObjectPtr*, Class*)
 {
     LOG_FATAL("NIY");
     return {};

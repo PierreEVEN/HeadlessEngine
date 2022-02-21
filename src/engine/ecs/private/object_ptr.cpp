@@ -1,8 +1,8 @@
-#include <object_ptr.h>
+#include "object_ptr.h"
+#include "ecs/ecs_new.h"
+#include "ecs/family.h"
 
-#include <family.h>
-
-Component<ComponentPtr> ObjectPtr::get_component(Class* component_class)
+Component<ComponentBase> ObjectPtr::get_component(Class* component_class)
 {
     if (!object_family)
         return {};
@@ -10,7 +10,7 @@ Component<ComponentPtr> ObjectPtr::get_component(Class* component_class)
     return object_family->get_component(this, component_class);
 }
 
-Component<ComponentPtr> ObjectPtr::add_component(Class* component_class)
+Component<ComponentBase> ObjectPtr::add_component(Class* component_class)
 {
     const auto new_signature = object_family->get_signature().added(component_class);
 

@@ -1,13 +1,15 @@
 #pragma once
+#include "object_base.h"
+
 #include <vcruntime_typeinfo.h>
 #include <vector>
+#include <cpputils/logger.hpp>
 
 #include <types/no_copy.h>
 
 #define Transient
 
-#define PROPERTY(Serialize)
-
+#define PROPERTY(...)
 
 #define COMPONENT_BODY                                      \
   public:                                                   \
@@ -56,6 +58,12 @@ class Class final : NoCopy
         return false;
     }
 
+    template<typename Class_T = ObjectBase>
+    [[nodiscard]] Class_T* instantiate() const
+    {
+        LOG_FATAL("NIY");
+    }
+
   private:
     Class*              parent = nullptr;
     std::vector<Class*> children;
@@ -63,3 +71,13 @@ class Class final : NoCopy
     const uint32_t type_size;
     const char*    class_name;
 };
+
+template <typename Class_T> [[nodiscard]] Class_T* cast(ObjectBase* other) requires std::is_base_of_v<ObjectBase, Class_T>
+{
+    Class* other_class = other->get_class();
+    if (other_class->is_child_of(Class_T::static_class()) || Class_T::static_class()->is_child_of(other_class))
+    {
+        return static_cast<Class_T*>(other);
+    }
+    return nullptr;
+}

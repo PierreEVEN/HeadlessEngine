@@ -4,12 +4,17 @@
 
 #include "object_ptr.h"
 
-Component<ComponentPtr> Object::get_component(Class* component_class) const
+Object::Object(Ecs_New* source_ecs)
+    : object_ptr(new ObjectPtr(source_ecs))
+{
+}
+
+Component<ComponentBase> Object::get_component(Class* component_class) const
 {
     return object_ptr->get_component(component_class);
 }
 
-Component<ComponentPtr> Object::add_component(Class* component_class) const
+Component<ComponentBase> Object::add_component(Class* component_class) const
 {
     return object_ptr->add_component(component_class);
 }

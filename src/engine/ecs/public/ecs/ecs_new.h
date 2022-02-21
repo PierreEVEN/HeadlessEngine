@@ -1,12 +1,7 @@
 #pragma once
-#include "family.h"
-#include "types/robin_hood_map.h"
-
 #include "ecs/object.h"
-
-#define NULL_ID 0
-
-using ObjectID = uint64_t;
+#include "ecs/family.h"
+#include "types/robin_hood_map.h"
 
 class Ecs_New
 {

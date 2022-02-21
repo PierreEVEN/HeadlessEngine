@@ -1,10 +1,9 @@
 #pragma once
 
-#include "ecs/component_new.h"
-#include "ecs/component_ptr.h"
 #include "ecs/ecs.h"
 #include "ecs/ecs_new.h"
 #include "ecs/object.h"
+#include "reflection/class.h"
 
 #include <glm/glm.hpp>
 
@@ -29,9 +28,7 @@ class WorldPartition final
 
     void include(WorldPartition& other);
     void render(const ViewPoint& view_point);
-
-    static void add_systems(ecs::SystemFactory* factory);
-
+    
   private:
     glm::dvec3 velocity;
     glm::dvec3 aabb_center;
@@ -43,10 +40,9 @@ class WorldPartition final
 /***
  * USE CASE EXAMPLES
  */
-class Transform : public ComponentPtr
+class Transform : public ComponentBase
 {
     COMPONENT_BODY;
-
   public:
 
     void translate()
@@ -71,7 +67,7 @@ class Transform : public ComponentPtr
     std::vector<Component<Transform>> children;
 };
 
-class Mesh : public ComponentPtr
+class Mesh : public ComponentBase
 {
     COMPONENT_BODY;
 
@@ -105,6 +101,18 @@ void test()
     Component<Mesh> mesh = obj_a.get_component<Mesh>();
     mesh.object().move_to(&ctx1);
     mesh.object().remove_component<Mesh>();
+
+
+    Mesh* m = new Mesh();
+    Transform* tr = new Transform();
+
+    if (cast<Transform>(m))
+    {
+        
+    }
+    Class* cl = m->get_class();
+    (void)cl;
+    (void)tr;
 }
 
 // RULES :

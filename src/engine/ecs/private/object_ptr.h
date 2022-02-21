@@ -1,10 +1,15 @@
 #pragma once
 
-#include "ecs/component_new.h"
-#include "ecs/ecs_new.h"
+#include "ecs/object.h"
 
 #include <cstdint>
+#include <cpputils/logger.hpp>
 #include <types/no_copy.h>
+
+class Ecs_New;
+using ObjectID = uint64_t;
+#define NULL_ID 0
+
 
 class ObjectPtr final : public NoCopy
 {
@@ -21,8 +26,8 @@ class ObjectPtr final : public NoCopy
         LOG_FATAL("NIY");
     }
 
-    Component<ComponentPtr> get_component(Class* component_class);
-    Component<ComponentPtr> add_component(Class* component_class);
+    Component<ComponentBase> get_component(Class* component_class);
+    Component<ComponentBase> add_component(Class* component_class);
     void                    remove_component(Class* component_class);
 
   private:
